@@ -1,1 +1,0 @@
-export { MonoText } from './StyledText';
