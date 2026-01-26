@@ -53,6 +53,13 @@ export default function StoryLayout() {
           headerBackVisible: false,
         }}
       />
+      <Stack.Screen
+        name="reader"
+        options={{
+          title: 'Lecture',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

@@ -1,65 +1,93 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button, ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
-import { getStoryStartById, getUniverseById } from '@/data';
+import { getStoryStartById, generateMockPageImage } from '@/data';
 import { generatePageId } from '@/data/mockStories';
+import { StoryPage } from '@/types';
+
+const TOTAL_PAGES = 5;
 
 /**
  * Page display screen - shows the BD page with image and text
+ * Manages the creation of 5 pages total
  */
 export const PageScreen: React.FC = () => {
-  const { startId } = useLocalSearchParams<{ startId: string }>();
+  const { paragraphText } = useLocalSearchParams<{ paragraphText: string }>();
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const addStory = useAppStore((state) => state.addStory);
-  const heroProfile = useAppStore((state) => state.heroProfile);
+  const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
 
-  const storyStart = startId ? getStoryStartById(startId) : null;
-  const universe = currentStory?.universeId
-    ? getUniverseById(currentStory.universeId)
-    : null;
+  const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
+  const isLastPage = currentPageNumber >= TOTAL_PAGES;
 
-  // Placeholder image URL based on universe
-  const imageUrl = universe
-    ? `https://via.placeholder.com/400x300/${universe.color.replace('#', '')}/FFFFFF?text=${encodeURIComponent(storyStart?.title || 'Histoire')}`
-    : 'https://via.placeholder.com/400x300/E8E8E8/333333?text=Image';
+  // Generate mock image for this page
+  const imageUrl = currentStory?.universeId
+    ? generateMockPageImage(currentPageNumber, currentStory.universeId)
+    : 'https://picsum.photos/seed/default/400/300';
 
-  const paragraphText = storyStart?.text.replace(
-    /tu/g,
-    heroProfile?.name || 'tu'
-  );
-
-  const handleSaveAndFinish = () => {
+  const handleAddPage = () => {
     if (!currentStory) return;
 
-    // Create the page
-    const newPage = {
+    // Create new page
+    const newPage: StoryPage = {
       id: generatePageId(),
       paragraphText: paragraphText || '',
       imageUrl,
-      pageNumber: 1,
+      pageNumber: currentPageNumber,
     };
 
-    // Save story to library
-    addStory({
-      ...currentStory,
-      title: storyStart?.title || 'Mon Histoire',
-      pages: [newPage],
-      updatedAt: new Date(),
-      isComplete: true,
-    } as any);
+    // Add page to current story
+    const updatedPages = [...(currentStory.pages || []), newPage];
+    updateCurrentStory({ pages: updatedPages });
 
-    // Clear current story and navigate to library
-    router.replace('/(tabs)');
+    if (isLastPage) {
+      // Story complete - save to library
+      addStory({
+        ...currentStory,
+        pages: updatedPages,
+        updatedAt: new Date(),
+        isComplete: true,
+      } as any);
+
+      clearCurrentStory();
+      
+      // Navigate to story reader
+      router.replace({
+        pathname: '/story/reader',
+        params: { storyId: currentStory.id },
+      });
+    } else {
+      // Continue to next page
+      router.replace('/story/paragraph');
+    }
   };
 
-  const handleContinue = () => {
-    // In MVP, we just save and finish
-    // In full version, this would continue to next paragraph
-    handleSaveAndFinish();
+  const handleSave = () => {
+    if (!currentStory) return;
+
+    // Create current page
+    const newPage: StoryPage = {
+      id: generatePageId(),
+      paragraphText: paragraphText || '',
+      imageUrl,
+      pageNumber: currentPageNumber,
+    };
+
+    // Save story as incomplete
+    const updatedPages = [...(currentStory.pages || []), newPage];
+    addStory({
+      ...currentStory,
+      pages: updatedPages,
+      updatedAt: new Date(),
+      isComplete: false,
+    } as any);
+
+    clearCurrentStory();
+    router.replace('/(tabs)');
   };
 
   return (
@@ -70,8 +98,10 @@ export const PageScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.chapterLabel}>Page 1</Text>
-          <Text style={styles.title}>{storyStart?.title}</Text>
+          <Text style={styles.chapterLabel}>
+            Page {currentPageNumber} / {TOTAL_PAGES}
+          </Text>
+          <Text style={styles.title}>{currentStory?.title}</Text>
         </View>
 
         {/* BD Page */}
@@ -91,27 +121,32 @@ export const PageScreen: React.FC = () => {
 
         {/* Success message */}
         <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>Bravo !</Text>
+          <Text style={styles.successTitle}>
+            {isLastPage ? 'Histoire terminee !' : 'Bravo !'}
+          </Text>
           <Text style={styles.successText}>
-            Ta premiere page est creee ! Tu peux continuer l'aventure ou
-            sauvegarder cette histoire.
+            {isLastPage
+              ? 'Ton histoire est complete ! Tu peux la lire maintenant.'
+              : `Ta page ${currentPageNumber} est creee ! Continue pour creer la suite.`}
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
+        {!isLastPage && (
+          <Button
+            title="Sauvegarder"
+            onPress={handleSave}
+            size="large"
+            variant="outline"
+            style={styles.footerButton}
+          />
+        )}
         <Button
-          title="Sauvegarder"
-          onPress={handleSaveAndFinish}
+          title={isLastPage ? 'Lire mon histoire' : 'Continuer'}
+          onPress={handleAddPage}
           size="large"
-          variant="outline"
-          style={styles.footerButton}
-        />
-        <Button
-          title="Continuer l'histoire"
-          onPress={handleContinue}
-          size="large"
-          style={styles.footerButton}
+          style={isLastPage ? undefined : styles.footerButton}
         />
       </View>
     </ScreenContainer>

@@ -35,11 +35,8 @@ export const StartSelectScreen: React.FC = () => {
       title: selectedStart.title,
     });
 
-    // Navigate to paragraph screen with the start text
-    router.push({
-      pathname: '/story/paragraph',
-      params: { startId: selectedStartId },
-    });
+    // Navigate to paragraph screen
+    router.push('/story/paragraph');
   };
 
   const renderStoryStart = ({ item }: { item: StoryStart }) => {

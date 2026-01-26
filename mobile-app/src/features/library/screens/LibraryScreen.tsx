@@ -132,7 +132,18 @@ export const LibraryScreen: React.FC = () => {
         title={selectedStory?.title}
       >
         <View style={styles.modalContent}>
-          <Button title="Voir l'histoire" onPress={() => setModalVisible(false)} />
+          <Button
+            title="Lire l'histoire"
+            onPress={() => {
+              if (selectedStory) {
+                setModalVisible(false);
+                router.push({
+                  pathname: '/story/reader',
+                  params: { storyId: selectedStory.id },
+                });
+              }
+            }}
+          />
           <Button
             title="Supprimer"
             onPress={handleDeleteStory}

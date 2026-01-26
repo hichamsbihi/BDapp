@@ -3,30 +3,25 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button, ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
-import { getStoryStartById } from '@/data';
+import { getParagraphForPage } from '@/data';
 
 /**
  * Paragraph display screen - shows the current story paragraph
+ * Displays different paragraphs for each of the 5 pages
  */
 export const ParagraphScreen: React.FC = () => {
-  const { startId } = useLocalSearchParams<{ startId: string }>();
-
   const currentStory = useAppStore((state) => state.currentStory);
-  const heroProfile = useAppStore((state) => state.heroProfile);
+  const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
 
-  // Get the story start text
-  const storyStart = startId ? getStoryStartById(startId) : null;
-
-  // Replace placeholder with hero name if available
-  const paragraphText = storyStart?.text.replace(
-    /tu/g,
-    heroProfile?.name || 'tu'
-  );
+  // Get paragraph text for current page
+  const paragraphText = currentStory?.universeId
+    ? getParagraphForPage(currentStory.universeId, currentPageNumber)
+    : '';
 
   const handleGenerateImage = () => {
     router.push({
       pathname: '/story/generating',
-      params: { startId },
+      params: { paragraphText },
     });
   };
 
@@ -34,8 +29,8 @@ export const ParagraphScreen: React.FC = () => {
     <ScreenContainer>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.chapterLabel}>Chapitre 1</Text>
-          <Text style={styles.title}>{currentStory?.title || storyStart?.title}</Text>
+          <Text style={styles.chapterLabel}>Page {currentPageNumber} / 5</Text>
+          <Text style={styles.title}>{currentStory?.title}</Text>
         </View>
 
         <ScrollView

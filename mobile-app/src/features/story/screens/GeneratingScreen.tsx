@@ -8,14 +8,12 @@ import { ScreenContainer } from '@/shared';
  * In production, this would call the AI image generation API
  */
 export const GeneratingScreen: React.FC = () => {
-  const { startId } = useLocalSearchParams<{ startId: string }>();
+  const { paragraphText } = useLocalSearchParams<{ paragraphText: string }>();
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('Preparation de la magie...');
 
-  // Animated value for pulsing effect
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
-  // Status messages to cycle through
   const statusMessages = [
     'Preparation de la magie...',
     'Les couleurs se melangent...',
@@ -44,7 +42,7 @@ export const GeneratingScreen: React.FC = () => {
     );
     pulse.start();
 
-    // Progress simulation (mock)
+    // Progress simulation
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         const newProgress = prev + Math.random() * 15;
@@ -61,11 +59,11 @@ export const GeneratingScreen: React.FC = () => {
       });
     }, 1500);
 
-    // Navigate to page screen after "generation" completes
+    // Navigate to page screen after generation
     const timeout = setTimeout(() => {
       router.replace({
         pathname: '/story/page',
-        params: { startId },
+        params: { paragraphText },
       });
     }, 4000);
 
@@ -75,7 +73,7 @@ export const GeneratingScreen: React.FC = () => {
       clearInterval(statusInterval);
       clearTimeout(timeout);
     };
-  }, []);
+  }, [paragraphText]);
 
   return (
     <ScreenContainer style={styles.container}>
@@ -87,7 +85,7 @@ export const GeneratingScreen: React.FC = () => {
           ]}
         >
           <View style={styles.iconPlaceholder}>
-            <Text style={styles.iconText}>*</Text>
+            <Text style={styles.iconText}>✨</Text>
           </View>
         </Animated.View>
 
@@ -130,7 +128,6 @@ const styles = StyleSheet.create({
   },
   iconText: {
     fontSize: 60,
-    color: '#FFFFFF',
   },
   title: {
     fontSize: 28,
