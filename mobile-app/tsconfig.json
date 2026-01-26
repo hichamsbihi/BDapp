@@ -5,10 +5,22 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@assets/*": ["./src/assets/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@constants/*": ["src/hooks/constants/*"]
+      "@/components/*": ["./src/components/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/navigation/*": ["./src/navigation/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/types": ["./src/types/index.ts"],
+      "@/assets/*": ["./src/assets/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/constants/*": ["./src/constants/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/shared": ["./src/shared/index.ts"],
+      "@/store/*": ["./src/store/*"],
+      "@/store": ["./src/store/index.ts"],
+      "@/data/*": ["./src/data/*"],
+      "@/data": ["./src/data/index.ts"]
     }
   },
   "include": [
