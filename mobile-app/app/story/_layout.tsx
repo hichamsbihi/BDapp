@@ -1,5 +1,6 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Stack, router } from 'expo-router';
 
 /**
  * Story creation stack layout
@@ -63,3 +64,15 @@ export default function StoryLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  headerButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  headerButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+});

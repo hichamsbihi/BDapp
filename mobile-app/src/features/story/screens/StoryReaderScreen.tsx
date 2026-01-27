@@ -4,251 +4,233 @@ import {
   Text,
   Image,
   StyleSheet,
-  FlatList,
   Dimensions,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScreenContainer, Button } from '@/shared';
 import { useAppStore } from '@/store';
-import { StoryPage } from '@/types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
- * Story reader screen - displays complete story in swipeable pages
+ * Story reader screen - comic book style reader with full-screen images
+ * Uses react-native-pager-view for smooth page flipping
  */
 export const StoryReaderScreen: React.FC = () => {
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [showHeader, setShowHeader] = useState(true);
+  const pagerRef = useRef<PagerView>(null);
 
   const stories = useAppStore((state) => state.stories);
   const story = stories.find((s) => s.id === storyId);
 
-  if (!story) {
+  if (!story || !story.pages || story.pages.length === 0) {
     return (
-      <ScreenContainer style={styles.errorContainer}>
+      <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Histoire introuvable</Text>
-        <Button title="Retour" onPress={() => router.back()} />
-      </ScreenContainer>
+        <TouchableOpacity onPress={() => router.back()} style={styles.errorButton}>
+          <Text style={styles.errorButtonText}>Retour</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
-  const handleScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / SCREEN_WIDTH);
-    setCurrentIndex(index);
+  const handlePageSelected = (e: any) => {
+    setCurrentPage(e.nativeEvent.position);
   };
 
-  const goToNextPage = () => {
-    if (currentIndex < story.pages.length - 1) {
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
-        animated: true,
-      });
-    }
+  const toggleHeader = () => {
+    setShowHeader(!showHeader);
   };
-
-  const goToPrevPage = () => {
-    if (currentIndex > 0) {
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex - 1,
-        animated: true,
-      });
-    }
-  };
-
-  const renderPage = ({ item }: { item: StoryPage }) => (
-    <View style={styles.pageWrapper}>
-      <View style={styles.pageContainer}>
-        <Image
-          source={{ uri: item.imageUrl }}
-          style={styles.pageImage}
-          resizeMode="cover"
-        />
-        <View style={styles.textContainer}>
-          <Text style={styles.pageNumber}>Page {item.pageNumber}</Text>
-          <Text style={styles.pageText}>{item.paragraphText}</Text>
-        </View>
-      </View>
-    </View>
-  );
 
   return (
-    <ScreenContainer style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Retour</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{story.title}</Text>
-        <View style={styles.pageIndicator}>
-          <Text style={styles.pageIndicatorText}>
-            {currentIndex + 1}/{story.pages.length}
+    <View style={styles.container}>
+      <StatusBar hidden={!showHeader} />
+      
+      {/* Header - toggleable by tapping screen */}
+      {showHeader && (
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>✕</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.title} numberOfLines={1}>
+            {story.title}
           </Text>
+          
+          <View style={styles.pageCounter}>
+            <Text style={styles.pageCounterText}>
+              {currentPage + 1}/{story.pages.length}
+            </Text>
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Pages swipeable */}
-      <FlatList
-        ref={flatListRef}
-        data={story.pages}
-        renderItem={renderPage}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        getItemLayout={(data, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
-          index,
-        })}
-      />
-
-      {/* Navigation dots */}
-      <View style={styles.dotsContainer}>
-        {story.pages.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              currentIndex === index && styles.dotActive,
-            ]}
-          />
+      {/* PagerView for comic book pages */}
+      <PagerView
+        style={styles.pagerView}
+        initialPage={0}
+        onPageSelected={handlePageSelected}
+        ref={pagerRef}
+      >
+        {story.pages.map((page, index) => (
+          <View style={styles.pageContainer} key={page.id}>
+            <TouchableOpacity
+              style={styles.imageTouchable}
+              activeOpacity={1}
+              onPress={toggleHeader}
+            >
+              <Image
+                source={{ uri: page.imageUrl }}
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            
+            {/* Page number overlay (always visible) */}
+            <View style={styles.pageNumberOverlay}>
+              <Text style={styles.pageNumberText}>{page.pageNumber}</Text>
+            </View>
+          </View>
         ))}
-      </View>
+      </PagerView>
 
-      {/* Navigation buttons */}
-      <View style={styles.footer}>
-        <Button
-          title="Page precedente"
-          onPress={goToPrevPage}
-          variant="outline"
-          disabled={currentIndex === 0}
-          style={styles.navButton}
-        />
-        <Button
-          title={currentIndex === story.pages.length - 1 ? 'Terminer' : 'Page suivante'}
-          onPress={currentIndex === story.pages.length - 1 ? () => router.back() : goToNextPage}
-          style={styles.navButton}
-        />
-      </View>
-    </ScreenContainer>
+      {/* Navigation hint (only on first page) */}
+      {currentPage === 0 && showHeader && (
+        <View style={styles.hintContainer}>
+          <Text style={styles.hintText}>← Glisse pour tourner la page →</Text>
+        </View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F8F8F8',
+    flex: 1,
+    backgroundColor: '#000000',
   },
   errorContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
     padding: 20,
   },
   errorText: {
     fontSize: 18,
-    color: '#FF3B30',
+    color: '#FFFFFF',
     marginBottom: 20,
+    textAlign: 'center',
+  },
+  errorButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  errorButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 10,
   },
   backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: '300',
   },
   title: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#1C1C1E',
-    flex: 1,
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 16,
   },
-  pageIndicator: {
-    backgroundColor: '#F2F2F7',
+  pageCounter: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
-  pageIndicatorText: {
+  pageCounterText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: '#FFFFFF',
   },
-  pageWrapper: {
-    width: SCREEN_WIDTH,
-    padding: 20,
+  pagerView: {
+    flex: 1,
   },
   pageContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  pageImage: {
-    width: '100%',
-    height: SCREEN_WIDTH * 0.75,
-    backgroundColor: '#F2F2F7',
-  },
-  textContainer: {
-    padding: 20,
-    backgroundColor: '#FFFBF0',
-  },
-  pageNumber: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  pageText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#1C1C1E',
-    fontStyle: 'italic',
-  },
-  dotsContainer: {
-    flexDirection: 'row',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
-    gap: 8,
+    backgroundColor: '#000000',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#C7C7CC',
-  },
-  dotActive: {
-    backgroundColor: '#007AFF',
-    width: 24,
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 20,
-    paddingBottom: 40,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  navButton: {
+  imageTouchable: {
     flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  pageNumberOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  pageNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  hintContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  hintText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
 });

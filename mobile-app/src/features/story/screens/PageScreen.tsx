@@ -55,11 +55,8 @@ export const PageScreen: React.FC = () => {
 
       clearCurrentStory();
       
-      // Navigate to story reader
-      router.replace({
-        pathname: '/story/reader',
-        params: { storyId: currentStory.id },
-      });
+      // Navigate to library
+      router.replace('/(tabs)');
     } else {
       // Continue to next page
       router.replace('/story/paragraph');
@@ -126,7 +123,7 @@ export const PageScreen: React.FC = () => {
           </Text>
           <Text style={styles.successText}>
             {isLastPage
-              ? 'Ton histoire est complete ! Tu peux la lire maintenant.'
+              ? 'Ton histoire est complete ! Elle est maintenant dans ta bibliotheque.'
               : `Ta page ${currentPageNumber} est creee ! Continue pour creer la suite.`}
           </Text>
         </View>
@@ -143,7 +140,7 @@ export const PageScreen: React.FC = () => {
           />
         )}
         <Button
-          title={isLastPage ? 'Lire mon histoire' : 'Continuer'}
+          title={isLastPage ? 'Terminer' : 'Continuer'}
           onPress={handleAddPage}
           size="large"
           style={isLastPage ? undefined : styles.footerButton}
