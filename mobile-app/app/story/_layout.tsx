@@ -1,78 +1,62 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 
 /**
  * Story creation stack layout
- * Flow: universe-select → start-select → paragraph → generating → page
- * Hero info is collected during onboarding (first time only)
+ * Flow: universe-select → start-select → paragraph → page
+ * 
+ * Swipe back is ALLOWED on first two screens (exploration phase)
+ * Swipe back is DISABLED on creation screens (paragraph, page, reader)
  */
 export default function StoryLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerBackTitle: 'Retour',
-        headerTintColor: '#007AFF',
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
+        headerShown: false,
+        animation: 'fade',
       }}
     >
+      {/* Exploration phase - swipe back allowed */}
       <Stack.Screen
         name="universe-select"
         options={{
-          title: 'Ton Univers',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
         }}
       />
       <Stack.Screen
         name="start-select"
         options={{
-          title: 'Ton Histoire',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
         }}
       />
+
+      {/* Creation phase - swipe back disabled */}
       <Stack.Screen
         name="paragraph"
         options={{
-          title: 'Ton Histoire',
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
         name="generating"
         options={{
-          headerShown: false,
           gestureEnabled: false,
         }}
       />
       <Stack.Screen
         name="page"
         options={{
-          title: 'Ta Page BD',
-          headerBackVisible: false,
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
         name="reader"
         options={{
-          title: 'Lecture',
-          headerShown: false,
+          gestureEnabled: false,
         }}
       />
     </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  headerButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  headerButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-});

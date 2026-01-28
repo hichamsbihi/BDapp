@@ -105,8 +105,11 @@ export const AvatarSelectScreen: React.FC = () => {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
 
   const updateHeroProfile = useAppStore((state) => state.updateHeroProfile);
-  const setHasCompletedOnboarding = useAppStore((state) => state.setHasCompletedOnboarding);
   const heroProfile = useAppStore((state) => state.heroProfile);
+  const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
+  
+  // Show step indicator only for new users
+  const isNewUser = !hasCompletedOnboarding;
 
   // Get avatars filtered by gender
   const avatars = useMemo(() => {
@@ -151,7 +154,8 @@ export const AvatarSelectScreen: React.FC = () => {
   const handleComplete = () => {
     if (!selectedAvatarId) return;
     updateHeroProfile({ avatarId: selectedAvatarId });
-    setHasCompletedOnboarding(true);
+    // Note: setHasCompletedOnboarding is called in UniverseSelectScreen
+    // after user selects a universe (to keep step 3 visible)
     router.replace('/story/universe-select');
   };
 
@@ -166,7 +170,16 @@ export const AvatarSelectScreen: React.FC = () => {
     <ScreenContainer style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={[styles.header, headerStyle]}>
-          <Text style={styles.stepIndicator}>Dernière étape</Text>
+          {isNewUser && (
+            <View style={styles.stepContainer}>
+              <Text style={styles.stepLabel}>Étape 2</Text>
+              <View style={styles.stepDots}>
+                <View style={styles.stepDot} />
+                <View style={[styles.stepDot, styles.stepDotActive]} />
+                <View style={styles.stepDot} />
+              </View>
+            </View>
+          )}
           <Text style={styles.headerIcon}>🦸‍♂️</Text>
           <Text style={styles.title}>Voici tes héros !</Text>
           <Text style={styles.subtitle}>
@@ -241,13 +254,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  stepIndicator: {
+  stepContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  stepLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#B8A99A',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 8,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E5DDD3',
+  },
+  stepDotActive: {
+    backgroundColor: '#FF8A65',
+    width: 20,
   },
   headerIcon: {
     fontSize: 44,

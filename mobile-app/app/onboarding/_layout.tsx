@@ -9,7 +9,8 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        gestureEnabled: false,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true, // iOS swipe back without header
       }}
     >
       <Stack.Screen name="index" />

@@ -37,6 +37,14 @@ export interface StoryPage {
   paragraphText: string;
   imageUrl: string;
   pageNumber: number;
+  // The choice that led to this page (if any)
+  choiceId?: string;
+}
+
+// Narrative choice for story branching
+export interface NarrativeChoice {
+  id: string;
+  text: string;
 }
 
 export interface Story {
@@ -48,6 +56,13 @@ export interface Story {
   createdAt: Date;
   updatedAt: Date;
   isComplete: boolean;
+  // Opening story data (selected start)
+  startId?: string;
+  openingText?: string;
+  // Current narrative choices available
+  nextChoices?: NarrativeChoice[];
+  // Selected choice for the next page
+  selectedChoiceId?: string;
 }
 
 // App state types

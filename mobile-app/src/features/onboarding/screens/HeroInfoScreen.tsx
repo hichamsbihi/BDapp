@@ -42,6 +42,10 @@ export const HeroInfoScreen: React.FC = () => {
 
   const ageInputRef = useRef<TextInput>(null);
   const setHeroProfile = useAppStore((state) => state.setHeroProfile);
+  const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
+  
+  // Show step indicator only for new users
+  const isNewUser = !hasCompletedOnboarding;
 
   // Animation progress values (0 = hidden, 1 = visible)
   const headerProgress = useSharedValue(0);
@@ -202,6 +206,16 @@ export const HeroInfoScreen: React.FC = () => {
           <Pressable onPress={Keyboard.dismiss} style={styles.content}>
             {/* Header with icon */}
             <Animated.View style={[styles.header, headerStyle]}>
+              {isNewUser && (
+                <View style={styles.stepIndicator}>
+                  <Text style={styles.stepText}>Étape 1</Text>
+                  <View style={styles.stepDots}>
+                    <View style={[styles.stepDot, styles.stepDotActive]} />
+                    <View style={styles.stepDot} />
+                    <View style={styles.stepDot} />
+                  </View>
+                </View>
+              )}
               <Text style={styles.headerIcon}>🦸</Text>
               <Text style={styles.title}>Dis-moi qui tu es !</Text>
               <Text style={styles.subtitle}>
@@ -330,6 +344,36 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 32,
     paddingHorizontal: 24,
+  },
+
+  // Step indicator
+  stepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  stepText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#B8A99A',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E5DDD3',
+  },
+  stepDotActive: {
+    backgroundColor: '#FF8A65',
+    width: 20,
   },
 
   // Header
