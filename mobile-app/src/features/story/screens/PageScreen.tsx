@@ -99,16 +99,22 @@ export const PageScreen: React.FC = () => {
     const updatedPages = [...(currentStory.pages || []), newPage];
 
     if (isLastPage) {
-      // Story complete
-      addStory({
+      // Story complete — save and celebrate
+      const completedStory = {
         ...currentStory,
         pages: updatedPages,
         updatedAt: new Date(),
         isComplete: true,
-      } as any);
+      } as any;
 
+      addStory(completedStory);
       clearCurrentStory();
-      router.replace('/(tabs)');
+
+      // Navigate to celebration screen
+      router.replace({
+        pathname: '/story/completed',
+        params: { storyId: completedStory.id },
+      });
     } else {
       // Continue to next paragraph
       updateCurrentStory({

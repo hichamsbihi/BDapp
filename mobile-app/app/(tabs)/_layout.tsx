@@ -1,37 +1,20 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 
 /**
- * Tab navigation layout
- * Main navigation for library and story creation
+ * Main app stack layout (previously tabs)
+ * Home is the entry point, Library is accessible via navigation
  */
-export default function TabLayout() {
+export default function MainLayout() {
   return (
-    <Tabs
+    <Stack
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#8E8E93',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E5E5EA',
-        },
+        contentStyle: { backgroundColor: '#FFFCF5' },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Mes Histoires',
-          tabBarLabel: 'Bibliotheque',
-        }}
-      />
-      <Tabs.Screen
-        name="create"
-        options={{
-          title: 'Creer',
-          tabBarLabel: 'Nouvelle',
-        }}
-      />
-    </Tabs>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="library" />
+    </Stack>
   );
 }

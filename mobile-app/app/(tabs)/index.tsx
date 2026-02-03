@@ -1,3 +1,3 @@
-import { LibraryScreen } from '@/features/library';
+import { HomeScreen } from '@/features/home';
 
-export default LibraryScreen;
+export default HomeScreen;

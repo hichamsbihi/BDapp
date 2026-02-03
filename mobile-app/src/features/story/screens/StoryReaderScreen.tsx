@@ -27,11 +27,16 @@ export const StoryReaderScreen: React.FC = () => {
   const stories = useAppStore((state) => state.stories);
   const story = stories.find((s) => s.id === storyId);
 
+  const handleClose = () => {
+    // Always go to home, not back (which could be ParagraphScreen)
+    router.replace('/');
+  };
+
   if (!story || !story.pages || story.pages.length === 0) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Histoire introuvable</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.errorButton}>
+        <TouchableOpacity onPress={handleClose} style={styles.errorButton}>
           <Text style={styles.errorButtonText}>Retour</Text>
         </TouchableOpacity>
       </View>
@@ -54,7 +59,7 @@ export const StoryReaderScreen: React.FC = () => {
       {showHeader && (
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={handleClose}
             style={styles.backButton}
           >
             <Text style={styles.backButtonText}>✕</Text>

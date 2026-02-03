@@ -57,6 +57,12 @@ export default function StoryLayout() {
           gestureEnabled: false,
         }}
       />
+      <Stack.Screen
+        name="completed"
+        options={{
+          gestureEnabled: false,
+        }}
+      />
     </Stack>
   );
 }

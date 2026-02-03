@@ -1,11 +1,15 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, HeroProfile, Story } from '@/types';
 
 /**
  * Global application store using Zustand
- * Manages hero profile, stories, and premium status
+ * Persisted to AsyncStorage for state restoration across app restarts
  */
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
   // Hero profile state
   heroProfile: null,
   setHeroProfile: (profile: HeroProfile) => set({ heroProfile: profile }),
@@ -51,7 +55,19 @@ export const useAppStore = create<AppState>((set) => ({
   hasCompletedOnboarding: false,
   setHasCompletedOnboarding: (status: boolean) =>
     set({ hasCompletedOnboarding: status }),
-}));
+    }),
+    {
+      name: 'story-app-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      // Only persist essential data
+      partialize: (state) => ({
+        heroProfile: state.heroProfile,
+        stories: state.stories,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+      }),
+    }
+  )
+);
 
 // Selector hooks for better performance
 export const useHeroProfile = () => useAppStore((state) => state.heroProfile);
