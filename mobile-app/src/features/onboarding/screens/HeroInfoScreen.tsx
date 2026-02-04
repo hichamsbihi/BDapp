@@ -6,9 +6,7 @@ import {
   StyleSheet,
   Pressable,
   Keyboard,
-  KeyboardAvoidingView,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
@@ -192,16 +190,13 @@ export const HeroInfoScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+      <View style={styles.main}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bounces={false}
+          keyboardDismissMode="on-drag"
         >
           <Pressable onPress={Keyboard.dismiss} style={styles.content}>
             {/* Header with icon */}
@@ -305,11 +300,11 @@ export const HeroInfoScreen: React.FC = () => {
           </Pressable>
         </ScrollView>
 
-        {/* Call-to-action button */}
+        {/* Bouton C'est moi - sticky en bas, ne bouge pas avec le clavier */}
         <Animated.View style={[styles.footer, buttonStyle]}>
           {/* Feedback message when form is complete - animated */}
           <Animated.Text style={[styles.readyMessage, readyMessageStyle]}>
-            Parfait ! Ton héros est prêt ✨
+            Parfait ! Ton héros est prêt
           </Animated.Text>
           <Pressable
             style={({ pressed }) => [
@@ -325,7 +320,7 @@ export const HeroInfoScreen: React.FC = () => {
             </Text>
           </Pressable>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 };
@@ -334,11 +329,12 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5', // Same warm background as WelcomeScreen
   },
-  keyboardView: {
+  main: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 160, // Espace pour le bouton sticky
   },
   content: {
     flex: 1,
@@ -458,10 +454,15 @@ const styles = StyleSheet.create({
     color: '#FF8A65',
   },
 
-  // Footer & Button
+  // Footer & Button - sticky en bas, position fixe
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 24,
     paddingBottom: 40,
+    backgroundColor: '#FFFCF5',
   },
   readyMessage: {
     fontSize: 16,

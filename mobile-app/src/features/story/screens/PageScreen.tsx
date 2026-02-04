@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,38 +13,210 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withDelay,
+  withSequence,
+  withSpring,
   Easing,
+  interpolate,
+  runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
 import { generateMockPageImage, getChoicesForPage } from '@/data';
 import { generatePageId } from '@/data/mockStories';
 import { StoryPage, NarrativeChoice } from '@/types';
+import {
+  getPivotPhraseForPage,
+  getContinuePhrase,
+  COMPLETION_PHRASES,
+  getRandomPhrase,
+} from '@/constants/magicWords';
 
 const TOTAL_PAGES = 5;
 
-// Pivot phrases that vary by page — keeps the experience fresh
-const PIVOT_PHRASES = [
-  'Et maintenant...',
-  'Et ensuite...',
-  'La suite commence ici...',
-  'Que va-t-il se passer ?',
-];
+/**
+ * Image Reveal Component
+ * 
+ * The spectacular moment when the image appears.
+ * Uses a "unveiling" effect - like pulling back a curtain.
+ */
+interface ImageRevealProps {
+  imageUrl: string;
+  onRevealComplete: () => void;
+}
+
+const ImageReveal: React.FC<ImageRevealProps> = ({ imageUrl, onRevealComplete }) => {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  
+  const imageScale = useSharedValue(1.1);
+  const imageOpacity = useSharedValue(0);
+  const curtainProgress = useSharedValue(0);
+  const glowOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Glow appears first - builds anticipation
+    glowOpacity.value = withTiming(0.6, { duration: 400 });
+    
+    // Image fades in with subtle scale (like emerging from mist)
+    imageOpacity.value = withDelay(
+      200,
+      withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) })
+    );
+    
+    // Image settles to normal scale
+    imageScale.value = withDelay(
+      200,
+      withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) })
+    );
+    
+    // Curtain reveals (shimmer effect)
+    curtainProgress.value = withDelay(
+      100,
+      withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) })
+    );
+
+    // Signal completion after reveal
+    const timer = setTimeout(() => {
+      runOnJS(onRevealComplete)();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [onRevealComplete]);
+
+  const imageStyle = useAnimatedStyle(() => ({
+    opacity: imageOpacity.value,
+    transform: [{ scale: imageScale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
+  // Shimmer overlay that sweeps across the image
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(curtainProgress.value, [0, 1], [-windowWidth, windowWidth * 2]) },
+    ],
+    opacity: interpolate(curtainProgress.value, [0, 0.5, 1], [0.8, 0.4, 0]),
+  }));
+
+  return (
+    <View style={styles.imageRevealContainer}>
+      {/* Glow behind image */}
+      <Animated.View style={[styles.imageGlow, glowStyle]} />
+      
+      {/* The hero image */}
+      <Animated.Image
+        source={{ uri: imageUrl }}
+        style={[styles.heroImage, imageStyle]}
+        resizeMode="cover"
+      />
+      
+      {/* Shimmer reveal effect */}
+      <Animated.View style={[styles.shimmerOverlay, shimmerStyle]} />
+    </View>
+  );
+};
+
+/**
+ * Choice Cards Component
+ * 
+ * Narrative choices appear after the image moment.
+ * Designed to not distract from the image.
+ */
+interface ChoiceCardsProps {
+  choices: NarrativeChoice[];
+  selectedChoice: NarrativeChoice | null;
+  onSelect: (choice: NarrativeChoice) => void;
+  visible: boolean;
+  pageNumber: number;
+}
+
+const ChoiceCards: React.FC<ChoiceCardsProps> = ({
+  choices,
+  selectedChoice,
+  onSelect,
+  visible,
+  pageNumber,
+}) => {
+  const containerOpacity = useSharedValue(0);
+  const containerY = useSharedValue(20);
+
+  // Dynamic pivot phrase
+  const pivotText = useMemo(
+    () => getPivotPhraseForPage(pageNumber),
+    [pageNumber]
+  );
+
+  useEffect(() => {
+    if (visible) {
+      containerOpacity.value = withDelay(300, withTiming(1, { duration: 400 }));
+      containerY.value = withDelay(300, withSpring(0, { damping: 15 }));
+    }
+  }, [visible]);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: containerOpacity.value,
+    transform: [{ translateY: containerY.value }],
+  }));
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[styles.choicesSection, containerStyle]}>
+      <Text style={styles.pivotText}>{pivotText}</Text>
+
+      <View style={styles.choicesContainer}>
+        {choices.map((choice) => {
+          const isSelected = selectedChoice?.id === choice.id;
+          const isDimmed = selectedChoice !== null && !isSelected;
+
+          return (
+            <Pressable
+              key={choice.id}
+              style={[
+                styles.choiceCard,
+                isSelected && styles.choiceCardSelected,
+                isDimmed && styles.choiceCardDimmed,
+              ]}
+              onPress={() => onSelect(choice)}
+            >
+              <Text style={[styles.choiceText, isSelected && styles.choiceTextSelected]}>
+                {choice.text}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+};
 
 /**
  * PageScreen
  * 
- * An illustrated book page. Simple, calm, natural.
+ * The illustrated story page. IMAGE IS THE HERO.
  * 
- * - The image is the hero, always visible at the top
- * - The child scrolls to reveal the caption and choices
- * - No timers, no phases — just a page to explore
+ * UX Philosophy:
+ * - Image appears first with spectacular reveal
+ * - Pivot phrase and choices appear after image moment
+ * - Everything else orbits around the image
+ * - CTA is inside scroll content (doesn't hide choices)
+ * 
+ * Reveal sequence:
+ * 1. Image reveals with shimmer effect (0-1.5s)
+ * 2. Brief pause for child to absorb the image (1.5-2.5s)
+ * 3. Choices appear with pivot phrase
+ * 4. CTA appears when a choice is selected
  */
 export const PageScreen: React.FC = () => {
   const { height: windowHeight } = useWindowDimensions();
   const { paragraphText } = useLocalSearchParams<{ paragraphText: string }>();
-  
+
+  // Phase states for reveal sequence (simplified - removed caption phase)
+  const [phase, setPhase] = useState<'image' | 'choices' | 'ready'>('image');
   const [selectedChoice, setSelectedChoice] = useState<NarrativeChoice | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
@@ -54,31 +226,59 @@ export const PageScreen: React.FC = () => {
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
   const isLastPage = currentPageNumber >= TOTAL_PAGES;
 
-  // Get narrative choices
-  const choices = currentStory?.universeId
-    ? getChoicesForPage(currentStory.universeId, currentPageNumber)
-    : [];
+  // Get narrative choices (empty on last page)
+  const choices = useMemo(() => {
+    if (isLastPage) return [];
+    return currentStory?.universeId
+      ? getChoicesForPage(currentStory.universeId, currentPageNumber)
+      : [];
+  }, [currentStory?.universeId, currentPageNumber, isLastPage]);
 
   // Generate mock image
-  const imageUrl = currentStory?.universeId
-    ? generateMockPageImage(currentPageNumber, currentStory.universeId)
-    : 'https://picsum.photos/seed/default/400/300';
+  const imageUrl = useMemo(
+    () =>
+      currentStory?.universeId
+        ? generateMockPageImage(currentPageNumber, currentStory.universeId)
+        : 'https://picsum.photos/seed/default/800/1200',
+    [currentPageNumber, currentStory?.universeId]
+  );
 
-  // Image takes ~65% of screen height
-  const imageHeight = windowHeight * 0.65;
+  // Image takes ~55% of screen to leave room for choices + CTA
+  const imageHeight = windowHeight * 0.55;
 
-  // Single animation: image fade-in on mount
-  const imageOpacity = useSharedValue(0);
+  // Dynamic CTA text
+  const ctaText = useMemo(() => {
+    if (isLastPage) return "Terminer l'histoire";
+    return getContinuePhrase();
+  }, [isLastPage]);
 
+  // Animation values for CTA
+  const ctaOpacity = useSharedValue(0);
+  const ctaY = useSharedValue(20);
+
+  // Handle reveal sequence phases (simplified)
+  const handleImageRevealComplete = useCallback(() => {
+    // After image reveals, show choices directly
+    setTimeout(() => {
+      setPhase(isLastPage ? 'ready' : 'choices');
+    }, 800); // Brief pause to absorb the image
+  }, [isLastPage]);
+
+  // Show CTA when appropriate
   useEffect(() => {
-    imageOpacity.value = withTiming(1, {
-      duration: 600,
-      easing: Easing.out(Easing.quad),
-    });
-  }, []);
+    const shouldShowCTA = isLastPage
+      ? phase === 'ready'
+      : selectedChoice !== null;
 
-  const imageStyle = useAnimatedStyle(() => ({
-    opacity: imageOpacity.value,
+    if (shouldShowCTA) {
+      ctaOpacity.value = withDelay(200, withTiming(1, { duration: 400 }));
+      ctaY.value = withDelay(200, withSpring(0, { damping: 15 }));
+    }
+  }, [selectedChoice, phase, isLastPage]);
+
+  const ctaStyle = useAnimatedStyle(() => ({
+    opacity: ctaOpacity.value,
+    transform: [{ translateY: ctaY.value }],
   }));
 
   const handleChoiceSelect = (choice: NarrativeChoice) => {
@@ -86,7 +286,8 @@ export const PageScreen: React.FC = () => {
   };
 
   const handleContinue = () => {
-    if (!currentStory) return;
+    if (!currentStory || isExiting) return;
+    setIsExiting(true);
 
     const newPage: StoryPage = {
       id: generatePageId(),
@@ -110,7 +311,6 @@ export const PageScreen: React.FC = () => {
       addStory(completedStory);
       clearCurrentStory();
 
-      // Navigate to celebration screen
       router.replace({
         pathname: '/story/completed',
         params: { storyId: completedStory.id },
@@ -126,7 +326,7 @@ export const PageScreen: React.FC = () => {
     }
   };
 
-  const showCTA = selectedChoice !== null || isLastPage;
+  const showCTA = isLastPage ? phase === 'ready' : selectedChoice !== null;
 
   return (
     <ScreenContainer style={styles.container}>
@@ -134,77 +334,52 @@ export const PageScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={true}
       >
-        {/* The illustrated scene — the heart of the page */}
-        <Animated.View style={[styles.imageWrapper, { height: imageHeight }, imageStyle]}>
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.image}
-            resizeMode="cover"
-          />
-        </Animated.View>
-
-        {/* Caption — revealed by scroll */}
-        <View style={styles.captionContainer}>
-          <Text style={styles.captionText}>{paragraphText}</Text>
+        {/* THE HERO: The illustrated scene */}
+        <View style={[styles.imageContainer, { height: imageHeight }]}>
+          <ImageReveal imageUrl={imageUrl} onRevealComplete={handleImageRevealComplete} />
         </View>
 
-        {/* Choices section — revealed by scroll (not on last page) */}
-        {!isLastPage && (
-          <View style={styles.choicesSection}>
-            <Text style={styles.pivotText}>
-              {PIVOT_PHRASES[(currentPageNumber - 1) % PIVOT_PHRASES.length]}
-            </Text>
+        {/* Secondary content area - below the image */}
+        <View style={styles.secondaryContent}>
+          {/* Narrative choices - not on last page */}
+          {!isLastPage && (
+            <ChoiceCards
+              choices={choices}
+              selectedChoice={selectedChoice}
+              onSelect={handleChoiceSelect}
+              visible={phase === 'choices' || phase === 'ready'}
+              pageNumber={currentPageNumber}
+            />
+          )}
 
-            <View style={styles.choicesContainer}>
-              {choices.map((choice) => {
-                const isSelected = selectedChoice?.id === choice.id;
-                const isDimmed = selectedChoice !== null && !isSelected;
-
-                return (
-                  <Pressable
-                    key={choice.id}
-                    style={[
-                      styles.choiceCard,
-                      isSelected && styles.choiceCardSelected,
-                      isDimmed && styles.choiceCardDimmed,
-                    ]}
-                    onPress={() => handleChoiceSelect(choice)}
-                  >
-                    <Text style={[styles.choiceText, isSelected && styles.choiceTextSelected]}>
-                      {choice.text}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+          {/* Last page ending message */}
+          {isLastPage && phase === 'ready' && (
+            <View style={styles.endSection}>
+              <Text style={styles.endTitle}>
+                {getRandomPhrase(COMPLETION_PHRASES.title, 'completion_title')}
+              </Text>
+              <Text style={styles.endText}>
+                {getRandomPhrase(COMPLETION_PHRASES.message, 'completion_message')}
+              </Text>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Last page ending */}
-        {isLastPage && (
-          <View style={styles.endSection}>
-            <Text style={styles.endTitle}>Fin de l'histoire</Text>
-            <Text style={styles.endText}>
-              Bravo ! Tu as cree une histoire merveilleuse.
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* CTA — appears after selection */}
-      {showCTA && (
-        <View style={styles.footer}>
-          <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={handleContinue}
-          >
-            <Text style={styles.buttonText}>
-              {isLastPage ? 'Terminer l\'histoire' : 'Continuer l\'histoire'}
-            </Text>
-          </Pressable>
+          {/* CTA - inside scroll content so it doesn't hide choices */}
+          {showCTA && (
+            <Animated.View style={[styles.ctaContainer, ctaStyle]}>
+              <Pressable
+                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+                onPress={handleContinue}
+                disabled={isExiting}
+              >
+                <Text style={styles.buttonText}>{ctaText}</Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </View>
-      )}
+      </ScrollView>
     </ScreenContainer>
   );
 };
@@ -217,56 +392,62 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 24,
   },
 
-  // Image — the hero of the page
-  imageWrapper: {
+  // Image container - the hero takes center stage
+  imageContainer: {
     width: '100%',
     overflow: 'hidden',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
-  image: {
+  imageRevealContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFF8F0',
+  },
+  heroImage: {
     width: '100%',
     height: '100%',
     backgroundColor: '#F5EBE0',
   },
-
-  // Caption — discrete legend
-  captionContainer: {
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    paddingBottom: 16,
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 150,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
-  captionText: {
-    fontSize: 15,
-    fontStyle: 'italic',
-    color: '#6B5E50',
-    lineHeight: 24,
-    textAlign: 'center',
+
+  // Secondary content - everything orbits around the image
+  secondaryContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
   },
 
   // Choices section
   choicesSection: {
-    paddingHorizontal: 28,
-    paddingTop: 8,
+    marginTop: 4,
   },
   pivotText: {
-    fontSize: 15,
+    fontSize: 16,
     fontStyle: 'italic',
-    color: '#9A8B7A',
+    color: '#8D7B68',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   choicesContainer: {
-    gap: 14,
+    gap: 12,
   },
   choiceCard: {
     backgroundColor: '#FFFCF5',
     borderRadius: 14,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     borderWidth: 1.5,
     borderColor: '#E8E0D5',
   },
@@ -281,17 +462,17 @@ const styles = StyleSheet.create({
   choiceText: {
     fontSize: 15,
     color: '#5D4E37',
-    lineHeight: 24,
+    lineHeight: 22,
     textAlign: 'center',
   },
   choiceTextSelected: {
     color: '#4A3F32',
+    fontWeight: '500',
   },
 
   // End section
   endSection: {
-    paddingHorizontal: 28,
-    paddingTop: 16,
+    marginTop: 20,
     alignItems: 'center',
   },
   endTitle: {
@@ -307,24 +488,28 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Footer
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
-    backgroundColor: '#FFFCF5',
+  // CTA - inside scroll content
+  ctaContainer: {
+    marginTop: 24,
+    paddingBottom: 16,
   },
   button: {
     backgroundColor: '#FF8A65',
-    paddingVertical: 16,
+    paddingVertical: 18,
     borderRadius: 14,
     alignItems: 'center',
+    shadowColor: '#FF8A65',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonPressed: {
     opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
   },
