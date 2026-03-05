@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -12,7 +13,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
 import { getParagraphForPage } from '@/data';
 import {
@@ -173,11 +174,12 @@ const CreationOverlay: React.FC<{ onComplete: () => void }> = ({ onComplete }) =
  * - Emotional continuity preserved
  */
 export const ParagraphScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [isCreating, setIsCreating] = useState(false);
   const [isButtonReady, setIsButtonReady] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-
   const currentStory = useAppStore((state) => state.currentStory);
+  const stars = useAppStore((state) => state.stars);
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
   const totalPages = 5;
 
@@ -261,10 +263,11 @@ export const ParagraphScreen: React.FC = () => {
   }));
 
   const handleContinue = () => {
-    // Mark as exiting to prevent double-taps
     if (isExiting) return;
+
+    // Les étoiles ne sont utilisées que pour débloquer des univers (pas pour les images)
     setIsExiting(true);
-    
+
     // Smooth "scene completion" effect:
     // 1. Content gently fades and lifts (like turning a page)
     // 2. Then the creation overlay appears
@@ -302,6 +305,9 @@ export const ParagraphScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <StarsBadge count={stars} />
+      </View>
       {/* Main content — dims during creation */}
       <Animated.View style={[styles.contentWrapper, contentStyle]}>
         <View style={styles.content}>
@@ -339,6 +345,10 @@ export const ParagraphScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
   },
   contentWrapper: {
     flex: 1,

@@ -65,6 +65,9 @@ export interface Story {
   selectedChoiceId?: string;
 }
 
+// Stars reward types (non-monetary, narrative)
+export type RewardStarType = 'watch_ad' | 'story_complete' | 'daily_bonus';
+
 // App state types
 export interface AppState {
   // Hero
@@ -84,6 +87,16 @@ export interface AppState {
   addStory: (story: Story) => void;
   removeStory: (storyId: string) => void;
   updateStory: (storyId: string, updates: Partial<Story>) => void;
+
+  // Stars (narrative currency - non-monetary)
+  stars: number;
+  unlockedUniverses: string[];
+  lastDailyBonusDate: string | null;
+  addStars: (amount: number) => void;
+  spendStars: (amount: number) => boolean;
+  canAfford: (amount: number) => boolean;
+  rewardStar: (type: RewardStarType) => Promise<number>;
+  unlockUniverse: (universeId: string) => boolean;
 
   // Premium status
   isPremium: boolean;

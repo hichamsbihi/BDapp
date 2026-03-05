@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -20,7 +21,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
 import { generateMockPageImage, getChoicesForPage } from '@/data';
 import { generatePageId } from '@/data/mockStories';
@@ -210,6 +211,7 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
  * 4. CTA appears when a choice is selected
  */
 export const PageScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { paragraphText } = useLocalSearchParams<{ paragraphText: string }>();
 
@@ -222,6 +224,8 @@ export const PageScreen: React.FC = () => {
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const addStory = useAppStore((state) => state.addStory);
   const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
+  const rewardStar = useAppStore((state) => state.rewardStar);
+  const stars = useAppStore((state) => state.stars);
 
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
   const isLastPage = currentPageNumber >= TOTAL_PAGES;
@@ -309,6 +313,7 @@ export const PageScreen: React.FC = () => {
       } as any;
 
       addStory(completedStory);
+      rewardStar('story_complete'); // +2 étoiles pour avoir terminé
       clearCurrentStory();
 
       router.replace({
@@ -330,6 +335,9 @@ export const PageScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <StarsBadge count={stars} />
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -387,6 +395,10 @@ export const PageScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
   },
   scrollView: {
     flex: 1,

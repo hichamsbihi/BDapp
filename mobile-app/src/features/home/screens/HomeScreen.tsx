@@ -45,8 +45,18 @@ export const HomeScreen: React.FC = () => {
   const heroProfile = useAppStore((state) => state.heroProfile);
   const stories = useAppStore((state) => state.stories);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
+  const rewardStar = useAppStore((state) => state.rewardStar);
 
   const hasStories = stories.length > 0;
+
+  // Bonus quotidien (1 fois par jour) - délai pour laisser le store se réhydrater
+  useEffect(() => {
+    if (!hasCompletedOnboarding) return;
+    const timer = setTimeout(() => {
+      rewardStar('daily_bonus');
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [hasCompletedOnboarding]);
   const heroName = heroProfile?.name || 'toi';
 
   // Image à afficher : la création de l'utilisateur OU l'image de démo
@@ -111,7 +121,7 @@ export const HomeScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <Animated.View style={[styles.content, contentStyle]}>
-        {/* IMAGE HERO - Le cœur de l'écran */}
+        {/* IMAGE HERO - Le cœur de l'écran (aucun élément par-dessus) */}
         <View style={[styles.imageContainer, { height: imageHeight }]}>
           <Image
             source={{ uri: heroImage }}
@@ -122,7 +132,6 @@ export const HomeScreen: React.FC = () => {
 
         {/* ZONE TEXTE + ACTIONS */}
         <View style={styles.bottomSection}>
-          {/* Texte d'accroche - court, pour enfant */}
           <Text style={styles.headline}>
             {hasStories
               ? `${heroName}, prêt pour une nouvelle aventure ?`

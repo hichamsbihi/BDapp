@@ -7,8 +7,9 @@ import {
   Pressable,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ScreenContainer, Modal } from '@/shared';
+import { ScreenContainer, Modal, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
 import { getUniverseById } from '@/data';
 import { Story } from '@/types';
@@ -23,12 +24,14 @@ import { Story } from '@/types';
  * Older stories rest quietly, ready to be revisited.
  */
 export const LibraryScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const stories = useAppStore((state) => state.stories);
   const heroProfile = useAppStore((state) => state.heroProfile);
   const removeStory = useAppStore((state) => state.removeStory);
+  const stars = useAppStore((state) => state.stars);
 
   // Sort by most recent first
   const sortedStories = [...stories].sort(
@@ -145,6 +148,9 @@ export const LibraryScreen: React.FC = () => {
   if (stories.length === 0) {
     return (
       <ScreenContainer style={styles.container}>
+        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+          <StarsBadge count={stars} />
+        </View>
         {renderEmptyState()}
       </ScreenContainer>
     );
@@ -152,6 +158,9 @@ export const LibraryScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <StarsBadge count={stars} />
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -234,6 +243,10 @@ export const LibraryScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
   },
   scrollView: {
     flex: 1,

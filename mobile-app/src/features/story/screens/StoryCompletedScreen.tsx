@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -11,7 +12,7 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
 
 /**
@@ -24,11 +25,13 @@ import { useAppStore } from '@/store';
  * This screen celebrates that act.
  */
 export const StoryCompletedScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
   
   const heroProfile = useAppStore((state) => state.heroProfile);
   const stories = useAppStore((state) => state.stories);
-  
+  const stars = useAppStore((state) => state.stars);
+
   const story = stories.find((s) => s.id === storyId);
   const heroName = heroProfile?.name || 'auteur';
 
@@ -76,7 +79,7 @@ export const StoryCompletedScreen: React.FC = () => {
     transform: [{ scale: celebrationScale.value }],
   }));
 
-  const sparkleStyle = (progress: Animated.SharedValue<number>, delay: number) =>
+  const sparkleStyle = (progress: { value: number }, _delay: number) =>
     useAnimatedStyle(() => ({
       opacity: progress.value,
       transform: [
@@ -121,6 +124,9 @@ export const StoryCompletedScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <StarsBadge count={stars} />
+      </View>
       <View style={styles.content}>
         {/* Celebration visual */}
         <Animated.View style={[styles.celebrationContainer, celebrationStyle]}>
@@ -188,6 +194,10 @@ export const StoryCompletedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
   },
   content: {
     flex: 1,

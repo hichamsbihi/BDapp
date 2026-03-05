@@ -1,8 +1,8 @@
 import { Universe, StoryStart } from '@/types';
 
 /**
- * Universe configuration with lock status
- * First universe of each gender is unlocked (free)
+ * Universe configuration
+ * isLocked est calculé dynamiquement par le store (unlockedUniverses)
  */
 export interface UniverseConfig extends Universe {
   isLocked: boolean;
@@ -10,8 +10,8 @@ export interface UniverseConfig extends Universe {
 }
 
 /**
- * Universes organized by gender
- * Each gender has 3 universes, first one is FREE
+ * Universes organisés par genre
+ * Déblocage via étoiles (unlockedUniverses dans le store)
  */
 export const UNIVERSES_BY_GENDER: Record<'boy' | 'girl', UniverseConfig[]> = {
   boy: [
@@ -22,7 +22,7 @@ export const UNIVERSES_BY_GENDER: Record<'boy' | 'girl', UniverseConfig[]> = {
       imageUrl: 'https://picsum.photos/seed/space/300/200',
       color: '#5B8DEE',
       emoji: '🚀',
-      isLocked: false, // FREE
+      isLocked: true,
     },
     {
       id: 'universe-pirates',
@@ -51,7 +51,7 @@ export const UNIVERSES_BY_GENDER: Record<'boy' | 'girl', UniverseConfig[]> = {
       imageUrl: 'https://picsum.photos/seed/fantasy/300/200',
       color: '#9B59B6',
       emoji: '🏰',
-      isLocked: false, // FREE
+      isLocked: true,
     },
     {
       id: 'universe-ocean',

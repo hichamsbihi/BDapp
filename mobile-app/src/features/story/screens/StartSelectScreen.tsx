@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -9,7 +10,7 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
 import { getStoryStartsByUniverse } from '@/data';
 import { StoryStart } from '@/types';
@@ -102,10 +103,12 @@ const Chapter: React.FC<ChapterProps> = ({
  * The text is sacred. Everything else disappears.
  */
 export const StartSelectScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [selectedChapter, setSelectedChapter] = useState<StoryStart | null>(null);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
+  const stars = useAppStore((state) => state.stars);
 
   const chapters = currentStory?.universeId
     ? getStoryStartsByUniverse(currentStory.universeId)
@@ -178,6 +181,9 @@ export const StartSelectScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <StarsBadge count={stars} />
+      </View>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -229,6 +235,10 @@ export const StartSelectScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
   },
   scroll: {
     flex: 1,

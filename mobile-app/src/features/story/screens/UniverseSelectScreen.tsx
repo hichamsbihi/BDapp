@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal as RNModal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -20,8 +21,9 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadge, NotEnoughStarsModal } from '@/shared';
 import { useAppStore } from '@/store';
+import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { getUniversesByGender, UniverseConfig } from '@/data';
 import { generateStoryId } from '@/data/mockStories';
 
@@ -157,13 +159,13 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
             </View>
           )}
 
-          {/* Locked overlay */}
+          {/* Locked overlay - "endormi" */}
           {universe.isLocked && (
             <View style={styles.lockedOverlay}>
               <View style={styles.lockBadge}>
-                <Text style={styles.lockIcon}>🔒</Text>
+                <Text style={styles.lockIcon}>✨</Text>
               </View>
-              <Text style={styles.lockedHint}>Bientôt...</Text>
+              <Text style={styles.lockedHint}>Tu peux le réveiller ✨</Text>
             </View>
           )}
 
@@ -187,7 +189,7 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
           </View>
           <Text style={[styles.cardDescription, universe.isLocked && styles.cardDescriptionLocked]}>
             {universe.isLocked
-              ? 'Ce monde dort encore... 😴'
+              ? "Ce monde dort encore..."
               : universe.description}
           </Text>
           {!universe.isLocked && !isSelected && (
@@ -200,40 +202,97 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
 };
 
 /**
- * Locked universe modal - Imaginative, not frustrating
+ * Locked universe modal - ton magique et rassurant pour l'enfant
+ * Message émotionnel : "Ce monde dort encore", pas de wording technique
  */
 interface LockedModalProps {
   visible: boolean;
   universe: UniverseConfig | null;
   onClose: () => void;
+  onUnlocked: () => void;
+  canAfford: boolean;
+  canAffordFn: (amount: number) => boolean;
+  onUnlock: (id: string) => boolean;
+  onWatchMagic: () => Promise<unknown>;
 }
 
-const LockedModal: React.FC<LockedModalProps> = ({ visible, universe, onClose }) => {
+const LockedModal: React.FC<LockedModalProps> = ({
+  visible,
+  universe,
+  onClose,
+  onUnlocked,
+  canAfford,
+  canAffordFn,
+  onUnlock,
+  onWatchMagic,
+}) => {
+  const [showGainStars, setShowGainStars] = React.useState(false);
+
   if (!universe) return null;
 
-  return (
-    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalEmoji}>{universe.emoji}</Text>
-          <Text style={styles.modalTitle}>{universe.name}</Text>
-          <Text style={styles.modalSubtitle}>Ce monde dort encore... 😴</Text>
-          <Text style={styles.modalMessage}>
-            Il s'ouvrira quand un adulte dira oui !{'\n'}
-            Plein d'aventures t'y attendent ✨
-          </Text>
+  const handleUseStars = () => {
+    if (onUnlock(universe.id)) {
+      onUnlocked();
+      onClose();
+    } else {
+      setShowGainStars(true);
+    }
+  };
 
-          <View style={styles.modalButtons}>
-            <Pressable style={styles.modalButtonSecondary} onPress={onClose}>
-              <Text style={styles.modalButtonSecondaryText}>J'ai compris</Text>
-            </Pressable>
-            <Pressable style={styles.modalButtonPrimary} onPress={onClose}>
-              <Text style={styles.modalButtonPrimaryText}>D'accord !</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Pressable>
-    </RNModal>
+  const handleGainStars = () => {
+    setShowGainStars(true);
+  };
+
+  // Après la "magie", si assez d'étoiles : débloquer + fermer tout.
+  // UX fluide : l'enfant entre DIRECTEMENT sans frustration.
+  const handleWatchMagicForUnlock = async () => {
+    await onWatchMagic();
+    if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
+      onUnlocked();
+      setShowGainStars(false);
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Pressable style={styles.modalOverlay} onPress={onClose}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalEmoji}>{universe.emoji}</Text>
+            <Text style={styles.modalTitle}>{universe.name}</Text>
+            <Text style={styles.modalSubtitle}>Ce monde dort encore...</Text>
+            <Text style={styles.modalMessage}>
+              {canAfford
+                ? "Tu as assez d'étoiles pour le réveiller ! ✨"
+                : "Tu peux le réveiller avec un peu de magie ✨\nIl lui manque encore quelques étoiles..."}
+            </Text>
+
+            <View style={styles.modalButtonsColumn}>
+              {canAfford ? (
+                <Pressable style={styles.modalButtonPrimary} onPress={handleUseStars}>
+                  <Text style={styles.modalButtonPrimaryText}>Utiliser 3 étoiles ✨</Text>
+                </Pressable>
+              ) : (
+                <Pressable style={styles.modalButtonPrimary} onPress={handleGainStars}>
+                  <Text style={styles.modalButtonPrimaryText}>Gagner des étoiles ✨</Text>
+                </Pressable>
+              )}
+              <Pressable style={styles.modalButtonSecondary} onPress={onClose}>
+                <Text style={styles.modalButtonSecondaryText}>⏳ Plus tard</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </RNModal>
+
+      <NotEnoughStarsModal
+        visible={showGainStars}
+        onClose={() => setShowGainStars(false)}
+        needed={UNIVERSE_UNLOCK_COST}
+        onWatchMagic={handleWatchMagicForUnlock}
+      />
+    </>
   );
 };
 
@@ -241,6 +300,7 @@ const LockedModal: React.FC<LockedModalProps> = ({ visible, universe, onClose })
  * Universe selection screen - "Magic Doors" experience
  */
 export const UniverseSelectScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [selectedLockedUniverse, setSelectedLockedUniverse] = useState<UniverseConfig | null>(null);
@@ -250,18 +310,27 @@ export const UniverseSelectScreen: React.FC = () => {
   const isPremium = useAppStore((state) => state.isPremium);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
   const setHasCompletedOnboarding = useAppStore((state) => state.setHasCompletedOnboarding);
-  
-  // Show step indicator only for new users (first time through onboarding)
+  const stars = useAppStore((state) => state.stars);
+  const unlockedUniverses = useAppStore((state) => state.unlockedUniverses);
+  const canAfford = useAppStore((state) => state.canAfford);
+  const unlockUniverse = useAppStore((state) => state.unlockUniverse);
+  const rewardStar = useAppStore((state) => state.rewardStar);
+
   const isNewUser = !hasCompletedOnboarding;
 
+  // Tous les univers sont verrouillés par défaut.
+  // Déblocage UNIQUEMENT via unlockedUniverses (étoiles dépensées) ou isPremium.
   const universes = useMemo(() => {
     const gender = heroProfile?.gender || 'boy';
     const allUniverses = getUniversesByGender(gender);
     if (isPremium) {
       return allUniverses.map((u) => ({ ...u, isLocked: false }));
     }
-    return allUniverses;
-  }, [heroProfile?.gender, isPremium]);
+    return allUniverses.map((u) => {
+      const isUnlocked = (unlockedUniverses ?? []).includes(u.id);
+      return { ...u, isLocked: !isUnlocked };
+    });
+  }, [heroProfile?.gender, isPremium, unlockedUniverses]);
 
   // Animation values
   const introProgress = useSharedValue(0);
@@ -338,6 +407,9 @@ export const UniverseSelectScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 24 }]}>
+        <StarsBadge count={stars} />
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -409,6 +481,11 @@ export const UniverseSelectScreen: React.FC = () => {
         visible={lockedModalVisible}
         universe={selectedLockedUniverse}
         onClose={() => setLockedModalVisible(false)}
+        onUnlocked={() => setSelectedUniverseId(selectedLockedUniverse?.id ?? null)}
+        canAfford={canAfford(UNIVERSE_UNLOCK_COST)}
+        canAffordFn={canAfford}
+        onUnlock={unlockUniverse}
+        onWatchMagic={() => rewardStar('watch_ad').then(() => {})}
       />
     </ScreenContainer>
   );
@@ -417,6 +494,11 @@ export const UniverseSelectScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
+  },
+  starsHeader: {
+    position: 'absolute',
+    zIndex: 10,
+    // top/right appliqués dynamiquement via useSafeAreaInsets
   },
   scrollView: {
     flex: 1,
@@ -729,13 +811,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  modalButtonsColumn: {
+    width: '100%',
+    gap: 12,
+    alignItems: 'stretch',
+  },
   modalButtonSecondary: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 14,
     backgroundColor: '#F5EBE0',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonSecondaryText: {
     fontSize: 15,
@@ -743,12 +831,13 @@ const styles = StyleSheet.create({
     color: '#8D7B68',
   },
   modalButtonPrimary: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 14,
     backgroundColor: '#FF8A65',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonPrimaryText: {
     fontSize: 15,
