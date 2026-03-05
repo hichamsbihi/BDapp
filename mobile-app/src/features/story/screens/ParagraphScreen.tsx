@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
-import { getParagraphForPage } from '@/data';
+import { useParagraph } from '@/hooks/useStoryData';
 import {
   getSceneRevealPhrase,
   getRandomPhrase,
@@ -186,13 +186,20 @@ export const ParagraphScreen: React.FC = () => {
   // Dynamic CTA text - varies to keep experience fresh
   const ctaText = useMemo(() => getSceneRevealPhrase(), [currentPageNumber]);
 
-  // Use stored openingText for page 1, otherwise fetch from data
+  // Fetch paragraph + image from Supabase (with local fallback)
+  const { data: paragraphData, loading: paragraphLoading } = useParagraph(
+    currentStory?.universeId,
+    currentPageNumber
+  );
+
+  // Page 1 uses the selected openingText, subsequent pages use fetched data
   const paragraphText =
     currentPageNumber === 1 && currentStory?.openingText
       ? currentStory.openingText
-      : currentStory?.universeId
-        ? getParagraphForPage(currentStory.universeId, currentPageNumber)
-        : '';
+      : paragraphData.text;
+
+  // imageUrl fetched alongside the paragraph (single DB call)
+  const paragraphImageUrl = paragraphData.imageUrl;
 
   // Animation values
   const textProgress = useSharedValue(0);
@@ -282,12 +289,11 @@ export const ParagraphScreen: React.FC = () => {
   };
 
   const handleCreationComplete = useCallback(() => {
-    // Navigate directly to page screen
     router.push({
       pathname: '/story/page',
-      params: { paragraphText },
+      params: { paragraphText, imageUrl: paragraphImageUrl },
     });
-  }, [paragraphText]);
+  }, [paragraphText, paragraphImageUrl]);
 
   // Generate progress dots
   const renderProgressDots = () => {

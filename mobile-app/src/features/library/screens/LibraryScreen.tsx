@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ScreenContainer, Modal, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
-import { getUniverseById } from '@/data';
-import { Story } from '@/types';
+import { fetchUniverseById } from '@/services/storyService';
+import { Story, Universe } from '@/types';
 
 /**
  * LibraryScreen
@@ -32,6 +32,24 @@ export const LibraryScreen: React.FC = () => {
   const heroProfile = useAppStore((state) => state.heroProfile);
   const removeStory = useAppStore((state) => state.removeStory);
   const stars = useAppStore((state) => state.stars);
+
+  // Cache universe data for story cards (color, name)
+  const [universesMap, setUniversesMap] = useState<Record<string, Universe>>({});
+
+  useEffect(() => {
+    const universeIds = [...new Set(stories.map((s) => s.universeId))];
+    universeIds.forEach(async (id) => {
+      if (universesMap[id]) return;
+      try {
+        const universe = await fetchUniverseById(id);
+        if (universe) {
+          setUniversesMap((prev) => ({ ...prev, [id]: universe }));
+        }
+      } catch {
+        // Silently skip if universe not found
+      }
+    });
+  }, [stories]);
 
   // Sort by most recent first
   const sortedStories = [...stories].sort(
@@ -76,7 +94,7 @@ export const LibraryScreen: React.FC = () => {
 
   // Featured story card (latest creation)
   const renderFeaturedStory = (story: Story) => {
-    const universe = getUniverseById(story.universeId);
+    const universe = universesMap[story.universeId];
     const coverImage = story.pages[0]?.imageUrl;
 
     return (
@@ -107,7 +125,7 @@ export const LibraryScreen: React.FC = () => {
 
   // Smaller story card for older stories
   const renderStoryCard = (story: Story) => {
-    const universe = getUniverseById(story.universeId);
+    const universe = universesMap[story.universeId];
     const coverImage = story.pages[0]?.imageUrl;
 
     return (

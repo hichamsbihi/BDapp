@@ -23,8 +23,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
-import { generateMockPageImage, getChoicesForPage } from '@/data';
-import { generatePageId } from '@/data/mockStories';
+import { useNarrativeChoices } from '@/hooks/useStoryData';
+import { generatePageId } from '@/utils/ids';
 import { StoryPage, NarrativeChoice } from '@/types';
 import {
   getPivotPhraseForPage,
@@ -213,7 +213,10 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
 export const PageScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { paragraphText } = useLocalSearchParams<{ paragraphText: string }>();
+  const { paragraphText, imageUrl: paramImageUrl } = useLocalSearchParams<{
+    paragraphText: string;
+    imageUrl: string;
+  }>();
 
   // Phase states for reveal sequence (simplified - removed caption phase)
   const [phase, setPhase] = useState<'image' | 'choices' | 'ready'>('image');
@@ -230,22 +233,16 @@ export const PageScreen: React.FC = () => {
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
   const isLastPage = currentPageNumber >= TOTAL_PAGES;
 
-  // Get narrative choices (empty on last page)
-  const choices = useMemo(() => {
-    if (isLastPage) return [];
-    return currentStory?.universeId
-      ? getChoicesForPage(currentStory.universeId, currentPageNumber)
-      : [];
-  }, [currentStory?.universeId, currentPageNumber, isLastPage]);
-
-  // Generate mock image
-  const imageUrl = useMemo(
-    () =>
-      currentStory?.universeId
-        ? generateMockPageImage(currentPageNumber, currentStory.universeId)
-        : 'https://picsum.photos/seed/default/800/1200',
-    [currentPageNumber, currentStory?.universeId]
+  // Fetch narrative choices from Supabase (with local fallback)
+  const { data: choices } = useNarrativeChoices(
+    currentStory?.universeId,
+    currentPageNumber,
+    isLastPage
   );
+
+  // Image comes from ParagraphScreen (fetched alongside the paragraph text)
+  const imageUrl = paramImageUrl
+    || `https://picsum.photos/seed/${currentStory?.universeId ?? 'default'}-${currentPageNumber}/400/300`;
 
   // Image takes ~55% of screen to leave room for choices + CTA
   const imageHeight = windowHeight * 0.55;

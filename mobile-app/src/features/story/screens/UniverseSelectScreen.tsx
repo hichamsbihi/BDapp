@@ -24,8 +24,9 @@ import Animated, {
 import { ScreenContainer, StarsBadge, NotEnoughStarsModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
-import { getUniversesByGender, UniverseConfig } from '@/data';
-import { generateStoryId } from '@/data/mockStories';
+import { UniverseConfig } from '@/types';
+import { useUniverses } from '@/hooks/useStoryData';
+import { generateStoryId } from '@/utils/ids';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
@@ -318,19 +319,19 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const isNewUser = !hasCompletedOnboarding;
 
-  // Tous les univers sont verrouillés par défaut.
-  // Déblocage UNIQUEMENT via unlockedUniverses (étoiles dépensées) ou isPremium.
+  const gender = heroProfile?.gender || 'boy';
+  const { data: rawUniverses, loading: universesLoading } = useUniverses(gender);
+
+  // isLocked is computed client-side from unlockedUniverses / isPremium
   const universes = useMemo(() => {
-    const gender = heroProfile?.gender || 'boy';
-    const allUniverses = getUniversesByGender(gender);
     if (isPremium) {
-      return allUniverses.map((u) => ({ ...u, isLocked: false }));
+      return rawUniverses.map((u) => ({ ...u, isLocked: false }));
     }
-    return allUniverses.map((u) => {
+    return rawUniverses.map((u) => {
       const isUnlocked = (unlockedUniverses ?? []).includes(u.id);
       return { ...u, isLocked: !isUnlocked };
     });
-  }, [heroProfile?.gender, isPremium, unlockedUniverses]);
+  }, [rawUniverses, isPremium, unlockedUniverses]);
 
   // Animation values
   const introProgress = useSharedValue(0);

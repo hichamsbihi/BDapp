@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
-import { getStoryStartsByUniverse } from '@/data';
+import { useStoryStarts } from '@/hooks/useStoryData';
 import { StoryStart } from '@/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -110,9 +110,7 @@ export const StartSelectScreen: React.FC = () => {
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const stars = useAppStore((state) => state.stars);
 
-  const chapters = currentStory?.universeId
-    ? getStoryStartsByUniverse(currentStory.universeId)
-    : [];
+  const { data: chapters, loading: chaptersLoading } = useStoryStarts(currentStory?.universeId);
 
   // Animation values
   const introProgress = useSharedValue(0);

@@ -24,6 +24,12 @@ export interface Universe {
   color: string;
 }
 
+// Extended universe with client-side display properties
+export interface UniverseConfig extends Universe {
+  isLocked: boolean;
+  emoji: string;
+}
+
 // Story types
 export interface StoryStart {
   id: string;
