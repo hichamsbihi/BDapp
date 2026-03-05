@@ -1,0 +1,305 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -496,
+        -80
+      ],
+      "id": "82de8e84-a30d-4004-bd62-2cd2309b3675",
+      "name": "When chat message received",
+      "webhookId": "e5c929f5-46c5-41ed-af0d-52bbdd34b6eb"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output[0].content[0].text;\n\nlet cleaned = raw.trim();\n\nif (cleaned.startsWith(\"```\")) {\n  cleaned = cleaned\n    .replace(/```json/g, \"\")\n    .replace(/```/g, \"\")\n    .trim();\n}\n\nconst parsed = JSON.parse(cleaned);\n\nconst STORY_ID = `story_${Date.now()}`;\nconst BUCKET = \"BD-Pages\";\nconst SUPABASE_URL = \"https://wddatxgqhdiosuhcztex.supabase.co\";\n\nconst CHARACTER_LOCK = `\nMain character reference (STRICT — MUST remain identical in every image):\n\n8-year-old girl\nshort straight black bob haircut\nsmall red ribbon on the LEFT side of her head\nlarge emerald green eyes\nsoft round child face\nblue adventure tunic with golden trim\nbrown leather boots\nsmall side satchel\nglowing star-shaped pendant around her neck\n\nDO NOT change character design.\nDO NOT change outfit.\nDO NOT move ribbon.\n`;\n\nconst flattenedPages = [];\n\nfor (const step of parsed.steps) {\n\n  for (const choice of step.choices) {\n\n    const fileName = `step-${step.step}-${choice.choice_id}.png`;\n    const storagePath = `${STORY_ID}/step-${step.step}/${fileName}`;\n\n    flattenedPages.push({\n      storyId: STORY_ID,\n      step: step.step,\n      choiceId: choice.choice_id,\n      pageId: `step-${step.step}-${choice.choice_id}`,\n\n      bucket: BUCKET,\n      fileName,\n      storagePath,\n      supabaseUrl: SUPABASE_URL,\n\n      sceneSummary: step.scene_summary,\n      panels: step.panels,\n\n      geminiPrompt: `\nCreate a full children manga page illustration.\n\nSTYLE:\nSoft pastel Japanese children manga style.\nNo text.\nNo speech bubbles.\nNo typography.\n\n${CHARACTER_LOCK}\n\nSCENE:\n${step.scene_summary}\n\nCHOICE CONTEXT:\n${choice.choice_label}\n\nPANELS:\n${JSON.stringify(step.panels, null, 2)}\n\nMaintain strict character consistency.\n`\n    });\n  }\n}\n\nreturn flattenedPages.map(p => ({ json: p }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ],
+      "id": "2153cb55-03bf-4ef7-ba69-7dbd525d4142",
+      "name": "json parser multi image"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output[0].content[0].text;\n\nlet cleaned = raw.trim();\n\nif (cleaned.startsWith(\"```\")) {\n  cleaned = cleaned\n    .replace(/```json/g, \"\")\n    .replace(/```/g, \"\")\n    .trim();\n}\n\nconst parsed = JSON.parse(cleaned);\n\nconst STORY_ID = `story_${Date.now()}`;\nconst BUCKET = \"BD-Pages\";\nconst SUPABASE_URL = \"https://wddatxgqhdiosuhcztex.supabase.co\";\n\nconst CHARACTER_LOCK = `\nMain character reference (STRICT — MUST remain identical in every image):\n\n8-year-old girl\nshort straight black bob haircut\nsmall red ribbon on the LEFT side of her head\nlarge emerald green eyes\nsoft round child face\nblue adventure tunic with golden trim\nbrown leather boots\nsmall side satchel\nglowing star-shaped pendant around her neck\n\nDO NOT change character design.\nDO NOT change outfit.\nDO NOT move ribbon.\n`;\n\nconst fileName = `page-1.png`;\nconst storagePath = `${STORY_ID}/page-1/${fileName}`;\n\nconst result = {\n  storyId: STORY_ID,\n  pageId: \"page-1\",\n\n  bucket: BUCKET,\n  fileName,\n  storagePath,\n  supabaseUrl: SUPABASE_URL,\n\n  sceneSummary: parsed.page.scene_summary,\n  panels: parsed.page.panels,\n\n  geminiPrompt: `\nCreate a full children manga page illustration.\n\nSTYLE:\nSoft pastel Japanese children manga style.\nNo text.\nNo speech bubbles.\nNo typography.\n\n${CHARACTER_LOCK}\n\nSCENE:\n${parsed.page.scene_summary}\n\nPANELS:\n${JSON.stringify(parsed.page.panels, null, 2)}\n\nMaintain strict character consistency.\n`\n};\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -208
+      ],
+      "id": "c7a16c70-ee98-46e3-9eb7-33061d5cd04d",
+      "name": "paser json single image"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "={{$json.geminiPrompt}}",
+        "options": {
+          "binaryPropertyOutput": "data"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        352
+      ],
+      "id": "b150ab8d-4723-4a74-8e3f-19c0e9580879",
+      "name": "Generating images",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yIkNrcZ8dCenkK89",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        128
+      ],
+      "id": "864302a0-3d3f-44d1-bdc5-ead7d9d6b71e",
+      "name": "Merging json and binary data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/storage/v1/object/{{$json.bucket}}/{{$json.storagePath}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1024,
+        -48
+      ],
+      "id": "3b0f41a6-6819-4804-ac67-b4ec09cef3f4",
+      "name": "Upload images",
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\n\nconst story_id = $json.storyId || null;\n\nconst paragraphe = $json.sceneSummary || null;\n\nconst image_url = `${$json.supabaseUrl}/storage/v1/object/public/${$json.bucket}/${$json.storagePath}`;\n\nreturn {\n  json: {\n    story_id,\n    paragraphe,\n    image_url\n  }\n};\n;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        272
+      ],
+      "id": "6e3fc9da-6718-475f-807d-8b090defdf77",
+      "name": "mapping table fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.2",
+          "mode": "list",
+          "cachedResultName": "GPT-5.2"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "={{$json.chatInput}}"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        -80
+      ],
+      "id": "176326da-b95f-4557-a222-20bcaf7d0731",
+      "name": "prompt images",
+      "credentials": {
+        "openAiApi": {
+          "id": "VBbboUkh3t3o6xhB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Story_Pages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "story_id",
+              "fieldValue": "={{ $json.story_id }}"
+            },
+            {
+              "fieldId": "image_url",
+              "fieldValue": "={{ $json.image_url }}"
+            },
+            {
+              "fieldId": "paragraph",
+              "fieldValue": "={{ $json.paragraphe}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        96
+      ],
+      "id": "379d3086-99e6-4d6c-99a7-af2c400df21a",
+      "name": "table data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "prompt images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "json parser multi image": {
+      "main": [
+        []
+      ]
+    },
+    "paser json single image": {
+      "main": [
+        [
+          {
+            "node": "Merging json and binary data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generating images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generating images": {
+      "main": [
+        [
+          {
+            "node": "Merging json and binary data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merging json and binary data": {
+      "main": [
+        [
+          {
+            "node": "mapping table fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload images": {
+      "main": [
+        []
+      ]
+    },
+    "mapping table fields": {
+      "main": [
+        [
+          {
+            "node": "table data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prompt images": {
+      "main": [
+        [
+          {
+            "node": "paser json single image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "table data": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1ab09319-efcb-4ab8-8899-e749f35555d9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "027eb02d4a7b0317fa0bdafe90c76187906eee4230a62cbad1a63f53a21b3d79"
+  },
+  "id": "QT7bnksqv9SByF8mEZyuz",
+  "tags": []
+}
