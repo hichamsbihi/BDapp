@@ -1,36 +1,57 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
-  Dimensions,
-  TouchableOpacity,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { ComicPage } from '../components/ComicPage';
+import { ViewerControls } from '../components/ViewerControls';
+import { ViewerHeader } from '../components/ViewerHeader';
 
 /**
- * Story reader screen - comic book style reader with full-screen images
- * Uses react-native-pager-view for smooth page flipping
+ * Story reader - illustrated book style viewer.
+ * Uses PagerView for horizontal swiping with image + paragraph per page.
+ * Header and controls overlay toggle on tap.
  */
 export const StoryReaderScreen: React.FC = () => {
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
+  const insets = useSafeAreaInsets();
   const [currentPage, setCurrentPage] = useState(0);
-  const [showHeader, setShowHeader] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
   const pagerRef = useRef<PagerView>(null);
 
   const stories = useAppStore((state) => state.stories);
   const story = stories.find((s) => s.id === storyId);
 
-  const handleClose = () => {
-    // Always go to home, not back (which could be ParagraphScreen)
+  const handleClose = useCallback(() => {
     router.replace('/');
-  };
+  }, []);
+
+  const toggleOverlay = useCallback(() => {
+    setShowOverlay((prev) => !prev);
+  }, []);
+
+  const handlePageSelected = useCallback((e: any) => {
+    setCurrentPage(e.nativeEvent.position);
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    if (currentPage > 0) {
+      pagerRef.current?.setPage(currentPage - 1);
+    }
+  }, [currentPage]);
+
+  const handleNext = useCallback(() => {
+    if (story && currentPage < story.pages.length - 1) {
+      pagerRef.current?.setPage(currentPage + 1);
+    }
+  }, [currentPage, story]);
 
   if (!story || !story.pages || story.pages.length === 0) {
     return (
@@ -43,73 +64,51 @@ export const StoryReaderScreen: React.FC = () => {
     );
   }
 
-  const handlePageSelected = (e: any) => {
-    setCurrentPage(e.nativeEvent.position);
-  };
-
-  const toggleHeader = () => {
-    setShowHeader(!showHeader);
-  };
+  const totalPages = story.pages.length;
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden={!showHeader} />
-      
-      {/* Header - toggleable by tapping screen */}
-      {showHeader && (
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>✕</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.title} numberOfLines={1}>
-            {story.title}
-          </Text>
-          
-          <View style={styles.pageCounter}>
-            <Text style={styles.pageCounterText}>
-              {currentPage + 1}/{story.pages.length}
-            </Text>
-          </View>
-        </View>
-      )}
+      <StatusBar hidden={!showOverlay} />
 
-      {/* PagerView for comic book pages */}
+      <ViewerHeader
+        title={story.title}
+        visible={showOverlay}
+        onClose={handleClose}
+      />
+
       <PagerView
         style={styles.pagerView}
         initialPage={0}
         onPageSelected={handlePageSelected}
         ref={pagerRef}
       >
-        {story.pages.map((page, index) => (
-          <View style={styles.pageContainer} key={page.id}>
-            <TouchableOpacity
-              style={styles.imageTouchable}
-              activeOpacity={1}
-              onPress={toggleHeader}
-            >
-              <Image
-                source={{ uri: page.imageUrl }}
-                style={styles.fullScreenImage}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            
-            {/* Page number overlay (always visible) */}
-            <View style={styles.pageNumberOverlay}>
-              <Text style={styles.pageNumberText}>{page.pageNumber}</Text>
-            </View>
+        {story.pages.map((page) => (
+          <View style={styles.pageWrapper} key={page.id}>
+            <ComicPage
+              page={page}
+              totalPages={totalPages}
+              onTap={toggleOverlay}
+            />
           </View>
         ))}
       </PagerView>
 
-      {/* Navigation hint (only on first page) */}
-      {currentPage === 0 && showHeader && (
+      {/* Bottom controls */}
+      {showOverlay && (
+        <View style={[styles.controlsWrapper, { paddingBottom: insets.bottom }]}>
+          <ViewerControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPrev={handlePrev}
+            onNext={handleNext}
+          />
+        </View>
+      )}
+
+      {/* Swipe hint on first page only */}
+      {currentPage === 0 && showOverlay && (
         <View style={styles.hintContainer}>
-          <Text style={styles.hintText}>← Glisse pour tourner la page →</Text>
+          <Text style={styles.hintText}>Glisse pour tourner la page</Text>
         </View>
       )}
     </View>
@@ -119,123 +118,63 @@ export const StoryReaderScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFCF5',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFCF5',
     padding: 20,
   },
   errorText: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: '#4A3F32',
     marginBottom: 20,
     textAlign: 'center',
   },
   errorButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    backgroundColor: '#FF8A65',
+    borderRadius: 12,
   },
   errorButtonText: {
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: '300',
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  pageCounter: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  pageCounterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+
   pagerView: {
     flex: 1,
   },
-  pageContainer: {
+  pageWrapper: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
   },
-  imageTouchable: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullScreenImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-  },
-  pageNumberOverlay: {
+
+  controlsWrapper: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  pageNumberText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+
   hintContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 80,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 10,
   },
   hintText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    fontSize: 13,
+    color: '#9A8B7A',
+    backgroundColor: 'rgba(255, 252, 245, 0.9)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    fontStyle: 'italic',
+    overflow: 'hidden',
   },
 });

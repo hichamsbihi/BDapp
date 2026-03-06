@@ -5,7 +5,6 @@ import { AppState, HeroProfile, Story } from '@/types';
 
 // Stars economy constants
 const INITIAL_STARS = 3;
-const IMAGE_COST = 1;
 const UNIVERSE_UNLOCK_COST = 3;
 const REWARD_WATCH_AD = 1;
 const REWARD_STORY_COMPLETE = 2;

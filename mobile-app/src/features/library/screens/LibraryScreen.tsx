@@ -6,12 +6,16 @@ import {
   ScrollView,
   Pressable,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ScreenContainer, Modal, StarsBadge } from '@/shared';
+import { ScreenContainer, Modal, StarsBadge, NotEnoughStarsModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { fetchUniverseById } from '@/services/storyService';
+import { exportAndSharePdf } from '@/utils/pdfGenerator';
+import { PDF_EXPORT_COST } from '@/constants/stars';
 import { Story, Universe } from '@/types';
 
 /**
@@ -27,11 +31,16 @@ export const LibraryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showNotEnoughStars, setShowNotEnoughStars] = useState(false);
 
   const stories = useAppStore((state) => state.stories);
   const heroProfile = useAppStore((state) => state.heroProfile);
   const removeStory = useAppStore((state) => state.removeStory);
   const stars = useAppStore((state) => state.stars);
+  const canAfford = useAppStore((state) => state.canAfford);
+  const spendStars = useAppStore((state) => state.spendStars);
+  const rewardStar = useAppStore((state) => state.rewardStar);
 
   // Cache universe data for story cards (color, name)
   const [universesMap, setUniversesMap] = useState<Record<string, Universe>>({});
@@ -75,9 +84,28 @@ export const LibraryScreen: React.FC = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    console.log('Export PDF requested - would show rewarded ad');
-    setModalVisible(false);
+  const handleExportPDF = async () => {
+    if (!selectedStory) return;
+
+    if (!canAfford(PDF_EXPORT_COST)) {
+      setModalVisible(false);
+      setShowNotEnoughStars(true);
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const spent = spendStars(PDF_EXPORT_COST);
+      if (!spent) return;
+
+      await exportAndSharePdf(selectedStory);
+      setModalVisible(false);
+    } catch (error) {
+      console.log('PDF export failed:', error);
+      Alert.alert('Erreur', 'La creation du PDF a echoue. Reessaie plus tard.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDeleteStory = () => {
@@ -235,15 +263,23 @@ export const LibraryScreen: React.FC = () => {
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.modalActionSecondary, pressed && styles.modalActionPressed]}
+            style={({ pressed }) => [
+              styles.modalActionSecondary,
+              pressed && styles.modalActionPressed,
+              isExporting && styles.modalActionDisabled,
+            ]}
             onPress={handleExportPDF}
+            disabled={isExporting}
           >
-            <Text style={styles.modalActionSecondaryText}>
-              Creer le livre PDF
-            </Text>
-            <Text style={styles.modalActionHint}>
-              Regarde une courte video pour debloquer
-            </Text>
+            {isExporting ? (
+              <ActivityIndicator color="#5D4E37" size="small" />
+            ) : (
+              <>
+                <Text style={styles.modalActionSecondaryText}>
+                  Creer le livre PDF ({PDF_EXPORT_COST} etoiles)
+                </Text>
+              </>
+            )}
           </Pressable>
 
           <Pressable
@@ -254,6 +290,13 @@ export const LibraryScreen: React.FC = () => {
           </Pressable>
         </View>
       </Modal>
+
+      <NotEnoughStarsModal
+        visible={showNotEnoughStars}
+        onClose={() => setShowNotEnoughStars(false)}
+        needed={PDF_EXPORT_COST}
+        onWatchMagic={() => rewardStar('watch_ad')}
+      />
     </ScreenContainer>
   );
 };
@@ -486,6 +529,9 @@ const styles = StyleSheet.create({
   modalActionPressed: {
     opacity: 0.8,
   },
+  modalActionDisabled: {
+    opacity: 0.5,
+  },
   modalActionText: {
     fontSize: 16,
     fontWeight: '600',
@@ -495,11 +541,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#5D4E37',
-  },
-  modalActionHint: {
-    fontSize: 12,
-    color: '#9A8B7A',
-    marginTop: 4,
   },
   modalActionDelete: {
     paddingVertical: 14,
