@@ -1,25 +1,31 @@
-# 📚 Monde d'Histoires - Application Mobile
+# Monde d'Histoires - Application Mobile
 
-Application mobile React Native / Expo permettant aux enfants de créer des histoires illustrées (bandes dessinées) de manière interactive et ludique.
+Application mobile React Native / Expo permettant aux enfants de creer des histoires illustrees (bandes dessinees) de maniere interactive et ludique.
 
-## 🎯 Vue d'ensemble
+## Vue d'ensemble
 
-Application destinée aux enfants permettant de :
-- Créer des histoires personnalisées avec leur héros
-- Choisir parmi différents univers (Fantasy, Space, Ocean)
-- Générer des pages de bande dessinée avec images et textes
-- Consulter leur bibliothèque d'histoires créées
+Application destinee aux enfants permettant de :
+- Creer des histoires personnalisees avec leur heros
+- Choisir parmi differents univers (Fantasy, Space, Ocean)
+- Generer des pages de bande dessinee avec images et textes
+- Lire les histoires dans un viewer premium style "livre illustre"
+- Exporter les histoires au format PDF (coute 2 etoiles)
+- Consulter leur bibliotheque d'histoires creees
 
-## 🛠️ Technologies
+## Technologies
 
 - **Framework** : React Native 0.81.5
 - **Plateforme** : Expo SDK 54
 - **Navigation** : Expo Router 6.0 (file-based routing)
 - **State Management** : Zustand 5.0
 - **Language** : TypeScript 5.9
-- **Architecture** : Feature-based architecture
+- **Architecture** : Feature-based architecture + Clean Architecture
+- **Database** : Supabase (PostgreSQL + PostgREST)
+- **PDF Generation** : expo-print + expo-sharing
+- **Image Storage** : Supabase Storage
+- **Data Fetching** : React hooks + Supabase client
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 mobile-app/
@@ -27,166 +33,273 @@ mobile-app/
 │   ├── _layout.tsx               # Layout racine (Stack Navigator)
 │   ├── (tabs)/                   # Navigation par onglets
 │   │   ├── _layout.tsx           # Layout des onglets (Tabs Navigator)
-│   │   ├── index.tsx              # Bibliothèque (LibraryScreen)
-│   │   └── create.tsx             # Redirection vers création
-│   ├── onboarding/               # Flow onboarding (première utilisation)
+│   │   ├── index.tsx              # Bibliotheque (LibraryScreen)
+│   │   └── create.tsx             # Redirection vers creation
+│   ├── onboarding/               # Flow onboarding (premiere utilisation)
 │   │   ├── _layout.tsx           # Stack Navigator onboarding
-│   │   ├── index.tsx              # Écran de bienvenue
-│   │   ├── hero-info.tsx         # Saisie infos héros
-│   │   └── avatar-select.tsx     # Sélection avatar
-│   ├── story/                    # Flow création d'histoire
+│   │   ├── index.tsx              # Ecran de bienvenue
+│   │   ├── hero-info.tsx         # Saisie infos heros
+│   │   └── avatar-select.tsx     # Selection avatar
+│   ├── story/                    # Flow creation d'histoire
 │   │   ├── _layout.tsx           # Stack Navigator story
-│   │   ├── universe-select.tsx   # Choix univers
-│   │   ├── start-select.tsx      # Choix début histoire
+│   │   ├── universe-select.tsx   # Choix univers (depuis Supabase)
+│   │   ├── start-select.tsx      # Choix debut histoire (depuis Supabase)
 │   │   ├── paragraph.tsx        # Affichage paragraphe
-│   │   ├── generating.tsx       # Écran génération (mock)
+│   │   ├── reader.tsx           # Lecteur d'histoire (Comic Viewer V1)
 │   │   └── page.tsx             # Page BD finale
 │   └── paywall.tsx               # Modal paywall
 │
 ├── src/
-│   ├── features/                 # Logique métier par feature
-│   │   ├── onboarding/           # Feature onboarding
+│   ├── features/                 # Logique metier par feature
+│   │   ├── onboarding/
+│   │   ├── story/
+│   │   │   ├── components/
+│   │   │   │   ├── ComicPage.tsx          # Page unique (image + texte)
+│   │   │   │   ├── ViewerControls.tsx     # Navigation (prev/next)
+│   │   │   │   └── ViewerHeader.tsx       # Header overlay transparent
 │   │   │   └── screens/
-│   │   │       ├── WelcomeScreen.tsx
-│   │   │       ├── HeroInfoScreen.tsx
-│   │   │       └── AvatarSelectScreen.tsx
-│   │   ├── story/                # Feature création histoire
-│   │   │   └── screens/
-│   │   │       ├── UniverseSelectScreen.tsx
-│   │   │       ├── StartSelectScreen.tsx
-│   │   │       ├── ParagraphScreen.tsx
-│   │   │       ├── GeneratingScreen.tsx
-│   │   │       └── PageScreen.tsx
-│   │   ├── library/              # Feature bibliothèque
-│   │   │   └── screens/
-│   │   │       └── LibraryScreen.tsx
-│   │   └── paywall/              # Feature paywall
+│   │   │       ├── StoryReaderScreen.tsx  # Lecteur premium PagerView
+│   │   │       └── ...
+│   │   └── library/
 │   │       └── screens/
-│   │           └── PaywallScreen.tsx
+│   │           └── LibraryScreen.tsx      # Bibliotheque avec export PDF
 │   │
-│   ├── shared/                   # Composants UI réutilisables
+│   ├── services/                 # Couche acces donnees (Supabase)
+│   │   └── storyService.ts       # Fetch universes, starts, paragraphs
+│   │
+│   ├── hooks/                    # React hooks custom
+│   │   ├── useUniverses.ts       # Fetch universes par genre
+│   │   └── useStoryStarts.ts     # Fetch debuts d'histoires
+│   │
+│   ├── shared/                   # Composants UI reutilisables
 │   │   ├── Button.tsx
 │   │   ├── Modal.tsx
 │   │   ├── Loader.tsx
-│   │   ├── Card.tsx
+│   │   ├── NotEnoughStarsModal.tsx
 │   │   └── ScreenContainer.tsx
 │   │
 │   ├── store/                    # State management (Zustand)
 │   │   └── index.ts              # Store global
 │   │
-│   ├── data/                     # Données mock
-│   │   ├── avatars.ts            # 4 avatars disponibles
-│   │   ├── universes.ts          # 3 univers + 6 débuts d'histoires
-│   │   └── mockStories.ts        # Stories exemple
+│   ├── utils/                    # Utilitaires
+│   │   ├── pdfGenerator.ts       # Generation PDF (expo-print)
+│   │   └── ids.ts                # Generateurs d'ID
+│   │
+│   ├── constants/                # Constantes applicatives
+│   │   └── stars.ts              # Cout en etoiles (PDF_EXPORT_COST = 2)
 │   │
 │   ├── types/                    # Types TypeScript
-│   │   └── index.ts
+│   │   └── index.ts              # HeroProfile, Story, Universe, etc.
+│   │
+│   ├── lib/                      # Configuration clients
+│   │   └── supabase.ts           # Client Supabase
 │   │
 │   └── assets/                   # Ressources statiques
 │       ├── images/
 │       └── fonts/
 │
+├── .env                          # Variables d'environnement
 ├── package.json
-├── tsconfig.json                 # Configuration TypeScript + alias
-└── app.json                      # Configuration Expo
+├── tsconfig.json
+└── app.json
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Feature-Based Architecture
 
-L'application suit une architecture orientée feature où chaque fonctionnalité est isolée dans son propre dossier :
+Chaque fonctionnalite est isolee dans son propre dossier avec clean separation :
 
-- **onboarding** : Gestion du premier lancement (Welcome → Hero Info → Avatar)
-- **story** : Création d'histoires (Universe → Start → Paragraph → Generating → Page)
-- **library** : Bibliothèque des histoires créées
-- **paywall** : Gestion de la monétisation (mock)
+```
+features/story/
+├── components/     # UI specifique a la feature
+├── screens/        # Ecrans complets
+└── index.ts        # Public API de la feature
+```
+
+### Couche Service (Data Layer)
+
+Le fichier `src/services/storyService.ts` est le seul endroit qui parle a Supabase.
+
+```typescript
+fetchUniversesByGender(gender)      // GET /universes?gender=eq.x
+fetchStoryStarts(universeId)        // GET /story_starts?universe_id=eq.x
+fetchParagraphForPage(universeId, pageNumber)  // GET /story_paragraphs
+fetchChoicesForPage(universeId, pageNumber)    // GET /narrative_choices
+```
+
+Pattern : Les lignes Supabase (snake_case) sont converties en types app (camelCase) via des mappers.
 
 ### State Management (Zustand)
 
-Store global dans `src/store/index.ts` gérant :
+Store global gerant :
 
 ```typescript
-- heroProfile: HeroProfile | null      // Profil héros (nom, âge, genre, avatar)
-- currentStory: Partial<Story> | null  // Histoire en cours de création
-- stories: Story[]                      // Bibliothèque d'histoires
-- isPremium: boolean                    // Statut premium
-- hasCompletedOnboarding: boolean       // Flag onboarding complété
+- heroProfile: HeroProfile | null
+- currentStory: Partial<Story> | null
+- stories: Story[]                      // Histoires sauvegardees
+- stars: number                         // Economie d'etoiles
+- canAfford(amount): boolean
+- spendStars(amount): boolean
 ```
 
 ### Navigation (Expo Router)
 
-Système de routing basé sur les fichiers :
+Routing base sur les fichiers avec layouts imbriques :
 
-1. **Layout racine** (`app/_layout.tsx`) : Stack Navigator principal
-2. **Onglets** (`app/(tabs)/_layout.tsx`) : Tabs Navigator (Bibliothèque / Nouvelle)
-3. **Onboarding** (`app/onboarding/_layout.tsx`) : Stack séquentiel
-4. **Story** (`app/story/_layout.tsx`) : Stack séquentiel avec headers
+1. **Layout racine** (`app/_layout.tsx`) : Stack Navigator
+2. **Onglets** (`app/(tabs)/_layout.tsx`) : Tabs Navigator
+3. **Onboarding** (`app/onboarding/_layout.tsx`) : Stack sequentiel
+4. **Story** (`app/story/_layout.tsx`) : Stack avec Comic Viewer
 
-## 🔄 Flow utilisateur
+## Comic Viewer V1
 
-### Première utilisation (Onboarding)
+Le lecteur d'histoires a ete completement refondu pour une experience premium.
+
+### Composants
+
+- **ComicPage** : Page unique avec image (55% hauteur) + paragraphe en italique
+- **ViewerControls** : Navigation prev/next + indicateur "Page X / Y"
+- **ViewerHeader** : Header overlay semi-transparent (75% opacity)
+
+### Technologies
+
+- **react-native-pager-view** : Swipe horizontal fluide
+- **react-native-reanimated** : Animations (deja installe)
+- **ScrollView** : Defilement du texte long dans chaque page
+- **React.memo** : Optimisation memoization pour eviter les re-renders
+
+### Design
+
+- Fond chaud `#FFFCF5` (parchment)
+- Typographie Georgia-like, 17px, italique, centre
+- Images avec coins arrondis et ombre legere
+- Toggle header au tap sur la page
+
+## Export PDF
+
+### Fonctionnement
+
+L'export PDF coute **2 etoiles** et utilise :
+
+1. **expo-print** : Genere le PDF a partir de HTML/CSS
+2. **expo-file-system** : Renomme le fichier avec le titre de l'histoire
+3. **expo-sharing** : Ouvre le dialogue de partage natif
+
+### Message de partage
+
+Sur iOS : Le message "Decouvre cette histoire magique creee avec MangaKids..." accompagne le PDF.
+
+Sur Android : Le message apparait dans le titre du dialogue de partage.
+
+### Integration LibraryScreen
+
+```typescript
+if (!canAfford(PDF_EXPORT_COST)) {
+  showNotEnoughStarsModal();
+} else {
+  spendStars(2);
+  await exportAndSharePdf(story);
+}
+```
+
+## Economie d'Etoiles (Stars)
+
+Systeme de monnaie narrative (non-monetaire, adapte aux enfants) :
+
+| Action | Cout/Gain |
+|--------|-----------|
+| Export PDF | -2 etoiles |
+| Generer image | -1 etoile |
+| Debloquer univers | -3 etoiles |
+| Regarder magie | +? etoiles |
+| Completer histoire | +? etoiles |
+
+## Flow utilisateur
+
+### Premiere utilisation (Onboarding)
 
 ```
 1. WelcomeScreen
    ↓
-2. HeroInfoScreen
-   - Saisie prénom
-   - Saisie âge (1-12)
-   - Sélection genre (👦/👧)
+2. HeroInfoScreen (prenom, age, genre)
    ↓
-3. AvatarSelectScreen
-   - Choix parmi 4 avatars
+3. AvatarSelectScreen (4 avatars)
    ↓
-4. UniverseSelectScreen (début création première histoire)
+4. UniverseSelectScreen
 ```
 
-### Création d'histoire
+### Creation d'histoire (Data dynamique Supabase)
 
 ```
 1. UniverseSelectScreen
-   - Choix parmi 3 univers (🏰 Fantasy, 🚀 Space, 🌊 Ocean)
+   - Fetch /universes depuis Supabase
    ↓
 2. StartSelectScreen
-   - Choix parmi 2 débuts d'histoires par univers
+   - Fetch /story_starts?universe_id=...
    ↓
 3. ParagraphScreen
-   - Affichage du paragraphe avec texte personnalisé
+   - Affichage du texte personnalise
    ↓
 4. GeneratingScreen
-   - Animation de génération (mock, 4 secondes)
+   - Animation de generation
    ↓
 5. PageScreen
-   - Affichage page BD finale (image + texte)
-   - Options : Sauvegarder / Continuer l'histoire
+   - Affichage page BD (image + texte)
 ```
 
-### Bibliothèque
+### Lecture d'histoire
 
-- Affichage des histoires créées sous forme de cartes
-- Limite gratuite : 1 histoire (paywall après)
-- Modal d'options : Voir / Supprimer
+```
+LibraryScreen → StoryReaderScreen (/story/reader)
+                 ↓
+                 PagerView avec ComicPage
+                 Swipe horizontal entre pages
+                 Header toggleable (transparent)
+                 Controls bottom (prev/next)
+```
 
-## 🚀 Installation et démarrage
+### Export PDF
 
-### Prérequis
+```
+LibraryScreen → Modal actions → "Creer le livre PDF (2 etoiles)"
+                 ↓
+                 Check canAfford(2)
+                 ↓
+                 Generer PDF (expo-print)
+                 ↓
+                 Renommer fichier (expo-file-system)
+                 ↓
+                 Partager (expo-sharing)
+```
 
-- Node.js 20.19.4+ (recommandé)
+## Installation et demarrage
+
+### Prerequis
+
+- Node.js 20.19.4+
 - npm ou yarn
-- Expo CLI (installé globalement ou via npx)
+- Expo CLI (optionnel, peut utiliser npx)
+
+### Variables d'environnement
+
+Creer un fichier `.env` :
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=votre-cle-anon
+```
 
 ### Installation
 
 ```bash
-# Installer les dépendances
+# Installer les dependances
 npm install
 
-# Démarrer le serveur de développement
-npm start
-# ou
+# Démarrer le serveur de developpement
 npx expo start
 
-# Démarrer avec cache vidé (si problèmes)
+# Démarrer avec cache vide
 npx expo start --clear
 ```
 
@@ -196,59 +309,39 @@ npx expo start --clear
 npm start          # Démarrer Expo dev server
 npm run android    # Lancer sur Android
 npm run ios        # Lancer sur iOS
-npm run web        # Lancer sur Web
 ```
 
-## 📝 Principes de développement
+## Base de donnees (Supabase)
 
-### KISS (Keep It Simple, Stupid)
-- Code simple et lisible
-- Pas de sur-ingénierie
-- MVP first
+### Tables principales
 
-### DRY (Don't Repeat Yourself)
-- Composants réutilisables dans `src/shared/`
-- Logique métier isolée par feature
-- Pas de duplication de code
+| Table | Description |
+|-------|-------------|
+| `universes` | Univers disponibles (Fantasy, Space, Ocean) |
+| `story_starts` | Debuts d'histoires par univers |
+| `story_paragraphs` | Paragraphes avec image_url et page_number |
+| `narrative_choices` | Choix narratifs par page |
 
-### YAGNI (You Aren't Gonna Need It)
-- Pas de fonctionnalités non nécessaires
-- Code minimal et fonctionnel
-- Focus sur le MVP
+### Relations
 
-## 🎨 Composants UI partagés
+```
+universes (1) ───< story_starts (N)
+universes (1) ───< story_paragraphs (N)
+story_paragraphs (1) ───< narrative_choices (N)
+```
 
-Tous les composants réutilisables sont dans `src/shared/` :
+## Composants UI partages
+
+Tous les composants reutilisables sont dans `src/shared/` :
 
 - **Button** : Bouton avec variants (primary, secondary, outline)
 - **Modal** : Modal avec overlay et fermeture
 - **Loader** : Indicateur de chargement
-- **Card** : Carte pour afficher du contenu
-- **ScreenContainer** : Container de base pour tous les écrans
+- **ScreenContainer** : Container de base pour tous les ecrans
+- **StarsBadge** : Affichage du nombre d'etoiles
+- **NotEnoughStarsModal** : Modal "pas assez d'etoiles"
 
-## 📊 Données mock
-
-### Avatars
-- 4 avatars disponibles (Luna, Max, Stella, Leo)
-- Identifiés par couleur et initiale
-
-### Univers
-- **Royaume Magique** (Fantasy) : 🏰
-- **Aventure Spatiale** (Space) : 🚀
-- **Monde Sous-Marin** (Ocean) : 🌊
-
-### Débuts d'histoires
-- 2 débuts par univers (6 au total)
-- Textes pré-écrits personnalisables avec le nom du héros
-
-## 🔐 Monétisation (Mock)
-
-- **Limite gratuite** : 1 histoire
-- **Paywall** : Affiché après limite atteinte
-- **Premium** : Flag `isPremium` dans le store (local uniquement)
-- **Fonctionnalités premium** : Histoires illimitées (à implémenter)
-
-## 🧭 Navigation programmatique
+## Navigation programmatique
 
 ```typescript
 import { router } from 'expo-router';
@@ -263,36 +356,67 @@ router.replace('/onboarding');
 router.back();
 ```
 
-## 📱 Routes disponibles
+## Routes disponibles
 
-| Route | Écran | Description |
+| Route | Ecran | Description |
 |-------|-------|-------------|
-| `/` ou `/(tabs)` | LibraryScreen | Bibliothèque des histoires |
-| `/(tabs)/create` | Redirection | Redirige vers création |
-| `/onboarding` | WelcomeScreen | Écran de bienvenue |
-| `/onboarding/hero-info` | HeroInfoScreen | Saisie infos héros |
+| `/` ou `/(tabs)` | LibraryScreen | Bibliotheque avec export PDF |
+| `/(tabs)/create` | Redirection | Redirige vers creation |
+| `/onboarding` | WelcomeScreen | Ecran de bienvenue |
+| `/onboarding/hero-info` | HeroInfoScreen | Saisie infos heros |
 | `/onboarding/avatar-select` | AvatarSelectScreen | Choix avatar |
-| `/story/universe-select` | UniverseSelectScreen | Choix univers |
-| `/story/start-select` | StartSelectScreen | Choix début histoire |
+| `/story/universe-select` | UniverseSelectScreen | Choix univers (Supabase) |
+| `/story/start-select` | StartSelectScreen | Choix debut histoire (Supabase) |
 | `/story/paragraph` | ParagraphScreen | Affichage paragraphe |
-| `/story/generating` | GeneratingScreen | Génération (mock) |
+| `/story/reader` | StoryReaderScreen | Lecteur Comic Viewer V1 |
 | `/story/page` | PageScreen | Page BD finale |
 | `/paywall` | PaywallScreen | Modal paywall |
 
-## 🎯 Prochaines étapes (TODO)
+## Fonctionnalites implementees
 
-- [ ] Intégration API pour génération d'images IA
-- [ ] Persistance des données (AsyncStorage)
-- [ ] Système de paiement réel
-- [ ] Partage d'histoires
-- [ ] Édition d'histoires existantes
-- [ ] Multi-pages par histoire
-- [ ] Export PDF des histoires
+- [x] Onboarding complet (Hero, Avatar)
+- [x] Selection univers dynamique (Supabase)
+- [x] Selection debut histoire dynamique (Supabase)
+- [x] Comic Viewer V1 (PagerView + ComicPage)
+- [x] Export PDF avec nom de fichier personnalise
+- [x] Systeme d'etoiles (economie narrative)
+- [x] Bibliotheque d'histoires persistante
+- [x] Header overlay transparent
+- [x] Numerotation des pages dans le PDF
+- [x] Message de partage magique
 
-## 📄 Licence
+## Ameliorations futures (V2)
+
+- [ ] Zoom pinch sur les images (react-native-gesture-handler)
+- [ ] Mode paysage
+- [ ] Couverture generee par IA
+- [ ] Mode lecture nocturne (fond sombre)
+- [ ] Audio narration
+- [ ] Partage direct sur reseaux sociaux
+- [ ] Edition d'histoires existantes
+- [ ] Multi-pages interactives avec choix
+
+## Principes de developpement
+
+### KISS (Keep It Simple, Stupid)
+- Code simple et lisible
+- Pas de sur-ingenierie
+- MVP first
+
+### DRY (Don't Repeat Yourself)
+- Composants reutilisables dans `src/shared/`
+- Logique metier isolee dans `src/services/`
+- Hooks custom pour la logique reutilisable
+
+### YAGNI (You Aren't Gonna Need It)
+- Pas de fonctionnalites non necessaires
+- Code minimal et fonctionnel
+- Focus sur le MVP
+
+## Licence
 
 Private project
 
 ---
 
-**Note** : Cette application est en phase MVP. Les fonctionnalités de génération d'images et de paiement sont actuellement mockées.
+**Note** : Cette application utilise Supabase pour la persistance des donnees. Les univers et debuts d'histoires sont recuperes dynamiquement depuis la base de donnees. L'export PDF utilise expo-print et expo-sharing pour une generation client-side.
