@@ -13,6 +13,7 @@ import Animated, {
   withSequence,
   withSpring,
   runOnJS,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,27 +63,37 @@ const AnimatedAvatarCardInner: React.FC<AnimatedAvatarCardProps> = ({
   }, []);
 
   const handlePress = useCallback(() => {
-    // Bounce, sparkle and frame swap only when selecting (not when deselecting)
-    if (!isSelected) {
-      scale.value = withSequence(
-        withSpring(0.88, { damping: 15, stiffness: 400 }),
-        withSpring(1.08, { damping: 10, stiffness: 250 }),
-        withSpring(1, { damping: 14, stiffness: 300 })
-      );
-      lottieRef.current?.reset();
-      lottieRef.current?.play();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      setTimeout(() => runOnJS(switchToReaction)(), 150);
-      timeoutRef.current = setTimeout(() => runOnJS(resetFrame)(), 1600);
-    }
+    // Squash then back to 1 — no overshoot/enlarge
+    scale.value = withSequence(
+      withSpring(0.92, { damping: 15, stiffness: 400 }),
+      withSpring(1, { damping: 14, stiffness: 300 })
+    );
+    lottieRef.current?.reset();
+    lottieRef.current?.play();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setTimeout(() => runOnJS(switchToReaction)(), 150);
+    timeoutRef.current = setTimeout(() => runOnJS(resetFrame)(), 1600);
 
     onSelect(avatar);
-  }, [avatar, isSelected, onSelect, switchToReaction, resetFrame]);
+  }, [avatar, onSelect, switchToReaction, resetFrame]);
 
   // Only scale on press — no entrance animation, no translateY, no glow
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  // When deselected: cancel ongoing animation, reset scale and frame immediately
+  React.useEffect(() => {
+    if (!isSelected) {
+      cancelAnimation(scale);
+      scale.value = 1;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setActiveFrame('normal');
+    }
+  }, [isSelected]);
 
   React.useEffect(() => {
     return () => {

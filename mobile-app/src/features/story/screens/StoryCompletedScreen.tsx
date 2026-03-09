@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  Dimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, {
@@ -7,94 +14,124 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
-  withSequence,
   withSpring,
+  withRepeat,
+  withSequence,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
 import { ScreenContainer, StarsBadge } from '@/shared';
 import { useAppStore } from '@/store';
+import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
+
+const EASING = Easing.out(Easing.cubic);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const AVATAR_SIZE = 128;
+const HERO_CARD_PADDING = spacing.xxl;
+const DECO_CIRCLE_SIZE = 160;
 
 /**
  * StoryCompletedScreen
- * 
- * The climax of the creation journey.
- * A moment of pride, accomplishment, and wonder.
- * 
- * The child has just created something.
- * This screen celebrates that act.
+ * Celebration moment: avatar, congratulations, and clear next steps.
+ * Designed for a "wow" effect with gradient background, Lottie and decorative elements.
  */
 export const StoryCompletedScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
-  
+
   const heroProfile = useAppStore((state) => state.heroProfile);
   const stories = useAppStore((state) => state.stories);
   const stars = useAppStore((state) => state.stars);
 
   const story = stories.find((s) => s.id === storyId);
-  const heroName = heroProfile?.name || 'auteur';
+  const heroName = heroProfile?.name || 'toi';
+  const avatarImageUrl = heroProfile?.avatarImageUrl;
+  const avatarCharacterName = heroProfile?.avatarCharacterName;
 
-  // Animation values
-  const celebrationScale = useSharedValue(0.8);
-  const celebrationOpacity = useSharedValue(0);
+  const lottieBurstRef = React.useRef<LottieView>(null);
+  const lottieSparkle1Ref = React.useRef<LottieView>(null);
+  const lottieSparkle2Ref = React.useRef<LottieView>(null);
+
+  const avatarScale = useSharedValue(0.5);
+  const avatarOpacity = useSharedValue(0);
+  const avatarFloat = useSharedValue(0);
+  const cardScale = useSharedValue(0.92);
+  const cardOpacity = useSharedValue(0);
+  const badgeOpacity = useSharedValue(0);
   const titleOpacity = useSharedValue(0);
   const messageOpacity = useSharedValue(0);
   const actionsOpacity = useSharedValue(0);
-  const sparkle1 = useSharedValue(0);
-  const sparkle2 = useSharedValue(0);
-  const sparkle3 = useSharedValue(0);
+  const deco1Opacity = useSharedValue(0);
+  const deco2Opacity = useSharedValue(0);
+  const deco3Opacity = useSharedValue(0);
 
   useEffect(() => {
-    // Celebration entrance
-    celebrationOpacity.value = withTiming(1, { duration: 600 });
-    celebrationScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+    lottieBurstRef.current?.play();
+    setTimeout(() => {
+      lottieSparkle1Ref.current?.play();
+      lottieSparkle2Ref.current?.play();
+    }, 400);
 
-    // Sparkles appear with stagger
-    sparkle1.value = withDelay(300, withTiming(1, { duration: 400 }));
-    sparkle2.value = withDelay(450, withTiming(1, { duration: 400 }));
-    sparkle3.value = withDelay(600, withTiming(1, { duration: 400 }));
+    avatarOpacity.value = withTiming(1, { duration: 400 });
+    avatarScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+    avatarFloat.value = withDelay(
+      600,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
+    );
 
-    // Title appears
+    deco1Opacity.value = withDelay(200, withTiming(0.35, { duration: 800 }));
+    deco2Opacity.value = withDelay(400, withTiming(0.25, { duration: 800 }));
+    deco3Opacity.value = withDelay(600, withTiming(0.3, { duration: 800 }));
+
+    cardOpacity.value = withDelay(300, withTiming(1, { duration: 500, easing: EASING }));
+    cardScale.value = withDelay(300, withSpring(1, { damping: 14, stiffness: 90 }));
+
+    badgeOpacity.value = withDelay(500, withTiming(1, { duration: 400 }));
     titleOpacity.value = withDelay(
-      400,
-      withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
+      600,
+      withTiming(1, { duration: 500, easing: EASING })
     );
-
-    // Message appears
     messageOpacity.value = withDelay(
-      700,
-      withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
+      900,
+      withTiming(1, { duration: 500, easing: EASING })
     );
-
-    // Actions appear last
     actionsOpacity.value = withDelay(
-      1000,
-      withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })
+      1100,
+      withTiming(1, { duration: 400, easing: EASING })
     );
   }, []);
 
-  const celebrationStyle = useAnimatedStyle(() => ({
-    opacity: celebrationOpacity.value,
-    transform: [{ scale: celebrationScale.value }],
+  const avatarStyle = useAnimatedStyle(() => ({
+    opacity: avatarOpacity.value,
+    transform: [
+      { scale: avatarScale.value },
+      { translateY: interpolate(avatarFloat.value, [0, 1], [0, -6]) },
+    ],
   }));
 
-  const sparkleStyle = (progress: { value: number }, _delay: number) =>
-    useAnimatedStyle(() => ({
-      opacity: progress.value,
-      transform: [
-        { scale: interpolate(progress.value, [0, 1], [0.5, 1]) },
-        { rotate: `${interpolate(progress.value, [0, 1], [0, 15])}deg` },
-      ],
-    }));
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ scale: cardScale.value }],
+  }));
 
-  const sparkle1Style = sparkleStyle(sparkle1, 0);
-  const sparkle2Style = sparkleStyle(sparkle2, 0);
-  const sparkle3Style = sparkleStyle(sparkle3, 0);
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: badgeOpacity.value,
+    transform: [{ scale: interpolate(badgeOpacity.value, [0, 1], [0.8, 1]) }],
+  }));
 
   const titleStyle = useAnimatedStyle(() => ({
     opacity: titleOpacity.value,
-    transform: [{ translateY: interpolate(titleOpacity.value, [0, 1], [20, 0]) }],
+    transform: [{ translateY: interpolate(titleOpacity.value, [0, 1], [12, 0]) }],
   }));
 
   const messageStyle = useAnimatedStyle(() => ({
@@ -104,6 +141,10 @@ export const StoryCompletedScreen: React.FC = () => {
   const actionsStyle = useAnimatedStyle(() => ({
     opacity: actionsOpacity.value,
   }));
+
+  const deco1Style = useAnimatedStyle(() => ({ opacity: deco1Opacity.value }));
+  const deco2Style = useAnimatedStyle(() => ({ opacity: deco2Opacity.value }));
+  const deco3Style = useAnimatedStyle(() => ({ opacity: deco3Opacity.value }));
 
   const handleReadStory = () => {
     if (story) {
@@ -122,78 +163,139 @@ export const StoryCompletedScreen: React.FC = () => {
     router.replace('/');
   };
 
+  const congratulationsMessage = avatarCharacterName
+    ? `Bravo ${heroName} ! ${avatarCharacterName} et toi avez créé une histoire unique.`
+    : `${heroName}, tu viens de créer quelque chose qui n'existait pas.`;
+
   return (
-    <ScreenContainer style={styles.container}>
-      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadge count={stars} />
-      </View>
-      <View style={styles.content}>
-        {/* Celebration visual */}
-        <Animated.View style={[styles.celebrationContainer, celebrationStyle]}>
-          {/* Central book symbol */}
-          <View style={styles.bookSymbol}>
-            <View style={styles.bookCover} />
-            <View style={styles.bookPages} />
-          </View>
-          
-          {/* Sparkles */}
-          <Animated.View style={[styles.sparkle, styles.sparkle1, sparkle1Style]} />
-          <Animated.View style={[styles.sparkle, styles.sparkle2, sparkle2Style]} />
-          <Animated.View style={[styles.sparkle, styles.sparkle3, sparkle3Style]} />
-        </Animated.View>
+    <View style={styles.wrapper}>
+      <LinearGradient
+        colors={['#FFF9F0', '#FFF5E8', '#FFEEE0', '#FFFCF5'] as const}
+        style={StyleSheet.absoluteFill}
+      />
 
-        {/* Congratulation text */}
-        <Animated.View style={[styles.textContainer, titleStyle]}>
-          <Text style={styles.headline}>
-            C'est ecrit.
-          </Text>
-          <Text style={styles.storyTitle}>
-            {story?.title || 'Ton histoire'}
-          </Text>
-        </Animated.View>
+      <Animated.View style={[styles.decoCircle, styles.deco1, deco1Style]} />
+      <Animated.View style={[styles.decoCircle, styles.deco2, deco2Style]} />
+      <Animated.View style={[styles.decoCircle, styles.deco3, deco3Style]} />
 
-        {/* Emotional message */}
-        <Animated.View style={[styles.messageContainer, messageStyle]}>
-          <Text style={styles.message}>
-            {heroName}, tu viens de creer{'\n'}
-            quelque chose qui n'existait pas.
-          </Text>
-          <Text style={styles.submessage}>
-            Garde-le precieusement.
-          </Text>
-        </Animated.View>
+      <ScreenContainer style={styles.container}>
+        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+          <StarsBadge count={stars} />
+        </View>
 
-        {/* Actions */}
-        <Animated.View style={[styles.actionsContainer, actionsStyle]}>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
-            onPress={handleReadStory}
-          >
-            <Text style={styles.primaryButtonText}>Decouvrir mon histoire</Text>
-          </Pressable>
+        <View style={styles.content}>
+          <LottieView
+            ref={lottieBurstRef}
+            source={require('@/assets/animations/stars-burst.json')}
+            autoPlay
+            loop={false}
+            style={styles.lottieBurst}
+          />
+          <LottieView
+            ref={lottieSparkle1Ref}
+            source={require('@/assets/animations/sparkle-loop.json')}
+            autoPlay
+            loop
+            style={styles.lottieSparkle1}
+          />
+          <LottieView
+            ref={lottieSparkle2Ref}
+            source={require('@/assets/animations/sparkle-loop.json')}
+            autoPlay
+            loop
+            style={styles.lottieSparkle2}
+          />
 
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
-            onPress={handleGoToLibrary}
-          >
-            <Text style={styles.secondaryButtonText}>Ma bibliotheque</Text>
-          </Pressable>
+          <Animated.View style={[styles.avatarSection, avatarStyle]}>
+            <LinearGradient
+              colors={['#FF8A65', '#FFD54F', '#FFB74D', '#FF8A65'] as const}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarRing}
+            >
+              <View style={styles.avatarInner}>
+                {avatarImageUrl ? (
+                  <Image
+                    source={{ uri: avatarImageUrl }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarPlaceholderText}>?</Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+            {avatarCharacterName ? (
+              <Text style={styles.avatarLabel}>{avatarCharacterName}</Text>
+            ) : null}
+          </Animated.View>
 
-          <Pressable
-            style={({ pressed }) => [styles.tertiaryButton, pressed && styles.tertiaryButtonPressed]}
-            onPress={handleGoHome}
-          >
-            <Text style={styles.tertiaryButtonText}>Retour</Text>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </ScreenContainer>
+          <Animated.View style={[styles.heroCard, cardStyle]}>
+            <LinearGradient
+              colors={[colors.surfaceElevated, '#FFFBF7'] as const}
+              style={styles.heroCardGradient}
+            >
+              <Animated.View style={[styles.badgeWrap, badgeStyle]}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>Histoire créée !</Text>
+                </View>
+              </Animated.View>
+
+              <Animated.View style={[styles.textSection, titleStyle]}>
+                <Text style={styles.headline}>C'est écrit.</Text>
+                <Text style={styles.storyTitle}>{story?.title || 'Ton histoire'}</Text>
+              </Animated.View>
+            </LinearGradient>
+          </Animated.View>
+
+          <Animated.View style={[styles.messageSection, messageStyle]}>
+            <Text style={styles.message}>{congratulationsMessage}</Text>
+            <Text style={styles.submessage}>Garde-la précieusement.</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.actionsSection, actionsStyle]}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleReadStory}
+            >
+              <LinearGradient
+                colors={[colors.primary, colors.primaryDark] as const}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryButtonGradient}
+              >
+                <Text style={styles.primaryButtonText}>Découvrir mon histoire</Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
+              onPress={handleGoToLibrary}
+            >
+              <Text style={styles.secondaryButtonText}>Ma bibliothèque</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.tertiaryButton, pressed && styles.tertiaryButtonPressed]}
+              onPress={handleGoHome}
+            >
+              <Text style={styles.tertiaryButtonText}>Retour</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </ScreenContainer>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: 'transparent',
   },
   starsHeader: {
     position: 'absolute',
@@ -201,156 +303,220 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 80,
+    paddingHorizontal: spacing.xl,
+    paddingTop: 40,
     alignItems: 'center',
   },
 
-  // Celebration visual
-  celebrationContainer: {
-    width: 180,
-    height: 180,
+  decoCircle: {
+    position: 'absolute',
+    borderRadius: DECO_CIRCLE_SIZE / 2,
+    backgroundColor: colors.accent,
+  },
+  deco1: {
+    width: DECO_CIRCLE_SIZE,
+    height: DECO_CIRCLE_SIZE,
+    top: '15%',
+    left: -DECO_CIRCLE_SIZE / 2,
+  },
+  deco2: {
+    width: DECO_CIRCLE_SIZE * 1.2,
+    height: DECO_CIRCLE_SIZE * 1.2,
+    top: '35%',
+    right: -DECO_CIRCLE_SIZE * 0.6,
+    backgroundColor: colors.primary,
+  },
+  deco3: {
+    width: DECO_CIRCLE_SIZE * 0.8,
+    height: DECO_CIRCLE_SIZE * 0.8,
+    bottom: '22%',
+    left: -DECO_CIRCLE_SIZE * 0.3,
+    backgroundColor: colors.secondary,
+  },
+
+  lottieBurst: {
+    position: 'absolute',
+    top: 24,
+    left: SCREEN_WIDTH / 2 - 80,
+    width: 160,
+    height: 160,
+    pointerEvents: 'none',
+  },
+  lottieSparkle1: {
+    position: 'absolute',
+    top: 90,
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    pointerEvents: 'none',
+  },
+  lottieSparkle2: {
+    position: 'absolute',
+    top: 200,
+    left: spacing.sm,
+    width: 48,
+    height: 48,
+    pointerEvents: 'none',
+  },
+
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    zIndex: 2,
+  },
+  avatarRing: {
+    width: AVATAR_SIZE + 14,
+    height: AVATAR_SIZE + 14,
+    borderRadius: (AVATAR_SIZE + 14) / 2,
+    padding: 7,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
+    ...shadows.lg,
   },
-  bookSymbol: {
-    width: 80,
-    height: 100,
-    position: 'relative',
+  avatarInner: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
   },
-  bookCover: {
-    position: 'absolute',
-    width: 80,
-    height: 100,
-    backgroundColor: '#FF8A65',
-    borderRadius: 6,
-    // Subtle shadow
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+  avatarImage: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
   },
-  bookPages: {
-    position: 'absolute',
-    right: 4,
-    top: 4,
-    bottom: 4,
-    width: 6,
-    backgroundColor: '#FAF6F0',
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
+  avatarPlaceholder: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.border,
   },
-  sparkle: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#FF8A65',
+  avatarPlaceholderText: {
+    fontSize: typography.size.xxl,
+    color: colors.text.muted,
+    fontWeight: typography.weight.bold,
   },
-  sparkle1: {
-    top: 20,
-    left: 30,
-    opacity: 0.7,
-  },
-  sparkle2: {
-    top: 40,
-    right: 25,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    opacity: 0.5,
-  },
-  sparkle3: {
-    bottom: 30,
-    left: 40,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    opacity: 0.6,
+  avatarLabel: {
+    marginTop: spacing.sm,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
   },
 
-  // Text
-  textContainer: {
+  heroCard: {
+    width: '100%',
+    marginBottom: spacing.xxl,
+    borderRadius: radius.lg + 4,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  heroCardGradient: {
+    paddingVertical: HERO_CARD_PADDING,
+    paddingHorizontal: HERO_CARD_PADDING,
     alignItems: 'center',
-    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.lg + 4,
+  },
+  badgeWrap: {
+    marginBottom: spacing.md,
+  },
+  badge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+  },
+  badgeText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    letterSpacing: 0.5,
+  },
+  textSection: {
+    alignItems: 'center',
   },
   headline: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#4A3F32',
-    marginBottom: 8,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   storyTitle: {
-    fontSize: 20,
+    fontSize: typography.size.xl,
     fontStyle: 'italic',
-    color: '#8D7B68',
+    color: colors.text.muted,
+    textAlign: 'center',
   },
 
-  // Message
-  messageContainer: {
+  messageSection: {
     alignItems: 'center',
-    marginBottom: 48,
-    paddingHorizontal: 20,
+    marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
   },
   message: {
-    fontSize: 17,
-    color: '#6B5E50',
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 16,
+    lineHeight: 26,
+    marginBottom: spacing.lg,
   },
   submessage: {
-    fontSize: 15,
+    fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: '#9A8B7A',
+    color: colors.text.muted,
   },
 
-  // Actions
-  actionsContainer: {
+  actionsSection: {
     width: '100%',
-    gap: 12,
+    gap: spacing.md,
     paddingBottom: 40,
   },
   primaryButton: {
-    backgroundColor: '#FF8A65',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  primaryButtonGradient: {
     paddingVertical: 18,
-    borderRadius: 14,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonPressed: {
-    opacity: 0.85,
+    opacity: 0.9,
   },
   primaryButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
   secondaryButton: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.surfaceElevated,
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   secondaryButtonPressed: {
-    backgroundColor: '#FAF6F0',
+    backgroundColor: colors.surface,
   },
   secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#5D4E37',
+    fontSize: typography.size.md + 1,
+    fontWeight: typography.weight.medium,
+    color: colors.text.secondary,
   },
   tertiaryButton: {
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   tertiaryButtonPressed: {
     opacity: 0.6,
   },
   tertiaryButtonText: {
-    fontSize: 14,
-    color: '#9A8B7A',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
   },
 });

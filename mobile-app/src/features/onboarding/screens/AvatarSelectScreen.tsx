@@ -76,7 +76,11 @@ export const AvatarSelectScreen: React.FC = () => {
 
   const handleComplete = () => {
     if (!selectedAvatar) return;
-    updateHeroProfile({ avatarId: selectedAvatar.id });
+    updateHeroProfile({
+      avatarId: selectedAvatar.id,
+      avatarImageUrl: selectedAvatar.frames.normal,
+      avatarCharacterName: selectedAvatar.characterName,
+    });
     router.replace('/story/universe-select');
   };
 

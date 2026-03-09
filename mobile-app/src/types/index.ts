@@ -5,6 +5,10 @@ export interface HeroProfile {
   age: number;
   gender: 'boy' | 'girl';
   avatarId: string;
+  /** Avatar image URL (normal frame) for display on completed story, etc. */
+  avatarImageUrl?: string;
+  /** Avatar character name for display (e.g. "Léo", "Mia") */
+  avatarCharacterName?: string;
 }
 
 // Avatar types (legacy - used by store for selected avatar reference)
