@@ -39,11 +39,21 @@ export const HeroInfoScreen: React.FC = () => {
   const [gender, setGender] = useState<Gender | null>(null);
 
   const ageInputRef = useRef<TextInput>(null);
+  const heroProfile = useAppStore((state) => state.heroProfile);
   const setHeroProfile = useAppStore((state) => state.setHeroProfile);
+  const updateHeroProfile = useAppStore((state) => state.updateHeroProfile);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  
-  // Show step indicator only for new users
+
+  const isEditMode = Boolean(hasCompletedOnboarding && heroProfile);
   const isNewUser = !hasCompletedOnboarding;
+
+  useEffect(() => {
+    if (isEditMode && heroProfile) {
+      setName(heroProfile.name || '');
+      setAge(heroProfile.age ? String(heroProfile.age) : '');
+      setGender(heroProfile.gender || null);
+    }
+  }, [isEditMode, heroProfile?.id]);
 
   // Animation progress values (0 = hidden, 1 = visible)
   const headerProgress = useSharedValue(0);
@@ -155,6 +165,16 @@ export const HeroInfoScreen: React.FC = () => {
   const handleContinue = () => {
     Keyboard.dismiss();
     if (!isValid || !gender) return;
+
+    if (isEditMode && heroProfile) {
+      updateHeroProfile({
+        name: name.trim(),
+        age: parseInt(age, 10),
+        gender,
+      });
+      router.back();
+      return;
+    }
 
     setHeroProfile({
       id: `hero-${Date.now()}`,
@@ -316,7 +336,7 @@ export const HeroInfoScreen: React.FC = () => {
             disabled={!isValid}
           >
             <Text style={[styles.buttonText, !isValid && styles.buttonTextDisabled]}>
-              C'est moi !
+              {isEditMode ? 'Sauvegarder' : "C'est moi !"}
             </Text>
           </Pressable>
         </Animated.View>

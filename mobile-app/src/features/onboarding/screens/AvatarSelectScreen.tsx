@@ -6,7 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,6 +26,9 @@ import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 const EASING = Easing.out(Easing.cubic);
 
 export const AvatarSelectScreen: React.FC = () => {
+  const params = useLocalSearchParams<{ from?: string }>();
+  const fromHome = params.from === 'home';
+
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarCharacter | null>(null);
 
   const updateHeroProfile = useAppStore((s) => s.updateHeroProfile);
@@ -81,7 +84,11 @@ export const AvatarSelectScreen: React.FC = () => {
       avatarImageUrl: selectedAvatar.frames.normal,
       avatarCharacterName: selectedAvatar.characterName,
     });
-    router.replace('/story/universe-select');
+    if (fromHome) {
+      router.back();
+    } else {
+      router.replace('/story/universe-select');
+    }
   };
 
   const confirmMessage = heroProfile?.name
