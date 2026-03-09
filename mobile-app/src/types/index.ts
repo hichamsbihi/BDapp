@@ -7,12 +7,30 @@ export interface HeroProfile {
   avatarId: string;
 }
 
-// Avatar types
+// Avatar types (legacy - used by store for selected avatar reference)
 export interface Avatar {
   id: string;
   name: string;
   imageUrl: string;
   color?: string;
+}
+
+// Frame-based avatar system (Supabase avatars table)
+export type FrameType = 'normal' | 'blink' | 'wink' | 'happy';
+
+export interface AvatarFrames {
+  normal: string;
+  blink?: string;
+  wink?: string;
+  happy?: string;
+}
+
+export interface AvatarCharacter {
+  id: string;
+  characterName: string;
+  frames: AvatarFrames;
+  gender: 'boy' | 'girl' | 'all';
+  displayOrder: number;
 }
 
 // Universe types

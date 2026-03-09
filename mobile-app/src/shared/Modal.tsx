@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { colors, radius, spacing, typography } from '@/theme/theme';
 
 interface ModalProps {
   visible: boolean;
@@ -15,9 +16,6 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-/**
- * Reusable modal component with overlay
- */
 export const Modal: React.FC<ModalProps> = ({
   visible,
   onClose,
@@ -57,14 +55,14 @@ export const Modal: React.FC<ModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   content: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
@@ -73,30 +71,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontSize: typography.size.xl - 2,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
     flex: 1,
   },
   closeButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8E8E93',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
   },
   body: {
-    padding: 16,
+    padding: spacing.lg,
   },
 });

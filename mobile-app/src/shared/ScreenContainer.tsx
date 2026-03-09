@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, spacing } from '@/theme/theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -9,10 +10,6 @@ interface ScreenContainerProps {
   safeArea?: boolean;
 }
 
-/**
- * Base container for all screens
- * Provides consistent padding and safe area handling
- */
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
   style,
@@ -31,9 +28,9 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   padded: {
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
   },
 });

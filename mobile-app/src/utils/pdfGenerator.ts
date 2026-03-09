@@ -21,28 +21,23 @@ export const generateStoryPdf = async (story: Story): Promise<string> => {
   const totalPages = story.pages.length;
 
   const pagesHtml = story.pages
-    .map(
-      (page, index) => `
-      <div class="page ${index > 0 ? 'page-break' : ''}">
-        <div class="image-container">
-          <img src="${page.imageUrl}" class="page-image"/>
-        </div>
+.map((page,index)=>`
+<div class="page ${index>0?'page-break':''}">
 
-        <div class="divider">
-          <span class="divider-line"></span>
-          <span class="divider-dot"></span>
-          <span class="divider-line"></span>
-        </div>
+  <div class="image-container">
+    <img src="${page.imageUrl}" class="page-image"/>
+  </div>
 
-        <p class="paragraph">${escapeHtml(page.paragraphText)}</p>
+  <div class="paragraph">
+    ${escapeHtml(page.paragraphText)}
+  </div>
 
-        <div class="page-footer">
-          Page ${page.pageNumber} / ${totalPages}
-        </div>
-      </div>
-    `
-    )
-    .join('');
+  <div class="page-footer">
+    Page ${page.pageNumber} / ${totalPages}
+  </div>
+
+</div>
+`).join('');
 
   const html = `
 <!DOCTYPE html>
@@ -96,15 +91,18 @@ html,body{
   color:#8E7F70;
 }
 
-/* PAGE */
+/* PAGE LAYOUT */
 
 .page{
   width:595px;
   height:842px;
-  display:flex;
-  flex-direction:column;
+
+  display:grid;
+  grid-template-rows: 1fr auto 40px;
+
   align-items:center;
-  justify-content:flex-start;
+  justify-items:center;
+
   padding:30px;
 }
 
@@ -116,36 +114,33 @@ html,body{
 
 .image-container{
   width:100%;
+  height:100%;
+
   display:flex;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
 }
 
 .page-image{
-  width:100%;
-  height:auto;
-  max-height:520px;
+  max-width:100%;
+  max-height:100%;
   object-fit:contain;
   border-radius:10px;
 }
 
-/* TEXT BLOCK */
+/* TEXT */
 
 .paragraph{
-  margin-top:25px;
+  max-width:480px;
   font-size:16px;
   line-height:1.7;
   text-align:center;
-  max-width:480px;
-  padding:18px 22px;
-  background:#FFF8ED;
-  border-radius:10px;
+  margin-top:10px;
 }
 
 /* FOOTER */
 
 .page-footer{
-  margin-top:auto;
   font-size:11px;
   color:#B8A99A;
   letter-spacing:1px;

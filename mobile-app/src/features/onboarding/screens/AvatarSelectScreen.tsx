@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
@@ -13,125 +13,44 @@ import Animated, {
   withTiming,
   withDelay,
   withSpring,
-  withSequence,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
-import { getAvatarsByGender } from '@/data';
-import { Avatar } from '@/types';
+import { useAvatars } from '@/hooks/useAvatars';
+import { AvatarCharacter } from '@/types';
+import { AnimatedAvatarCard } from '../components/AnimatedAvatarCard';
+import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const AVATAR_SIZE = (SCREEN_WIDTH - 72) / 2;
-const ANIMATION_DURATION = 600;
 const EASING = Easing.out(Easing.cubic);
 
-/**
- * Individual animated avatar component
- * Each instance has its own animation hooks (valid React pattern)
- */
-interface AnimatedAvatarProps {
-  avatar: Avatar;
-  index: number;
-  isSelected: boolean;
-  onSelect: (id: string) => void;
-}
-
-const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
-  avatar,
-  index,
-  isSelected,
-  onSelect,
-}) => {
-  const progress = useSharedValue(0);
-  const scale = useSharedValue(1);
-
-  // Entrance animation with stagger
-  useEffect(() => {
-    progress.value = withDelay(
-      250 + index * 120,
-      withTiming(1, { duration: 500, easing: EASING })
-    );
-  }, [index]);
-
-  // Bounce animation on selection
-  const handlePress = () => {
-    scale.value = withSequence(
-      withSpring(0.95, { damping: 10, stiffness: 400 }),
-      withSpring(1.08, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 12, stiffness: 400 })
-    );
-    onSelect(avatar.id);
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scale: progress.value * scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.avatarWrapper, animatedStyle]}>
-      <Pressable
-        style={[styles.avatarCard, isSelected && styles.avatarCardSelected]}
-        onPress={handlePress}
-      >
-        {isSelected && (
-          <View style={[styles.glowEffect, { backgroundColor: avatar.color }]} />
-        )}
-
-        <View style={[styles.avatarCircle, { backgroundColor: avatar.color }]}>
-          <Text style={styles.avatarInitial}>{avatar.name.charAt(0)}</Text>
-        </View>
-
-        <Text style={[styles.avatarName, isSelected && styles.avatarNameSelected]}>
-          {avatar.name}
-        </Text>
-
-        {isSelected && (
-          <View style={styles.selectedBadge}>
-            <Text style={styles.selectedBadgeText}>✓</Text>
-          </View>
-        )}
-      </Pressable>
-    </Animated.View>
-  );
-};
-
-/**
- * Avatar selection screen - final step of onboarding
- */
 export const AvatarSelectScreen: React.FC = () => {
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarCharacter | null>(null);
 
-  const updateHeroProfile = useAppStore((state) => state.updateHeroProfile);
-  const heroProfile = useAppStore((state) => state.heroProfile);
-  const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  
-  // Show step indicator only for new users
+  const updateHeroProfile = useAppStore((s) => s.updateHeroProfile);
+  const heroProfile = useAppStore((s) => s.heroProfile);
+  const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
   const isNewUser = !hasCompletedOnboarding;
 
-  // Get avatars filtered by gender
-  const avatars = useMemo(() => {
-    const gender = heroProfile?.gender || 'boy';
-    return getAvatarsByGender(gender);
-  }, [heroProfile?.gender]);
+  const gender = heroProfile?.gender || 'boy';
+  const { avatars, loading, error } = useAvatars(gender);
 
-  // Animation values
+  // Animations
   const headerProgress = useSharedValue(0);
   const buttonProgress = useSharedValue(0);
-  const confirmMessageProgress = useSharedValue(0);
+  const confirmProgress = useSharedValue(0);
 
   useEffect(() => {
-    headerProgress.value = withTiming(1, { duration: ANIMATION_DURATION, easing: EASING });
+    headerProgress.value = withTiming(1, { duration: 600, easing: EASING });
     buttonProgress.value = withDelay(800, withTiming(1, { duration: 700, easing: EASING }));
   }, []);
 
   useEffect(() => {
-    confirmMessageProgress.value = selectedAvatarId
+    confirmProgress.value = selectedAvatar
       ? withSpring(1, { damping: 12, stiffness: 200 })
       : withTiming(0, { duration: 200 });
-  }, [selectedAvatarId]);
+  }, [selectedAvatar]);
 
   const headerStyle = useAnimatedStyle(() => ({
     opacity: headerProgress.value,
@@ -143,28 +62,33 @@ export const AvatarSelectScreen: React.FC = () => {
     transform: [{ scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) }],
   }));
 
-  const confirmMessageStyle = useAnimatedStyle(() => ({
-    opacity: confirmMessageProgress.value,
+  const confirmStyle = useAnimatedStyle(() => ({
+    opacity: confirmProgress.value,
     transform: [
-      { scale: interpolate(confirmMessageProgress.value, [0, 1], [0.8, 1]) },
-      { translateY: interpolate(confirmMessageProgress.value, [0, 1], [10, 0]) },
+      { scale: interpolate(confirmProgress.value, [0, 1], [0.8, 1]) },
+      { translateY: interpolate(confirmProgress.value, [0, 1], [10, 0]) },
     ],
   }));
 
+  const handleSelect = (avatar: AvatarCharacter) => {
+    setSelectedAvatar(avatar);
+  };
+
   const handleComplete = () => {
-    if (!selectedAvatarId) return;
-    updateHeroProfile({ avatarId: selectedAvatarId });
-    // Note: setHasCompletedOnboarding is called in UniverseSelectScreen
-    // after user selects a universe (to keep step 3 visible)
+    if (!selectedAvatar) return;
+    updateHeroProfile({ avatarId: selectedAvatar.id });
     router.replace('/story/universe-select');
   };
 
-  const getConfirmationMessage = () => {
-    const name = heroProfile?.name || '';
-    return name
-      ? `Parfait ${name} ! Ton héros est prêt ✨`
-      : 'Super choix ! Ton héros est prêt ✨';
-  };
+  const confirmMessage = heroProfile?.name
+    ? `Parfait ${heroProfile.name} ! Ton héros est prêt ✨`
+    : 'Super choix ! Ton héros est prêt ✨';
+
+  // Split avatars into rows of 2 for the grid layout
+  const rows: AvatarCharacter[][] = [];
+  for (let i = 0; i < avatars.length; i += 2) {
+    rows.push(avatars.slice(i, i + 2));
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -192,47 +116,49 @@ export const AvatarSelectScreen: React.FC = () => {
           </Text>
         </Animated.View>
 
-        <View style={styles.avatarGrid}>
-          <View style={styles.avatarRow}>
-            {avatars.slice(0, 2).map((avatar, index) => (
-              <AnimatedAvatar
-                key={avatar.id}
-                avatar={avatar}
-                index={index}
-                isSelected={selectedAvatarId === avatar.id}
-                onSelect={setSelectedAvatarId}
-              />
+        {loading ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loaderText}>Chargement des héros...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.loaderContainer}>
+            <Text style={styles.errorText}>Impossible de charger les héros</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {rows.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.gridRow}>
+                {row.map((avatar, colIndex) => (
+                  <AnimatedAvatarCard
+                    key={avatar.id}
+                    avatar={avatar}
+                    index={rowIndex * 2 + colIndex}
+                    isSelected={selectedAvatar?.id === avatar.id}
+                    onSelect={handleSelect}
+                  />
+                ))}
+              </View>
             ))}
           </View>
-          <View style={styles.avatarRow}>
-            {avatars.slice(2, 4).map((avatar, index) => (
-              <AnimatedAvatar
-                key={avatar.id}
-                avatar={avatar}
-                index={index + 2}
-                isSelected={selectedAvatarId === avatar.id}
-                onSelect={setSelectedAvatarId}
-              />
-            ))}
-          </View>
-        </View>
+        )}
       </View>
 
       <Animated.View style={[styles.footer, buttonStyle]}>
-        <Animated.Text style={[styles.confirmMessage, confirmMessageStyle]}>
-          {getConfirmationMessage()}
+        <Animated.Text style={[styles.confirmMessage, confirmStyle]}>
+          {confirmMessage}
         </Animated.Text>
 
         <Pressable
           style={({ pressed }) => [
             styles.button,
-            !selectedAvatarId && styles.buttonDisabled,
-            pressed && selectedAvatarId && styles.buttonPressed,
+            !selectedAvatar && styles.buttonDisabled,
+            pressed && !!selectedAvatar && styles.buttonPressed,
           ]}
           onPress={handleComplete}
-          disabled={!selectedAvatarId}
+          disabled={!selectedAvatar}
         >
-          <Text style={[styles.buttonText, !selectedAvatarId && styles.buttonTextDisabled]}>
+          <Text style={[styles.buttonText, !selectedAvatar && styles.buttonTextDisabled]}>
             L'aventure commence !
           </Text>
         </Pressable>
@@ -243,28 +169,28 @@ export const AvatarSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    paddingTop: 16,
-    paddingHorizontal: 24,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   stepContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
   stepLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -276,10 +202,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E5DDD3',
+    backgroundColor: colors.border,
   },
   stepDotActive: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.primary,
     width: 20,
   },
   headerIcon: {
@@ -288,125 +214,68 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#5D4E37',
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#8D7B68',
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
     textAlign: 'center',
   },
   subtitleHint: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FF8A65',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.medium,
+    color: colors.primary,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
-  avatarGrid: {
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loaderText: {
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
+  },
+  errorText: {
+    fontSize: typography.size.lg,
+    color: colors.semantic.error,
+    textAlign: 'center',
+  },
+  grid: {
     flex: 1,
     justifyContent: 'center',
   },
-  avatarRow: {
+  gridRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  avatarWrapper: {
-    width: AVATAR_SIZE,
-  },
-  avatarCard: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 20,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#F5EBE0',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  avatarCardSelected: {
-    borderColor: '#FF8A65',
-    backgroundColor: '#FFF3E8',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  glowEffect: {
-    position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    opacity: 0.15,
-    borderRadius: 30,
-  },
-  avatarCircle: {
-    width: AVATAR_SIZE - 48,
-    height: AVATAR_SIZE - 48,
-    borderRadius: (AVATAR_SIZE - 48) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarInitial: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  avatarName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#5D4E37',
-  },
-  avatarNameSelected: {
-    color: '#FF8A65',
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FF8A65',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedBadgeText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    marginBottom: spacing.lg,
   },
   footer: {
-    padding: 24,
+    padding: spacing.xl,
     paddingBottom: 40,
   },
   confirmMessage: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF8A65',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
     textAlign: 'center',
     marginBottom: 14,
   },
   button: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.primary,
     paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.md,
   },
   buttonDisabled: {
-    backgroundColor: '#E5DDD3',
+    backgroundColor: colors.border,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -415,12 +284,12 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
     letterSpacing: 0.5,
   },
   buttonTextDisabled: {
-    color: '#B8AFA3',
+    color: colors.text.muted,
   },
 });

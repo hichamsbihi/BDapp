@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
+import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
 
 interface CardProps {
   title: string;
@@ -17,9 +18,6 @@ interface CardProps {
   children?: React.ReactNode;
 }
 
-/**
- * Reusable card component for displaying content
- */
 export const Card: React.FC<CardProps> = ({
   title,
   subtitle,
@@ -64,32 +62,28 @@ export const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.md,
   },
   image: {
     width: '100%',
     height: 150,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.surface,
   },
   content: {
-    padding: 16,
+    padding: spacing.lg,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4,
+    fontSize: typography.size.xl - 2,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
     lineHeight: 20,
   },
 });

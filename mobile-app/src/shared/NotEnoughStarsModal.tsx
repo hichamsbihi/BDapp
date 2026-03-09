@@ -7,6 +7,7 @@ import {
   Modal as RNModal,
   ActivityIndicator,
 } from 'react-native';
+import { colors, radius, spacing, typography } from '@/theme/theme';
 
 interface NotEnoughStarsModalProps {
   visible: boolean;
@@ -17,9 +18,9 @@ interface NotEnoughStarsModalProps {
 }
 
 /**
- * Modal "pas assez d'étoiles"
- * Ton rassurant, magique, jamais bloquant
- * Jamais de mot "pub", "ad", "advertising"
+ * Modal "pas assez d'etoiles"
+ * Reassuring, magical tone - never blocking.
+ * Never use "pub", "ad", "advertising" wording.
  */
 export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
   visible,
@@ -72,7 +73,7 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
               disabled={isWatching}
             >
               {isWatching ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={colors.text.inverse} size="small" />
               ) : (
                 <View style={styles.buttonPrimaryContent}>
                   <Text style={styles.buttonPrimaryIcon}>✨</Text>
@@ -106,53 +107,53 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(93, 78, 55, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
   content: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
     borderRadius: 28,
-    padding: 32,
+    padding: spacing.xxl,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
   },
   emoji: {
     fontSize: 48,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#5D4E37',
-    marginBottom: 12,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   message: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#5D4E37',
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   submessage: {
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.text.muted,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   buttons: {
     width: '100%',
-    gap: 12,
+    gap: spacing.md,
   },
   buttonPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.lg,
   },
   buttonPrimaryContent: {
     flexDirection: 'row',
@@ -173,12 +174,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   buttonPrimaryText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
   },
   buttonSecondaryText: {
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.text.muted,
   },
 });
