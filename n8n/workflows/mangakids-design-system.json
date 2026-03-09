@@ -1,0 +1,197 @@
+{
+  "name": "MangaKids - Generate App Assets",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-600, 200],
+      "id": "asset-00000000-0000-0000-0000-000000000001",
+      "name": "Start"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst BUCKET = 'app-assets';\n\nreturn [{\n  json: {\n    supabaseUrl: SUPABASE_URL,\n    bucket: BUCKET,\n    style: 'Soft pastel Japanese kawaii manga style for children aged 6-12. Bright warm colors, rounded shapes, friendly and magical atmosphere. No text, no typography, no speech bubbles.',\n    brandColors: {\n      primary: '#FF8A65',\n      background: '#FFFCF5',\n      secondary: '#7EC8E3',\n      fantasy: '#C8A2C8',\n      space: '#7EC8E3',\n      ocean: '#4FC3F7'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-340, 200],
+      "id": "asset-00000000-0000-0000-0000-000000000002",
+      "name": "Config"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const cfg = $input.first().json;\nconst c = cfg.brandColors;\nconst S = cfg.style;\n\nconst assets = [\n  // --- BACKGROUNDS (immersive full-screen for story reader) ---\n  {\n    type: 'background',\n    name: 'Royaume Enchanté',\n    description: 'Fond magique univers fantasy',\n    storagePath: 'backgrounds/fantasy.png',\n    universeType: 'fantasy',\n    gender: 'all',\n    displayOrder: 1,\n    prompt: `${S}\\n\\nCreate a dreamy full-screen background for a magical fantasy kingdom.\\n\\nSCENE: A lush enchanted forest with glowing mushrooms, tiny fairies with light trails, a distant floating castle in pastel clouds, rainbow waterfalls, and golden sparkles everywhere. Soft pink and purple sky at golden hour.\\n\\nCOLORS: Dominant ${c.fantasy}, accents of soft gold, pink, lavender. Warm and cozy.\\n\\nFull bleed illustration, no borders, no characters, portrait orientation (9:16 ratio).\\nMust feel absolutely magical and safe for a 6-year-old child.`\n  },\n  {\n    type: 'background',\n    name: 'Galaxie Aventure',\n    description: 'Fond spatial univers espace',\n    storagePath: 'backgrounds/space.png',\n    universeType: 'space',\n    gender: 'all',\n    displayOrder: 2,\n    prompt: `${S}\\n\\nCreate a full-screen background for a cute outer space adventure.\\n\\nSCENE: A colorful galaxy with smiling planets (each has a cute face), swirling pastel nebulas, a tiny cute rocket with round windows, cozy stars that glow warmly, a friendly crescent moon, and distant sparkling constellations.\\n\\nCOLORS: Dominant ${c.space}, deep soft blues, bright star yellows, purple nebula accents. NOT dark or scary.\\n\\nFull bleed illustration, no borders, no characters, portrait orientation (9:16 ratio).\\nPlayful and adventurous, never frightening.`\n  },\n  {\n    type: 'background',\n    name: 'Ocean Mystérieux',\n    description: 'Fond sous-marin univers ocean',\n    storagePath: 'backgrounds/ocean.png',\n    universeType: 'ocean',\n    gender: 'all',\n    displayOrder: 3,\n    prompt: `${S}\\n\\nCreate a full-screen background for a magical underwater kingdom.\\n\\nSCENE: A vibrant coral reef with friendly colorful fish, a pearl palace in the distance, dancing jellyfish with soft glowing tentacles, treasure chests with sparkles, seashell decorations, and gentle light rays from the surface.\\n\\nCOLORS: Dominant ${c.ocean}, turquoise, coral pink, sea green, soft gold accents. Bright and luminous.\\n\\nFull bleed illustration, no borders, no characters, portrait orientation (9:16 ratio).\\nPeaceful, magical underwater wonderland.`\n  },\n\n  // --- AVATARS GARCONS ---\n  {\n    type: 'avatar',\n    name: 'Kaito Explorateur',\n    description: 'Petit garcon explorateur courageux',\n    storagePath: 'avatars/boy-explorer.png',\n    universeType: null,\n    gender: 'boy',\n    displayOrder: 1,\n    prompt: `${S}\\n\\nCreate a cute chibi-style avatar portrait of a brave boy explorer, aged 8.\\n\\nCHARACTER: Messy brown hair, big bright amber eyes, warm smile, adventure hat slightly tilted, blue explorer vest with star patches, small compass around neck.\\n\\nFRAMING: Head and shoulders, centered, circular composition.\\nBACKGROUND: Transparent or soft warm gradient (${c.primary} to ${c.background}).\\n\\nExpression: confident and friendly. Must make a child want to pick this avatar.`\n  },\n  {\n    type: 'avatar',\n    name: 'Ryu Magicien',\n    description: 'Petit garcon magicien mystérieux',\n    storagePath: 'avatars/boy-wizard.png',\n    universeType: null,\n    gender: 'boy',\n    displayOrder: 2,\n    prompt: `${S}\\n\\nCreate a cute chibi-style avatar portrait of a young boy wizard, aged 7.\\n\\nCHARACTER: Spiky dark blue hair, large curious violet eyes, tiny round glasses, oversized purple wizard hat with a golden star, blue robe with sparkle patterns, holding a small glowing wand.\\n\\nFRAMING: Head and shoulders, centered, circular composition.\\nBACKGROUND: Transparent or soft purple gradient (${c.fantasy} to ${c.background}).\\n\\nExpression: wonder and excitement. Magical sparkles around him.`\n  },\n\n  // --- AVATARS FILLES ---\n  {\n    type: 'avatar',\n    name: 'Luna Fée',\n    description: 'Petite fille fée lumineuse',\n    storagePath: 'avatars/girl-fairy.png',\n    universeType: null,\n    gender: 'girl',\n    displayOrder: 1,\n    prompt: `${S}\\n\\nCreate a cute chibi-style avatar portrait of a magical fairy girl, aged 8.\\n\\nCHARACTER: Long flowing pink hair with tiny flowers woven in, large sparkling green eyes, delicate translucent butterfly wings, flower crown with soft glow, pastel pink dress with petal layers, tiny star freckles on cheeks.\\n\\nFRAMING: Head and shoulders, centered, circular composition.\\nBACKGROUND: Transparent or soft pink gradient (${c.primary} to ${c.background}).\\n\\nExpression: gentle and magical smile. Sparkles and tiny hearts floating around.`\n  },\n  {\n    type: 'avatar',\n    name: 'Mei Pirate',\n    description: 'Petite fille pirate intrépide',\n    storagePath: 'avatars/girl-pirate.png',\n    universeType: null,\n    gender: 'girl',\n    displayOrder: 2,\n    prompt: `${S}\\n\\nCreate a cute chibi-style avatar portrait of a brave pirate girl, aged 9.\\n\\nCHARACTER: Short wavy red hair, big confident teal eyes, cute tiny pirate hat with a heart skull, red bandana, striped shirt, small golden anchor necklace, one tiny star-shaped earring.\\n\\nFRAMING: Head and shoulders, centered, circular composition.\\nBACKGROUND: Transparent or soft ocean gradient (${c.ocean} to ${c.background}).\\n\\nExpression: bold and playful grin. Small waves and stars around.`\n  },\n\n  // --- MASCOTTE ---\n  {\n    type: 'mascot',\n    name: 'Piko',\n    description: 'Mascotte MangaKids - petit compagnon magique',\n    storagePath: 'mascot/piko.png',\n    universeType: null,\n    gender: 'all',\n    displayOrder: 1,\n    prompt: `${S}\\n\\nCreate the main mascot character for a children's manga creation app called MangaKids.\\n\\nCHARACTER: A tiny round magical creature (like a mix between a cat and a star). Fluffy soft body in warm orange (${c.primary}), big sparkling dark eyes that take up 40% of the face, tiny stubby arms holding a glowing magical pencil, small golden star antenna on top of head, rosy cheeks, perpetual happy smile, tiny wings that shimmer.\\n\\nFRAMING: Full body, centered, floating with small sparkle trail below.\\nBACKGROUND: Transparent or pure white.\\n\\nMust be EXTREMELY cute. The kind of character a 6-year-old would want as a plush toy.\\nSimple enough to be recognizable at any size (app icon, loading screen, stickers).`\n  },\n\n  // --- DECORATIONS ---\n  {\n    type: 'decoration',\n    name: 'Cadre Magique',\n    description: 'Cadre décoratif pour les cartes histoires',\n    storagePath: 'decorations/magic-frame.png',\n    universeType: null,\n    gender: 'all',\n    displayOrder: 1,\n    prompt: `${S}\\n\\nCreate a decorative rectangular frame border for a children's story card.\\n\\nDESIGN: Ornate but cute frame made of intertwined vines, tiny stars, small flowers, and sparkle dots. Corners have small decorative swirls. The inside of the frame is COMPLETELY EMPTY AND TRANSPARENT (this is crucial - content will be placed inside).\\n\\nCOLORS: Golden edges with soft ${c.primary} accents, tiny ${c.fantasy} flowers, ${c.ocean} star accents.\\n\\nThe frame must be on a transparent background. Portrait orientation.\\nDelicate but visible. Magical storybook feel.`\n  },\n  {\n    type: 'decoration',\n    name: 'Bannière Étoiles',\n    description: 'Bannière décorative pour les récompenses',\n    storagePath: 'decorations/star-banner.png',\n    universeType: null,\n    gender: 'all',\n    displayOrder: 2,\n    prompt: `${S}\\n\\nCreate a cute decorative banner/ribbon for displaying star rewards in a children's app.\\n\\nDESIGN: A flowing ribbon banner with gentle wave shape. Decorated with tiny golden stars, small sparkle effects, and soft glow. The center of the banner is empty (text will be overlaid). Small cute star characters sitting on the ends of the ribbon.\\n\\nCOLORS: Main ribbon in soft gold/warm orange (${c.primary}), stars in bright yellow, sparkles in white, accents in ${c.secondary}.\\n\\nHorizontal orientation, transparent background.\\nFestive and rewarding feeling.`\n  }\n];\n\nreturn assets.map(a => ({\n  json: {\n    ...a,\n    bucket: cfg.bucket,\n    supabaseUrl: cfg.supabaseUrl\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 200],
+      "id": "asset-00000000-0000-0000-0000-000000000003",
+      "name": "Build Asset Prompts"
+    },
+
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "={{ $json.prompt }}",
+        "options": { "binaryPropertyOutput": "data" }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [260, 400],
+      "id": "asset-00000000-0000-0000-0000-000000000004",
+      "name": "Generate Image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yIkNrcZ8dCenkK89",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [540, 200],
+      "id": "asset-00000000-0000-0000-0000-000000000005",
+      "name": "Merge JSON + Image"
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/storage/v1/object/{{ $json.bucket }}/{{ $json.storagePath }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "image/png" },
+            { "name": "x-upsert", "value": "true" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [840, 60],
+      "id": "asset-00000000-0000-0000-0000-000000000006",
+      "name": "Upload to Storage",
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst now = new Date().toISOString();\n\nreturn items.map(item => {\n  const d = item.json;\n  return {\n    json: {\n      type: d.type,\n      name: d.name,\n      description: d.description || '',\n      image_url: `${d.supabaseUrl}/storage/v1/object/public/${d.bucket}/${d.storagePath}`,\n      storage_path: d.storagePath,\n      universe_type: d.universeType || null,\n      gender: d.gender || 'all',\n      display_order: d.displayOrder || 0,\n      created_at: now\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 340],
+      "id": "asset-00000000-0000-0000-0000-000000000007",
+      "name": "Build DB Rows"
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/app_assets?on_conflict=storage_path",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Prefer", "value": "resolution=merge-duplicates" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1140, 340],
+      "id": "asset-00000000-0000-0000-0000-000000000008",
+      "name": "Upsert app_assets",
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+
+  "connections": {
+    "Start": {
+      "main": [
+        [{ "node": "Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Config": {
+      "main": [
+        [{ "node": "Build Asset Prompts", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Asset Prompts": {
+      "main": [
+        [
+          { "node": "Generate Image", "type": "main", "index": 0 },
+          { "node": "Merge JSON + Image", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [{ "node": "Merge JSON + Image", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge JSON + Image": {
+      "main": [
+        [
+          { "node": "Upload to Storage", "type": "main", "index": 0 },
+          { "node": "Build DB Rows", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build DB Rows": {
+      "main": [
+        [{ "node": "Upsert app_assets", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "mangakids-assets-v1-2026-03-05",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "mangakids-assets"
+  },
+  "tags": []
+}
