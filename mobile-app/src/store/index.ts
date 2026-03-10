@@ -2,13 +2,15 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, HeroProfile, Story } from '@/types';
-
-// Stars economy constants
-const INITIAL_STARS = 3;
-const UNIVERSE_UNLOCK_COST = 3;
-const REWARD_WATCH_AD = 1;
-const REWARD_STORY_COMPLETE = 2;
-const REWARD_DAILY_BONUS = 1;
+import {
+  INITIAL_STARS,
+  UNIVERSE_UNLOCK_COST,
+  REWARD_WATCH_AD,
+  REWARD_STORY_COMPLETE,
+  REWARD_DAILY_BONUS,
+  COUNTDOWN_REWARD,
+  COUNTDOWN_HOURS,
+} from '@/constants/stars';
 
 /**
  * Check if we're in a new calendar day (for daily bonus)
@@ -22,6 +24,17 @@ const isNewDay = (lastDate: string | null): boolean => {
     last.getMonth() !== now.getMonth() ||
     last.getDate() !== now.getDate()
   );
+};
+
+/**
+ * Check if 12h have passed since last countdown claim
+ */
+const canClaimCountdown = (lastDate: string | null): boolean => {
+  if (!lastDate) return true;
+  const last = new Date(lastDate);
+  const now = new Date();
+  const elapsedMs = now.getTime() - last.getTime();
+  return elapsedMs >= COUNTDOWN_HOURS * 60 * 60 * 1000;
 };
 
 /**
@@ -75,6 +88,7 @@ export const useAppStore = create<AppState>()(
       stars: INITIAL_STARS,
       unlockedUniverses: [],
       lastDailyBonusDate: null,
+      lastCountdownClaimDate: null,
       addStars: (amount: number) =>
         set((state) => ({
           stars: Math.max(0, (state.stars ?? INITIAL_STARS) + amount),
@@ -106,6 +120,11 @@ export const useAppStore = create<AppState>()(
             if (!isNewDay(state.lastDailyBonusDate)) return 0;
             amount = REWARD_DAILY_BONUS;
             set({ lastDailyBonusDate: new Date().toISOString() });
+            break;
+          case 'countdown_bonus':
+            if (!canClaimCountdown(state.lastCountdownClaimDate)) return 0;
+            amount = COUNTDOWN_REWARD;
+            set({ lastCountdownClaimDate: new Date().toISOString() });
             break;
           default:
             return 0;
@@ -148,14 +167,16 @@ export const useAppStore = create<AppState>()(
         stars: state.stars,
         unlockedUniverses: state.unlockedUniverses,
         lastDailyBonusDate: state.lastDailyBonusDate,
+        lastCountdownClaimDate: state.lastCountdownClaimDate,
       }),
-      version: 1,
+      version: 2,
       migrate: (persistedState: any) => {
         return {
           ...persistedState,
           stars: persistedState?.stars ?? INITIAL_STARS,
           unlockedUniverses: persistedState?.unlockedUniverses ?? [],
           lastDailyBonusDate: persistedState?.lastDailyBonusDate ?? null,
+          lastCountdownClaimDate: persistedState?.lastCountdownClaimDate ?? null,
         };
       },
     }

@@ -94,7 +94,7 @@ export interface Story {
 }
 
 // Stars reward types (non-monetary, narrative)
-export type RewardStarType = 'watch_ad' | 'story_complete' | 'daily_bonus';
+export type RewardStarType = 'watch_ad' | 'story_complete' | 'daily_bonus' | 'countdown_bonus';
 
 // App state types
 export interface AppState {
@@ -120,6 +120,8 @@ export interface AppState {
   stars: number;
   unlockedUniverses: string[];
   lastDailyBonusDate: string | null;
+  /** Last time user claimed the 12h countdown reward (ISO string) */
+  lastCountdownClaimDate: string | null;
   addStars: (amount: number) => void;
   spendStars: (amount: number) => boolean;
   canAfford: (amount: number) => boolean;

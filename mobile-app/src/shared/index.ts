@@ -8,6 +8,8 @@ export { Modal } from './Modal';
 export { Loader } from './Loader';
 export { ScreenContainer } from './ScreenContainer';
 export { StarsBadge } from './StarsBadge';
+export { StarsBadgeWithModal } from './StarsBadgeWithModal';
+export { StarsModal } from './StarsModal';
 export { NotEnoughStarsModal } from './NotEnoughStarsModal';
 export { LottieAnimation } from './LottieAnimation';
 export type { AnimationName } from './LottieAnimation';

@@ -10,7 +10,7 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { useStoryStarts } from '@/hooks/useStoryData';
 import { StoryStart } from '@/types';
@@ -180,7 +180,7 @@ export const StartSelectScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadge count={stars} />
+        <StarsBadgeWithModal />
       </View>
       <ScrollView
         style={styles.scroll}

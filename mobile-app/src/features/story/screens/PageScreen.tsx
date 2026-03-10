@@ -21,7 +21,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
@@ -333,7 +333,7 @@ export const PageScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadge count={stars} />
+        <StarsBadgeWithModal />
       </View>
       <ScrollView
         style={styles.scrollView}

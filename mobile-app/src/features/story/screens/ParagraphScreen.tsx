@@ -13,7 +13,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { useParagraph } from '@/hooks/useStoryData';
 import {
@@ -312,7 +312,7 @@ export const ParagraphScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadge count={stars} />
+        <StarsBadgeWithModal />
       </View>
       {/* Main content — dims during creation */}
       <Animated.View style={[styles.contentWrapper, contentStyle]}>

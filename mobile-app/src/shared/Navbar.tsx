@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, shadows } from '@/theme/theme';
-import { StarsBadge } from './StarsBadge';
-import { useAppStore } from '@/store';
+import { StarsBadgeWithModal } from './StarsBadgeWithModal';
 
 interface NavbarProps {
   title: string;
@@ -20,7 +19,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   rightElement,
 }) => {
   const insets = useSafeAreaInsets();
-  const stars = useAppStore((s) => s.stars);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }, style]}>
@@ -28,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {title}
       </Text>
 
-      {rightElement ?? (showStars && <StarsBadge count={stars} />)}
+      {rightElement ?? (showStars && <StarsBadgeWithModal />)}
     </View>
   );
 };

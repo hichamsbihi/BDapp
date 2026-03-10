@@ -21,7 +21,7 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge, NotEnoughStarsModal } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { UniverseConfig } from '@/types';
@@ -409,7 +409,7 @@ export const UniverseSelectScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 24 }]}>
-        <StarsBadge count={stars} />
+        <StarsBadgeWithModal />
       </View>
       <ScrollView
         style={styles.scrollView}

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ScreenContainer, Modal, StarsBadge, NotEnoughStarsModal } from '@/shared';
+import { ScreenContainer, Modal, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { fetchUniverseById } from '@/services/storyService';
 import { exportAndSharePdf } from '@/utils/pdfGenerator';
@@ -195,7 +195,7 @@ export const LibraryScreen: React.FC = () => {
     return (
       <ScreenContainer style={styles.container}>
         <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-          <StarsBadge count={stars} />
+          <StarsBadgeWithModal />
         </View>
         {renderEmptyState()}
       </ScreenContainer>
@@ -205,7 +205,7 @@ export const LibraryScreen: React.FC = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadge count={stars} />
+        <StarsBadgeWithModal />
       </View>
       <ScrollView
         style={styles.scrollView}
