@@ -22,7 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
-import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
+import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 
@@ -179,10 +179,6 @@ export const StoryCompletedScreen: React.FC = () => {
       <Animated.View style={[styles.decoCircle, styles.deco3, deco3Style]} />
 
       <ScreenContainer style={styles.container}>
-        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-          <StarsBadgeWithModal />
-        </View>
-
         <View style={styles.content}>
           <LottieView
             ref={lottieBurstRef}
@@ -296,10 +292,6 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: 'transparent',
-  },
-  starsHeader: {
-    position: 'absolute',
-    zIndex: 10,
   },
   content: {
     flex: 1,

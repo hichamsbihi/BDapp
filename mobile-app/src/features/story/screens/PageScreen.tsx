@@ -21,7 +21,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
+import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
 import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
@@ -35,7 +35,7 @@ import {
   getRandomPhrase,
 } from '@/constants/magicWords';
 
-const TOTAL_PAGES = 5;
+/** No fixed total: story length is dynamic (driven by universe/story data). Last page = no choices. */
 
 /**
  * Image Reveal Component
@@ -236,14 +236,14 @@ export const PageScreen: React.FC = () => {
   const stars = useAppStore((state) => state.stars);
 
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
-  const isLastPage = currentPageNumber >= TOTAL_PAGES;
 
-  // Fetch narrative choices from Supabase (with local fallback)
-  const { data: choices } = useNarrativeChoices(
+  // Fetch choices for current step; when choices are empty (and loaded), this is the last page
+  const { data: choices, loading: choicesLoading } = useNarrativeChoices(
     currentStory?.universeId,
     currentPageNumber,
-    isLastPage
+    false
   );
+  const isLastPage = !choicesLoading && Array.isArray(choices) && choices.length === 0;
 
   // Image comes from ParagraphScreen (fetched alongside the paragraph text)
   const imageUrl = paramImageUrl
@@ -350,9 +350,6 @@ export const PageScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
-      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadgeWithModal />
-      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -410,10 +407,6 @@ export const PageScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
-  },
-  starsHeader: {
-    position: 'absolute',
-    zIndex: 10,
   },
   scrollView: {
     flex: 1,

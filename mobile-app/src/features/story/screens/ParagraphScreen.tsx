@@ -13,7 +13,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
+import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
 import { useParagraph } from '@/hooks/useStoryData';
 import {
@@ -21,6 +21,9 @@ import {
   getRandomPhrase,
   CREATION_PHRASES,
 } from '@/constants/magicWords';
+
+/** Max dots shown in progress indicator (story length is dynamic per universe). */
+const MAX_PROGRESS_DOTS = 10;
 
 /**
  * Magical Sparkle component for the creation overlay
@@ -181,7 +184,8 @@ export const ParagraphScreen: React.FC = () => {
   const currentStory = useAppStore((state) => state.currentStory);
   const stars = useAppStore((state) => state.stars);
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
-  const totalPages = 5;
+  // Dots count = current step (dynamic per story); cap for very long stories
+  const dotsCount = Math.min(currentPageNumber, MAX_PROGRESS_DOTS);
 
   // Dynamic CTA text - varies to keep experience fresh
   const ctaText = useMemo(() => getSceneRevealPhrase(), [currentPageNumber]);
@@ -295,15 +299,12 @@ export const ParagraphScreen: React.FC = () => {
     });
   }, [paragraphText, paragraphImageUrl]);
 
-  // Generate progress dots
+  // Progress dots: exactly dotsCount dots (current step), all filled
   const renderProgressDots = () => {
     const dots = [];
-    for (let i = 1; i <= totalPages; i++) {
+    for (let i = 1; i <= dotsCount; i++) {
       dots.push(
-        <View
-          key={i}
-          style={[styles.dot, i <= currentPageNumber && styles.dotFilled]}
-        />
+        <View key={i} style={[styles.dot, styles.dotFilled]} />
       );
     }
     return dots;
@@ -311,9 +312,7 @@ export const ParagraphScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
-      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
-        <StarsBadgeWithModal />
-      </View>
+      {/* No stars badge in story creation flow */}
       {/* Main content — dims during creation */}
       <Animated.View style={[styles.contentWrapper, contentStyle]}>
         <View style={styles.content}>
@@ -351,10 +350,6 @@ export const ParagraphScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFCF5',
-  },
-  starsHeader: {
-    position: 'absolute',
-    zIndex: 10,
   },
   contentWrapper: {
     flex: 1,
