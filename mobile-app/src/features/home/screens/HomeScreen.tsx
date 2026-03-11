@@ -64,12 +64,10 @@ export const HomeScreen: React.FC = () => {
   const completedStories = sortedStories.filter((s) => s.isComplete);
 
   useEffect(() => {
-    if (!hasCompletedOnboarding) {
-      const t = setTimeout(() => router.replace('/onboarding'), 100);
+    if (hasCompletedOnboarding) {
+      const t = setTimeout(() => rewardStar('daily_bonus'), 800);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => rewardStar('daily_bonus'), 800);
-    return () => clearTimeout(t);
   }, [hasCompletedOnboarding]);
 
   useEffect(() => {
@@ -120,14 +118,6 @@ export const HomeScreen: React.FC = () => {
   const coverImageUrl = useCallback((story: Story) => {
     return story.pages?.[0]?.imageUrl || `https://picsum.photos/seed/${story.id}/400/300`;
   }, []);
-
-  if (!hasCompletedOnboarding) {
-    return (
-      <ScreenContainer style={styles.container}>
-        <View style={styles.loadingContainer} />
-      </ScreenContainer>
-    );
-  }
 
   const lastStoryImage = currentStory?.pages?.[0]?.imageUrl;
   const lastStoryTitle = currentStory?.title || 'Histoire en cours';

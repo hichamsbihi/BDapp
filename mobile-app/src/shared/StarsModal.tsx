@@ -22,8 +22,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
+import { router } from 'expo-router';
 import { useAppStore } from '@/store';
 import { useCountdownStatus } from '@/hooks/useCountdownStatus';
+import { getCurrentUser } from '@/services/authService';
 import {
   COUNTDOWN_REWARD,
   COUNTDOWN_HOURS,
@@ -121,6 +123,14 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
   const stars = useAppStore((s) => s.stars);
   const rewardStar = useAppStore((s) => s.rewardStar);
   const { canClaim, nextClaimAt } = useCountdownStatus();
+
+  const handlePackPress = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      onClose();
+      router.push('/(auth)/login?from=stars');
+    }
+  };
 
   const [countdownLabel, setCountdownLabel] = useState('');
   const [isClaiming, setIsClaiming] = useState(false);
@@ -353,21 +363,30 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                 </Pressable>
               </Animated.View>
 
-              {/* Packs: visual cards */}
+              {/* Packs: tap to buy; if no profile yet, redirect to onboarding to create it */}
               <View style={styles.packsSection}>
                 <View style={styles.packRow}>
-                  <View style={styles.packCard}>
+                  <Pressable
+                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
+                    onPress={handlePackPress}
+                  >
                     <Text style={styles.packNumber}>{STARS_PACK_SMALL.stars}</Text>
-                    <Text style={styles.packSoon}>Bientôt</Text>
-                  </View>
-                  <View style={styles.packCard}>
+                    <Text style={styles.packSoon}>Acheter</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
+                    onPress={handlePackPress}
+                  >
                     <Text style={styles.packNumber}>{STARS_PACK_MEDIUM.stars}</Text>
-                    <Text style={styles.packSoon}>Bientôt</Text>
-                  </View>
-                  <View style={styles.packCard}>
+                    <Text style={styles.packSoon}>Acheter</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
+                    onPress={handlePackPress}
+                  >
                     <Text style={styles.packNumber}>{STARS_PACK_LARGE.stars}</Text>
-                    <Text style={styles.packSoon}>Bientôt</Text>
-                  </View>
+                    <Text style={styles.packSoon}>Acheter</Text>
+                  </Pressable>
                 </View>
               </View>
 

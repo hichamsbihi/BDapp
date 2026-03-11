@@ -4,6 +4,7 @@ import {
   fetchUniversesByGender,
   fetchStoryStarts,
   fetchParagraphForPage,
+  fetchParagraphById,
   fetchChoicesForPage,
 } from '@/services/storyService';
 
@@ -100,6 +101,47 @@ export const useParagraph = (universeId: string | undefined, pageNumber: number)
       setState((prev) => ({ ...prev, loading: false, error: message }));
     }
   }, [universeId, pageNumber]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { ...state, refetch: load };
+};
+
+/** Paragraph result when loading by id (branching). */
+export type ParagraphByIdResult = {
+  id: string;
+  text: string;
+  imageUrl: string;
+  pageNumber: number;
+  step?: number | null;
+} | null;
+
+/**
+ * Fetch a single paragraph by id (for branching: after user selects a choice with nextParagraphId).
+ */
+export const useParagraphById = (paragraphId: string | undefined) => {
+  const [state, setState] = useState<AsyncState<ParagraphByIdResult>>({
+    data: null,
+    loading: !!paragraphId,
+    error: null,
+  });
+
+  const load = useCallback(async () => {
+    if (!paragraphId) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await fetchParagraphById(paragraphId);
+      setState({ data, loading: false, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setState({ data: null, loading: false, error: message });
+    }
+  }, [paragraphId]);
 
   useEffect(() => {
     load();

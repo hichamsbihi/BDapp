@@ -65,6 +65,8 @@ export interface StoryPage {
   paragraphText: string;
   imageUrl: string;
   pageNumber: number;
+  /** Narrative step (order in path) */
+  step?: number | null;
   // The choice that led to this page (if any)
   choiceId?: string;
 }
@@ -73,6 +75,8 @@ export interface StoryPage {
 export interface NarrativeChoice {
   id: string;
   text: string;
+  /** Id of the paragraph shown after this choice (branching: different text + image) */
+  nextParagraphId?: string | null;
 }
 
 export interface Story {
@@ -113,6 +117,7 @@ export interface AppState {
   // Saved stories library
   stories: Story[];
   addStory: (story: Story) => void;
+  setStories: (stories: Story[]) => void;
   removeStory: (storyId: string) => void;
   updateStory: (storyId: string, updates: Partial<Story>) => void;
 
@@ -123,6 +128,12 @@ export interface AppState {
   /** Last time user claimed the 12h countdown reward (ISO string) */
   lastCountdownClaimDate: string | null;
   addStars: (amount: number) => void;
+  /** Set stars from server (e.g. on session restore). Use instead of addStars for sync. */
+  setStarsFromServer: (amount: number) => void;
+  /** Set unlocked universes from server (e.g. on login). */
+  setUnlockedUniverses: (ids: string[]) => void;
+  /** Add one universe to unlocked (e.g. after completing a story) without spending stars. */
+  addUnlockedUniverse: (universeId: string) => void;
   spendStars: (amount: number) => boolean;
   canAfford: (amount: number) => boolean;
   rewardStar: (type: RewardStarType) => Promise<number>;
@@ -135,6 +146,32 @@ export interface AppState {
   // Onboarding status
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (status: boolean) => void;
+
+  // Story progress from server (for "Continue in X")
+  storyProgressList: { universeId: string; currentPageNumber: number }[];
+  setStoryProgressList: (list: { universeId: string; currentPageNumber: number }[]) => void;
+
+  /** Clear all persisted user data (e.g. on sign out or when server unreachable). Next launch will show onboarding. */
+  resetStoreForSignOut: () => void;
+}
+
+/** Supabase profiles table row (extends auth.users). Avatar = selected_avatar_id (FK avatars), not avatar_url. */
+export interface SupabaseProfile {
+  id: string;
+  email: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  stars_balance: number;
+  created_at: string;
+  updated_at: string;
+  last_login_at: string | null;
+  provider: 'email' | 'google' | 'apple';
+  is_child_account: boolean;
+  selected_avatar_id: string | null;
+  last_universe_id: string | null;
+  age: number | null;
+  gender: 'boy' | 'girl' | null;
+  unlocked_universe_ids: string[];
 }
 
 // Navigation types for story creation flow

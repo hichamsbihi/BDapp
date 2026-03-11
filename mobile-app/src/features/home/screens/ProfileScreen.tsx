@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,6 +18,8 @@ import { ScreenContainer } from '@/shared';
 import { useAppStore } from '@/store';
 import { useAvatars } from '@/hooks/useAvatars';
 import { ProfileAvatarGrid } from '../components/ProfileAvatarGrid';
+import { getCurrentUser, signOut } from '@/services/authService';
+import { updateProfile } from '@/services/profileService';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import type { AvatarCharacter } from '@/types';
 
@@ -33,6 +36,8 @@ export const ProfileScreen: React.FC = () => {
 
   const [name, setName] = useState(heroProfile?.name ?? '');
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarCharacter | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const gender = heroProfile?.gender ?? 'boy';
   const { avatars, loading } = useAvatars(gender);
@@ -47,18 +52,41 @@ export const ProfileScreen: React.FC = () => {
     if (current) setSelectedAvatar(current);
   }, [avatars, heroProfile?.avatarId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    updateHeroProfile({
-      name: trimmed,
-      ...(selectedAvatar && {
-        avatarId: selectedAvatar.id,
-        avatarImageUrl: selectedAvatar.frames.normal,
-        avatarCharacterName: selectedAvatar.characterName,
-      }),
-    });
-    router.back();
+    setSaving(true);
+    try {
+      updateHeroProfile({
+        name: trimmed,
+        ...(selectedAvatar && {
+          avatarId: selectedAvatar.id,
+          avatarImageUrl: selectedAvatar.frames.normal,
+          avatarCharacterName: selectedAvatar.characterName,
+        }),
+      });
+      const user = await getCurrentUser();
+      if (user) {
+        await updateProfile(user.id, {
+          username: trimmed,
+          selected_avatar_id: selectedAvatar?.id ?? null,
+        });
+      }
+    } finally {
+      setSaving(false);
+      router.back();
+    }
+  };
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      useAppStore.getState().resetStoreForSignOut();
+      router.replace('/onboarding');
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   const displayAvatarUrl = selectedAvatar?.frames.normal ?? heroProfile?.avatarImageUrl;
@@ -132,6 +160,7 @@ export const ProfileScreen: React.FC = () => {
           <Pressable
             style={({ pressed }) => [styles.saveButton, pressed && styles.saveButtonPressed]}
             onPress={handleSave}
+            disabled={saving}
           >
             <LinearGradient
               colors={[colors.primary, colors.primaryDark] as const}
@@ -139,8 +168,24 @@ export const ProfileScreen: React.FC = () => {
               end={{ x: 1, y: 0 }}
               style={styles.saveButtonGradient}
             >
-              <Text style={styles.saveButtonText}>Sauvegarder</Text>
+              {saving ? (
+                <ActivityIndicator color={colors.text.inverse} />
+              ) : (
+                <Text style={styles.saveButtonText}>Sauvegarder</Text>
+              )}
             </LinearGradient>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutButtonPressed]}
+            onPress={handleSignOut}
+            disabled={signingOut}
+          >
+            {signingOut ? (
+              <ActivityIndicator color={colors.text.secondary} />
+            ) : (
+              <Text style={styles.signOutText}>Se déconnecter</Text>
+            )}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -254,5 +299,20 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
     color: colors.text.inverse,
+  },
+  signOutButton: {
+    marginTop: spacing.xxl,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  signOutButtonPressed: {
+    opacity: 0.8,
+  },
+  signOutText: {
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+    fontWeight: typography.weight.medium,
   },
 });

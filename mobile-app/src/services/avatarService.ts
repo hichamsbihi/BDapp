@@ -96,3 +96,20 @@ export const fetchAvatarByName = async (
   const grouped = groupAvatarRows(data as AvatarRow[]);
   return grouped[0] ?? null;
 };
+
+/** Fetch avatar by id (e.g. profile.selected_avatar_id). Returns character name and image URL for display. */
+export async function fetchAvatarById(
+  avatarId: string
+): Promise<{ id: string; characterName: string; imageUrl: string } | null> {
+  const { data, error } = await supabase
+    .from('avatars')
+    .select('id, character_name, image_url')
+    .eq('id', avatarId)
+    .single();
+  if (error || !data) return null;
+  return {
+    id: data.id,
+    characterName: (data as { character_name: string }).character_name,
+    imageUrl: (data as { image_url: string }).image_url,
+  };
+}

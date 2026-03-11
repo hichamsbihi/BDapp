@@ -73,6 +73,7 @@ export const useAppStore = create<AppState>()(
       stories: [],
       addStory: (story: Story) =>
         set((state) => ({ stories: [...state.stories, story] })),
+      setStories: (stories: Story[]) => set({ stories: Array.isArray(stories) ? stories : [] }),
       removeStory: (storyId: string) =>
         set((state) => ({
           stories: state.stories.filter((s) => s.id !== storyId),
@@ -93,6 +94,16 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           stars: Math.max(0, (state.stars ?? INITIAL_STARS) + amount),
         })),
+      setStarsFromServer: (amount: number) =>
+        set({ stars: Math.max(0, amount) }),
+      setUnlockedUniverses: (ids: string[]) =>
+        set({ unlockedUniverses: Array.isArray(ids) ? ids : [] }),
+      addUnlockedUniverse: (universeId: string) =>
+        set((s) => {
+          const list = s.unlockedUniverses ?? [];
+          if (list.includes(universeId)) return s;
+          return { unlockedUniverses: [...list, universeId] };
+        }),
       spendStars: (amount: number) => {
         const state = get();
         const current = state.stars ?? INITIAL_STARS;
@@ -156,6 +167,23 @@ export const useAppStore = create<AppState>()(
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (status: boolean) =>
         set({ hasCompletedOnboarding: status }),
+
+      // Story progress from server (for "Continue in X")
+      storyProgressList: [],
+      setStoryProgressList: (list) => set({ storyProgressList: list }),
+
+      resetStoreForSignOut: () =>
+        set({
+          heroProfile: null,
+          stories: [],
+          hasCompletedOnboarding: false,
+          stars: INITIAL_STARS,
+          unlockedUniverses: [],
+          lastDailyBonusDate: null,
+          lastCountdownClaimDate: null,
+          currentStory: null,
+          storyProgressList: [],
+        }),
     }),
     {
       name: 'story-app-storage',

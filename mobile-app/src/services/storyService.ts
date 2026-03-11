@@ -26,6 +26,7 @@ interface NarrativeChoiceRow {
   page_number: number;
   choice_order: number;
   text: string;
+  next_paragraph_id?: string | null;
 }
 
 // DB row to app model mappers
@@ -50,6 +51,7 @@ const toStoryStart = (row: StoryStartRow): StoryStart => ({
 const toNarrativeChoice = (row: NarrativeChoiceRow): NarrativeChoice => ({
   id: row.id,
   text: row.text,
+  nextParagraphId: row.next_paragraph_id ?? undefined,
 });
 
 /**
@@ -135,6 +137,7 @@ export const fetchParagraphForPage = async (
 
 /**
  * Fetch narrative choices for a specific universe page.
+ * Returns choices with nextParagraphId when set (branching: each choice leads to a specific next paragraph).
  */
 export const fetchChoicesForPage = async (
   universeId: string,
@@ -142,11 +145,35 @@ export const fetchChoicesForPage = async (
 ): Promise<NarrativeChoice[]> => {
   const { data, error } = await supabase
     .from('narrative_choices')
-    .select('*')
+    .select('id, universe_id, page_number, choice_order, text, next_paragraph_id')
     .eq('universe_id', universeId)
     .eq('page_number', pageNumber)
     .order('choice_order', { ascending: true });
 
   if (error) throw error;
   return (data ?? []).map(toNarrativeChoice);
+};
+
+/**
+ * Fetch a single paragraph by id (for branching: next paragraph after a choice).
+ * Use when nextParagraphId is set on the chosen choice.
+ */
+export const fetchParagraphById = async (
+  paragraphId: string
+): Promise<{ id: string; text: string; imageUrl: string; pageNumber: number; step?: number | null } | null> => {
+  const { data, error } = await supabase
+    .from('story_paragraphs')
+    .select('id, text, image_url, page_number, step')
+    .eq('id', paragraphId)
+    .single();
+
+  if (error || !data) return null;
+  const placeholderImage = `https://picsum.photos/seed/${paragraphId}/400/300`;
+  return {
+    id: data.id,
+    text: data.text,
+    imageUrl: data.image_url ?? placeholderImage,
+    pageNumber: data.page_number ?? 0,
+    step: data.step ?? undefined,
+  };
 };

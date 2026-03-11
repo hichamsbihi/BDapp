@@ -27,6 +27,8 @@ import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { UniverseConfig } from '@/types';
 import { useUniverses } from '@/hooks/useStoryData';
 import { generateStoryId } from '@/utils/ids';
+import { getCurrentUser } from '@/services/authService';
+import { upsertStoryProgress, setLastUniverse } from '@/services/syncService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
@@ -316,13 +318,14 @@ export const UniverseSelectScreen: React.FC = () => {
   const canAfford = useAppStore((state) => state.canAfford);
   const unlockUniverse = useAppStore((state) => state.unlockUniverse);
   const rewardStar = useAppStore((state) => state.rewardStar);
+  const storyProgressList = useAppStore((state) => state.storyProgressList);
+  const stories = useAppStore((state) => state.stories);
 
   const isNewUser = !hasCompletedOnboarding;
 
   const gender = heroProfile?.gender || 'boy';
   const { data: rawUniverses, loading: universesLoading } = useUniverses(gender);
 
-  // isLocked is computed client-side from unlockedUniverses / isPremium
   const universes = useMemo(() => {
     if (isPremium) {
       return rawUniverses.map((u) => ({ ...u, isLocked: false }));
@@ -332,6 +335,12 @@ export const UniverseSelectScreen: React.FC = () => {
       return { ...u, isLocked: !isUnlocked };
     });
   }, [rawUniverses, isPremium, unlockedUniverses]);
+
+  const resumeProgress = storyProgressList.find((p) => p.currentPageNumber >= 1);
+  const hasCompletedInResumeUniverse =
+    resumeProgress && (stories ?? []).some((s) => s.universeId === resumeProgress.universeId && s.isComplete !== false);
+  const resumeUniverse = resumeProgress ? universes.find((u) => u.id === resumeProgress.universeId) : null;
+  const showResume = resumeUniverse && resumeProgress && !hasCompletedInResumeUniverse;
 
   // Animation values
   const introProgress = useSharedValue(0);
@@ -383,10 +392,9 @@ export const UniverseSelectScreen: React.FC = () => {
     setLockedModalVisible(true);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedUniverseId) return;
 
-    // Mark onboarding as complete when user proceeds (keeps step 3 visible until now)
     if (!hasCompletedOnboarding) {
       setHasCompletedOnboarding(true);
     }
@@ -401,6 +409,26 @@ export const UniverseSelectScreen: React.FC = () => {
       isComplete: false,
     });
 
+    const user = await getCurrentUser();
+    if (user) {
+      await upsertStoryProgress(user.id, selectedUniverseId, 1);
+      await setLastUniverse(user.id, selectedUniverseId);
+    }
+
+    router.push('/story/start-select');
+  };
+
+  const handleResumeProgress = () => {
+    if (!resumeProgress) return;
+    setCurrentStory({
+      id: generateStoryId(),
+      universeId: resumeProgress.universeId,
+      heroId: heroProfile?.id || 'default-hero',
+      pages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isComplete: false,
+    });
     router.push('/story/start-select');
   };
 
@@ -442,6 +470,16 @@ export const UniverseSelectScreen: React.FC = () => {
           <Text style={styles.title}>Choisis ta porte magique</Text>
           <Text style={styles.subtitle}>Chaque monde cache des secrets...</Text>
         </Animated.View>
+
+        {showResume && resumeUniverse && resumeProgress && (
+          <Pressable style={styles.resumeCard} onPress={handleResumeProgress}>
+            <Text style={styles.resumeLabel}>Reprendre</Text>
+            <Text style={styles.resumeText}>
+              Tu étais à la même place dans « {resumeUniverse.name} » (page {resumeProgress.currentPageNumber})
+            </Text>
+            <Text style={styles.resumeCta}>Reprendre l'histoire</Text>
+          </Pressable>
+        )}
 
         {/* Universe cards */}
         <View style={styles.cardsContainer}>
@@ -579,6 +617,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#8D7B68',
     textAlign: 'center',
+  },
+  resumeCard: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FFCC80',
+  },
+  resumeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#E65100',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  resumeText: {
+    fontSize: 15,
+    color: '#5D4E37',
+    marginBottom: 8,
+  },
+  resumeCta: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FF8A65',
   },
 
   // Cards

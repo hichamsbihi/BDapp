@@ -11,19 +11,22 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { useAppStore } from '@/store';
 
 /**
- * Welcome screen - first screen of onboarding
- * Creates a magical first impression for children (6-10 years)
- * 
- * Animation sequence:
- * 1. Illustration (scale + fade) - immediate, then breathing loop
- * 2. Title (fade + slide) - 400ms delay
- * 3. Subtitle (fade + slide) - 650ms delay
- * 4. Button (scale + fade) - 950ms delay
+ * Welcome screen - first screen of onboarding.
+ * Data (name, gender, avatar) is stored in localStorage only; no Supabase account yet.
+ * If user already completed onboarding (returning without account), skip to (tabs).
  */
 export const WelcomeScreen: React.FC = () => {
-  // Shared values for animation progress (0 = hidden, 1 = visible)
+  const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
+
+  useEffect(() => {
+    if (hasCompletedOnboarding) {
+      router.replace('/(tabs)');
+    }
+  }, [hasCompletedOnboarding]);
+
   const illustrationProgress = useSharedValue(0);
   const illustrationBreathing = useSharedValue(1); // For subtle breathing effect
   const titleProgress = useSharedValue(0);
@@ -108,6 +111,10 @@ export const WelcomeScreen: React.FC = () => {
     router.push('/onboarding/hero-info');
   };
 
+  const handleAlreadyHaveAccount = () => {
+    router.push('/(auth)/login?from=onboarding&mode=signin');
+  };
+
   return (
     <ScreenContainer style={styles.container}>
       <View style={styles.content}>
@@ -135,7 +142,7 @@ export const WelcomeScreen: React.FC = () => {
         </Animated.View>
       </View>
 
-      {/* Call-to-action button */}
+      {/* Call-to-action buttons */}
       <Animated.View style={[styles.footer, buttonStyle]}>
         <Pressable
           style={({ pressed }) => [
@@ -144,7 +151,13 @@ export const WelcomeScreen: React.FC = () => {
           ]}
           onPress={handleStart}
         >
-          <Text style={styles.buttonText}>C'est parti 🚀</Text>
+          <Text style={styles.buttonText}>C'est parti</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
+          onPress={handleAlreadyHaveAccount}
+        >
+          <Text style={styles.linkButtonText}>J'ai déjà un compte</Text>
         </Pressable>
       </Animated.View>
     </ScreenContainer>
@@ -221,6 +234,20 @@ const styles = StyleSheet.create({
   footer: {
     padding: 24,
     paddingBottom: 48,
+    gap: 16,
+  },
+  linkButton: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  linkButtonPressed: {
+    opacity: 0.8,
+  },
+  linkButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8D7B68',
   },
   button: {
     backgroundColor: '#FF8A65', // Match title color

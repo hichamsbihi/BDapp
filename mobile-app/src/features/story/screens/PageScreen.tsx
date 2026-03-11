@@ -25,7 +25,9 @@ import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { useAppStore } from '@/store';
 import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
-import { StoryPage, NarrativeChoice } from '@/types';
+import { Story, StoryPage, NarrativeChoice } from '@/types';
+import { getCurrentUser } from '@/services/authService';
+import { upsertStoryProgress, insertUserChoice, saveCreatedStory } from '@/services/syncService';
 import {
   getPivotPhraseForPage,
   getContinuePhrase,
@@ -228,6 +230,9 @@ export const PageScreen: React.FC = () => {
   const addStory = useAppStore((state) => state.addStory);
   const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
   const rewardStar = useAppStore((state) => state.rewardStar);
+  const storyProgressList = useAppStore((state) => state.storyProgressList);
+  const setStoryProgressList = useAppStore((state) => state.setStoryProgressList);
+  const addUnlockedUniverse = useAppStore((state) => state.addUnlockedUniverse);
   const stars = useAppStore((state) => state.stars);
 
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
@@ -286,7 +291,7 @@ export const PageScreen: React.FC = () => {
     setSelectedChoice(choice);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!currentStory || isExiting) return;
     setIsExiting(true);
 
@@ -299,18 +304,32 @@ export const PageScreen: React.FC = () => {
     };
 
     const updatedPages = [...(currentStory.pages || []), newPage];
+    const universeId = currentStory.universeId;
+
+    const user = await getCurrentUser();
+    if (user && universeId) {
+      const nextPageNum = isLastPage ? currentPageNumber : currentPageNumber + 1;
+      await upsertStoryProgress(user.id, universeId, isLastPage ? currentPageNumber : nextPageNum);
+      if (selectedChoice?.id) {
+        await insertUserChoice(user.id, universeId, currentPageNumber, selectedChoice.id);
+      }
+    }
 
     if (isLastPage) {
-      // Story complete — save and celebrate
       const completedStory = {
         ...currentStory,
         pages: updatedPages,
         updatedAt: new Date(),
         isComplete: true,
-      } as any;
+      } as Story;
 
       addStory(completedStory);
-      rewardStar('story_complete'); // +2 étoiles pour avoir terminé
+      if (universeId) addUnlockedUniverse(universeId);
+      if (user) {
+        saveCreatedStory(user.id, completedStory).catch(() => {});
+      }
+      setStoryProgressList((storyProgressList ?? []).filter((p) => p.universeId !== universeId));
+      rewardStar('story_complete');
       clearCurrentStory();
 
       router.replace({
@@ -318,7 +337,6 @@ export const PageScreen: React.FC = () => {
         params: { storyId: completedStory.id },
       });
     } else {
-      // Continue to next paragraph
       updateCurrentStory({
         pages: updatedPages,
         selectedChoiceId: selectedChoice?.id,

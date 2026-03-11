@@ -1,37 +1,50 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppStore } from '@/store';
+import { signOut } from '@/services/authService';
 
 export {
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
-// DEV flag: set to true to clear storage on cold start (not hot reload)
-const DEV_CLEAR_STORAGE = __DEV__;
-
-// Module-level flag survives hot reloads but resets on cold start (Ctrl+C + restart)
-let hasCleared = false;
+/** In __DEV__, clear all persisted data before rendering the app so each reload starts fresh. */
+async function devClearPersistedData(): Promise<void> {
+  await AsyncStorage.clear();
+  useAppStore.getState().resetStoreForSignOut();
+  await signOut();
+  if (__DEV__) console.log('DEV: AsyncStorage and session cleared');
+}
 
 /**
- * Root layout - manages top-level navigation
+ * Root layout - manages top-level navigation.
+ * In __DEV__: wait for storage/session clear before rendering so rehydration sees empty state.
  */
 export default function RootLayout() {
-  // Clear AsyncStorage only on cold start, not hot reload
+  const [devReady, setDevReady] = useState(!__DEV__);
+
   useEffect(() => {
-    if (DEV_CLEAR_STORAGE && !hasCleared) {
-      hasCleared = true;
-      AsyncStorage.clear().then(() => {
-        console.log('DEV: AsyncStorage cleared (cold start)');
-      });
-    }
+    if (!__DEV__) return;
+    devClearPersistedData().then(() => setDevReady(true));
   }, []);
+
+  if (__DEV__ && !devReady) {
+    return (
+      <View style={devLoadingStyles.container}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
         name="onboarding"
@@ -51,3 +64,12 @@ export default function RootLayout() {
     </Stack>
   );
 }
+
+const devLoadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFCF5',
+  },
+});
