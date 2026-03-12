@@ -12,28 +12,23 @@ export async function ensureProfile(
   email: string | null,
   provider: 'email' | 'google' | 'apple' = 'email'
 ): Promise<EnsureProfileResult> {
+  const payload = { id: userId, email: email ?? null, provider, updated_at: new Date().toISOString() };
+  if (__DEV__) console.log('ensureProfile: upserting to Supabase profiles', { userId, email: payload.email, provider });
   const { data, error } = await supabase
     .from('profiles')
-    .upsert(
-      {
-        id: userId,
-        email: email ?? null,
-        provider,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id', ignoreDuplicates: false }
-    )
+    .upsert(payload, { onConflict: 'id', ignoreDuplicates: false })
     .select()
     .single();
 
   if (error) {
-    if (__DEV__) console.log('ensureProfile error:', error.message);
+    if (__DEV__) console.log('ensureProfile: upsert failed', error.message, error.code);
     return { error: error as Error, profile: null };
   }
   if (!data) {
-    if (__DEV__) console.log('ensureProfile: no data returned');
+    if (__DEV__) console.log('ensureProfile: no row returned after upsert (check RLS)');
     return { error: new Error('No profile data'), profile: null };
   }
+  if (__DEV__) console.log('ensureProfile: upsert ok', data.id);
   const profile = normalizeProfileRow(data);
   return { error: null, profile };
 }

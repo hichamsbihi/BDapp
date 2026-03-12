@@ -14,7 +14,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import {
   signInWithEmail,
@@ -54,6 +62,37 @@ function getAuthErrorMessage(error: AuthError | null): string {
 }
 
 const AVATAR_SIZE = 96;
+
+/** Animated success card shown after account creation. Wrapper has layout animation, inner has opacity/scale to avoid Reanimated conflict. */
+function SuccessMessageCard({ message }: { message: string }) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    opacity.value = withTiming(1, { duration: 400 });
+    scale.value = withSequence(
+      withSpring(1.05, { damping: 12 }),
+      withSpring(1, { damping: 15 })
+    );
+  }, [message]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View entering={FadeIn.duration(300)}>
+      <Animated.View style={[styles.successCard, animatedStyle]}>
+        <View style={styles.successIconWrap}>
+          <Text style={styles.successIconText}>✓</Text>
+        </View>
+        <Text style={styles.successCardTitle}>Compte créé</Text>
+        <Text style={styles.successCardMessage}>{message}</Text>
+      </Animated.View>
+    </Animated.View>
+  );
+}
 
 /**
  * Sign up view: avatar that "talks", welcome message with name, email + password + confirm.
@@ -164,7 +203,9 @@ function SignUpView({
           editable={!loading}
         />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+        {successMessage ? (
+          <SuccessMessageCard message={successMessage} />
+        ) : null}
         <Pressable
           style={[styles.primaryBtn, loading && styles.btnDisabled]}
           onPress={onSubmit}
@@ -325,6 +366,9 @@ export function LoginScreen() {
     setLoading(true);
     try {
       const result = await signUpWithEmail(trimmed, password);
+      if (__DEV__) {
+        console.log('signUp flow:', { hasError: !!result.error, hasSession: !!result.session, hasUser: !!result.user });
+      }
       if (result.error) {
         setError(getAuthErrorMessage(result.error));
         return;
@@ -336,6 +380,14 @@ export function LoginScreen() {
       }
       if (result.user && !result.session) {
         setSuccessMessage('Compte créé. Tu peux te connecter avec ton email et ton mot de passe.');
+        // Retry sign-in after delay (Supabase may not return session immediately)
+        setTimeout(async () => {
+          const retry = await signInWithEmail(trimmed, password);
+          if (retry.session) {
+            await hydrateStoreFromProfile();
+            router.replace('/(tabs)');
+          }
+        }, 2800);
       }
     } finally {
       setLoading(false);
@@ -568,10 +620,40 @@ const styles = StyleSheet.create({
     color: colors.semantic.error,
     marginBottom: spacing.md,
   },
-  successText: {
-    fontSize: typography.size.sm,
-    color: colors.semantic.success,
+  successCard: {
+    backgroundColor: 'rgba(102, 187, 106, 0.12)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 187, 106, 0.4)',
+    padding: spacing.lg,
     marginBottom: spacing.md,
+    alignItems: 'center',
+  },
+  successIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.semantic.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  successIconText: {
+    fontSize: 22,
+    color: colors.text.inverse,
+    fontWeight: '700',
+  },
+  successCardTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  successCardMessage: {
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   primaryBtn: {
     borderRadius: radius.lg,

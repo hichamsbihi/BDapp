@@ -22,9 +22,10 @@ This document describes the complete authentication setup for the mobile app: Su
 1. **Authentication** → **Providers** → **Email**.
 2. Enable **Email**.
 3. **Disable "Confirm email"** so that account creation works without verification and data is persisted immediately.
-   - Turn **OFF** the option: "Confirm email" (or "Users will need to confirm their email address before signing in for the first time").
-   - If this is left ON, sign-up may return a user but no session, and the app will retry sign-in; for reliable creation and profile persistence, keep it OFF.
-4. Save.
+   - In the dashboard: **Authentication** (left sidebar) → **Providers** → open **Email**.
+   - Find the option **"Confirm email"** and turn it **OFF**.
+   - If this is left ON, sign-up creates the user but returns no session, and retry sign-in returns **"Invalid login credentials"** until the user confirms their email. For the app to get a session right after sign-up, keep it OFF.
+4. Click **Save**.
 
 ### 1.4 OAuth providers (Google, Apple)
 
@@ -79,18 +80,13 @@ SQL is in `mobile-app/supabase/migrations/001_profiles_auth.sql`.
 
 ## 3. SQL migrations
 
-Run the migration in the Supabase SQL Editor (or via CLI):
+Run in the Supabase Dashboard **SQL Editor** (in order):
 
-- File: `mobile-app/supabase/migrations/001_profiles_auth.sql`
+1. **001_profiles_auth.sql** — Creates `public.profiles`, trigger `on_auth_user_created` on `auth.users`, RLS (SELECT, UPDATE, INSERT for own row), and `updated_at` trigger. New signups will get a profile row automatically.
 
-It creates:
+2. **002_backfill_profiles_from_auth.sql** — Run once to create profile rows for users already in `auth.users` but missing from `profiles` (e.g. signups before the trigger existed). Safe to run multiple times.
 
-- Table `public.profiles`
-- Trigger on `auth.users` to insert a row into `profiles` on sign-up
-- RLS policies (read/update own profile only)
-- `updated_at` trigger on `profiles`
-
-On older PostgreSQL, if `EXECUTE FUNCTION` fails, replace it with `EXECUTE PROCEDURE` in the trigger definition.
+If the new user is still not persisted in `profiles`, run both scripts in the SQL Editor and ensure there are no errors in the execution log.
 
 ---
 
@@ -116,7 +112,7 @@ On older PostgreSQL, if `EXECUTE FUNCTION` fails, replace it with `EXECUTE PROCE
 - **RLS** is enabled on `public.profiles`.
 - **SELECT**: `auth.uid() = id` (user sees only their row).
 - **UPDATE**: `auth.uid() = id` for both `USING` and `WITH CHECK`.
-- **INSERT**: no policy for clients; inserts are done only by the trigger (SECURITY DEFINER).
+- **INSERT**: trigger creates the row (SECURITY DEFINER). Policy `profiles_insert_own` (auth.uid() = id) allows client to create own row on first sign-in if trigger did not run (e.g. migration added after sign-up).
 
 ---
 
@@ -256,6 +252,15 @@ Add a "Se déconnecter" (or "Déconnexion") button (e.g. in ProfileScreen) that:
 ## Dev note: session persistence
 
 In `app/_layout.tsx`, `DEV_CLEAR_STORAGE` clears AsyncStorage on cold start when `__DEV__` is true. That also removes the Supabase session. To test auth persistence (e.g. session restore after app restart), set `DEV_CLEAR_STORAGE = false` or comment out the clear logic.
+
+---
+
+## Troubleshooting: sign-up works but no session / "Invalid login credentials"
+
+If the app logs show **hasUser: true, hasSession: false** and **retry signIn failed Invalid login credentials**:
+
+- **Cause:** "Confirm email" is enabled in Supabase. The user is created in `auth.users` but cannot get a session until they click the confirmation link in the email.
+- **Fix:** Supabase Dashboard → **Authentication** → **Providers** → **Email** → turn **OFF** "Confirm email" → **Save**. Then try signing up with a new email (or delete the test user in Authentication → Users and try again).
 
 ---
 

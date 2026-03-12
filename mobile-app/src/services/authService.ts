@@ -23,13 +23,20 @@ export async function signUpWithEmail(
   email: string,
   password: string
 ): Promise<AuthResult> {
+  if (__DEV__) console.log('signUp: sending to Supabase Auth', { email });
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: undefined },
   });
   if (__DEV__) {
-    console.log('signUp result:', { hasUser: !!data?.user, hasSession: !!data?.session, error: error?.message ?? null });
+    console.log('signUp: response', {
+      hasUser: !!data?.user,
+      userId: data?.user?.id ?? null,
+      hasSession: !!data?.session,
+      error: error?.message ?? null,
+      errorCode: error?.code ?? null,
+    });
   }
   if (error) {
     return { user: null, session: null, error };
@@ -38,17 +45,28 @@ export async function signUpWithEmail(
     return { user: data.user ?? null, session: data.session, error: null };
   }
   if (data?.user) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const delays = [0, 1500, 3000];
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      if (__DEV__ && attempt > 0) console.log('signUp: retry signIn attempt', attempt + 1);
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, delays[attempt]));
+      }
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      if (__DEV__ && signInError) {
+        console.log('signUp: retry signIn failed', signInError.message, signInError.code);
+      }
       if (!signInError && signInData?.session) {
+        if (__DEV__) console.log('signUp: got session on retry');
         return { user: signInData.user ?? null, session: signInData.session, error: null };
       }
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 1500));
-      }
+    }
+    if (__DEV__) {
+      console.log(
+        'signUp: no session after retries. Disable email confirmation: Supabase Dashboard > Authentication > Providers > Email > turn OFF "Confirm email"'
+      );
     }
   }
   return {
@@ -182,7 +200,11 @@ export function onAuthStateChange(
  */
 export async function hydrateStoreFromProfile(): Promise<boolean> {
   const user = await getCurrentUser();
-  if (!user) return false;
+  if (!user) {
+    if (__DEV__) console.log('hydrateStoreFromProfile: no user (no session)');
+    return false;
+  }
+  if (__DEV__) console.log('hydrateStoreFromProfile: user present, ensuring profile', user.id);
   const { ensureProfile, fetchProfile, touchLastLogin, syncLocalToProfile } = await import('./profileService');
   const { fetchAvatarById } = await import('./avatarService');
   const rawProvider = user.app_metadata?.provider as string | undefined;
