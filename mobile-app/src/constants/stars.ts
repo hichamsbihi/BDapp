@@ -57,7 +57,31 @@ export const COUNTDOWN_HOURS = 12;
 // --- INITIAL ---
 export const INITIAL_STARS = 3;
 
-// --- PACKS (placeholder, prix a definir avec IAP) ---
-export const STARS_PACK_SMALL = { stars: 10, productId: 'stars_pack_small' };
-export const STARS_PACK_MEDIUM = { stars: 25, productId: 'stars_pack_medium' };
-export const STARS_PACK_LARGE = { stars: 60, productId: 'stars_pack_large' };
+// --- PACKS (IAP) ---
+export const STARS_PACK_SMALL = {
+  stars: 10,
+  priceEur: 3.99,
+  universes: 2,
+  books: 2,
+  productId: 'stars_pack_10',
+};
+export const STARS_PACK_MEDIUM = {
+  stars: 20,
+  priceEur: 5.99,
+  universes: 4,
+  books: 4,
+  productId: 'stars_pack_20',
+};
+export const STARS_PACK_LARGE = {
+  stars: 30,
+  priceEur: 7.99,
+  universes: 6,
+  books: 10,
+  productId: 'stars_pack_30',
+};
+
+/** Premium: unlimited universes, no stars (lifetime). */
+export const PREMIUM_LIFETIME = {
+  priceEur: 19.99,
+  productId: 'premium_lifetime',
+};

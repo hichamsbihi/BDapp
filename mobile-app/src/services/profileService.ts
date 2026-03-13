@@ -51,6 +51,7 @@ function normalizeProfileRow(row: Record<string, unknown>): SupabaseProfile {
     age: (row.age as number | null) ?? null,
     gender: (row.gender as 'boy' | 'girl' | null) ?? null,
     unlocked_universe_ids: Array.isArray(row.unlocked_universe_ids) ? row.unlocked_universe_ids : [],
+    is_premium: Boolean(row.is_premium),
   };
 }
 
@@ -83,6 +84,7 @@ export type ProfileUpdatePayload = Partial<
     | 'age'
     | 'gender'
     | 'unlocked_universe_ids'
+    | 'is_premium'
   >
 >;
 

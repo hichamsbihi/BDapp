@@ -25,7 +25,7 @@ export const StarsBadge: React.FC<StarsBadgeProps> = ({ count, style }) => {
     if (prevCount.current !== count) {
       prevCount.current = count;
       scale.value = withSequence(
-        withSpring(1.2, { damping: 8 }),
+        withSpring(1.08, { damping: 10 }),
         withSpring(1, { damping: 12 })
       );
     }
@@ -37,8 +37,8 @@ export const StarsBadge: React.FC<StarsBadgeProps> = ({ count, style }) => {
 
   return (
     <Animated.View style={[styles.badge, animatedStyle, style]}>
-      <Text style={styles.icon}>⭐</Text>
-      <Text style={styles.count}>{count}</Text>
+      <Text style={styles.icon} allowFontScaling={false}>⭐</Text>
+      <Text style={styles.count} allowFontScaling={false}>{count}</Text>
     </Animated.View>
   );
 };

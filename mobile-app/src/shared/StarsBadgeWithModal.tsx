@@ -10,11 +10,14 @@ interface StarsBadgeWithModalProps {
 
 /**
  * Stars badge that opens the Stars modal on press.
- * Use this instead of StarsBadge when the badge should be tappable.
+ * Hidden when user is premium (no stars needed).
  */
 export const StarsBadgeWithModal: React.FC<StarsBadgeWithModalProps> = ({ style }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const stars = useAppStore((s) => s.stars);
+  const isPremium = useAppStore((s) => s.isPremium);
+
+  if (isPremium) return null;
 
   return (
     <>

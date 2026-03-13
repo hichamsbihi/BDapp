@@ -26,14 +26,7 @@ import { router } from 'expo-router';
 import { useAppStore } from '@/store';
 import { useCountdownStatus } from '@/hooks/useCountdownStatus';
 import { getCurrentUser } from '@/services/authService';
-import {
-  COUNTDOWN_REWARD,
-  COUNTDOWN_HOURS,
-  REWARD_WATCH_AD,
-  STARS_PACK_SMALL,
-  STARS_PACK_MEDIUM,
-  STARS_PACK_LARGE,
-} from '@/constants/stars';
+import { COUNTDOWN_REWARD, COUNTDOWN_HOURS } from '@/constants/stars';
 import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -124,11 +117,13 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
   const rewardStar = useAppStore((s) => s.rewardStar);
   const { canClaim, nextClaimAt } = useCountdownStatus();
 
-  const handlePackPress = async () => {
+  const handleGoToPaywall = async () => {
     const user = await getCurrentUser();
-    if (!user) {
-      onClose();
-      router.push('/(auth)/login?from=stars');
+    onClose();
+    if (user) {
+      router.push('/paywall');
+    } else {
+      router.push('/(auth)/login?from=paywall');
     }
   };
 
@@ -278,7 +273,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
               <View style={styles.hero}>
                 <Animated.View style={[styles.heroBalance, balanceAnimatedStyle]}>
                   <View style={styles.heroGlow} />
-                  <Text style={styles.heroNumber}>{stars}</Text>
+                  <Text style={styles.heroNumber} allowFontScaling={false}>{stars}</Text>
                   <Text style={styles.heroLabel}>étoiles</Text>
                 </Animated.View>
               </View>
@@ -363,31 +358,22 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                 </Pressable>
               </Animated.View>
 
-              {/* Packs: tap to buy; if no profile yet, redirect to onboarding to create it */}
+              {/* Button to paywall: if logged in go to paywall, else login then paywall */}
               <View style={styles.packsSection}>
-                <View style={styles.packRow}>
-                  <Pressable
-                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
-                    onPress={handlePackPress}
+                <Pressable
+                  style={({ pressed }) => [styles.paywallButton, pressed && styles.buttonDimmed]}
+                  onPress={handleGoToPaywall}
+                >
+                  <LinearGradient
+                    colors={['#FFE082', '#FFD54F', '#FFB300'] as const}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.paywallButtonGradient}
                   >
-                    <Text style={styles.packNumber}>{STARS_PACK_SMALL.stars}</Text>
-                    <Text style={styles.packSoon}>Acheter</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
-                    onPress={handlePackPress}
-                  >
-                    <Text style={styles.packNumber}>{STARS_PACK_MEDIUM.stars}</Text>
-                    <Text style={styles.packSoon}>Acheter</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.packCard, pressed && styles.buttonDimmed]}
-                    onPress={handlePackPress}
-                  >
-                    <Text style={styles.packNumber}>{STARS_PACK_LARGE.stars}</Text>
-                    <Text style={styles.packSoon}>Acheter</Text>
-                  </Pressable>
-                </View>
+                    <Text style={styles.paywallButtonIcon}>✨</Text>
+                    <Text style={styles.paywallButtonText}>Voir les packs d'étoiles</Text>
+                  </LinearGradient>
+                </Pressable>
               </View>
 
               <Pressable
@@ -568,28 +554,26 @@ const styles = StyleSheet.create({
   packsSection: {
     marginBottom: spacing.lg,
   },
-  packRow: {
+  paywallButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  paywallButtonGradient: {
     flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  packCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  packNumber: {
-    fontSize: typography.size.xl,
-    fontWeight: '700',
-    color: colors.text.secondary,
+  paywallButtonIcon: {
+    fontSize: 20,
   },
-  packSoon: {
-    fontSize: 10,
-    color: colors.text.muted,
-    marginTop: 2,
+  paywallButtonText: {
+    fontSize: typography.size.md,
+    fontWeight: '600',
+    color: colors.text.primary,
   },
   closeBtn: {
     alignItems: 'center',

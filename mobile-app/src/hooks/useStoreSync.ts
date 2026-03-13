@@ -20,12 +20,14 @@ export function useStoreSync(): void {
         stars: state.stars ?? 0,
         heroProfile: state.heroProfile,
         unlockedUniverses: state.unlockedUniverses ?? [],
+        isPremium: state.isPremium,
       };
       const key = JSON.stringify({
         s: payload.stars,
         n: payload.heroProfile?.name,
         a: payload.heroProfile?.avatarId,
         u: payload.unlockedUniverses.slice().sort(),
+        p: payload.isPremium,
       });
       if (key === prevRef.current) return;
       prevRef.current = key;
@@ -43,6 +45,7 @@ export function useStoreSync(): void {
             age: payload.heroProfile?.age ?? null,
             gender: payload.heroProfile?.gender ?? null,
             unlocked_universe_ids: payload.unlockedUniverses,
+            is_premium: payload.isPremium,
           });
         } catch (e) {
           if (__DEV__) console.log('useStoreSync error:', e);
@@ -62,6 +65,7 @@ export function useStoreSync(): void {
           age: state.heroProfile?.age ?? null,
           gender: state.heroProfile?.gender ?? null,
           unlocked_universe_ids: state.unlockedUniverses ?? [],
+          is_premium: state.isPremium,
         });
       } catch (e) {
         if (__DEV__) console.log('useStoreSync initial error:', e);

@@ -172,6 +172,7 @@ export interface SupabaseProfile {
   age: number | null;
   gender: 'boy' | 'girl' | null;
   unlocked_universe_ids: string[];
+  is_premium: boolean;
 }
 
 // Navigation types for story creation flow

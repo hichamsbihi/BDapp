@@ -325,6 +325,7 @@ export function LoginScreen() {
   const params = useLocalSearchParams<{ from?: string; mode?: string }>();
   const fromOnboarding = params.from === 'onboarding';
   const wantSignIn = params.mode === 'signin';
+  const targetAfterAuth = params.from === 'paywall' ? '/paywall' : '/(tabs)';
   const insets = useSafeAreaInsets();
   const heroProfile = useAppStore((state) => state.heroProfile);
 
@@ -375,17 +376,16 @@ export function LoginScreen() {
       }
       if (result.session) {
         await hydrateStoreFromProfile();
-        router.replace('/(tabs)');
+        router.replace(targetAfterAuth as any);
         return;
       }
       if (result.user && !result.session) {
         setSuccessMessage('Compte créé. Tu peux te connecter avec ton email et ton mot de passe.');
-        // Retry sign-in after delay (Supabase may not return session immediately)
         setTimeout(async () => {
           const retry = await signInWithEmail(trimmed, password);
           if (retry.session) {
             await hydrateStoreFromProfile();
-            router.replace('/(tabs)');
+            router.replace(targetAfterAuth as any);
           }
         }, 2800);
       }
@@ -419,7 +419,7 @@ export function LoginScreen() {
       }
       if (result.session) {
         await hydrateStoreFromProfile();
-        router.replace('/(tabs)');
+        router.replace(targetAfterAuth as any);
       } else {
         setError('Impossible de te connecter. Vérifie ton email et ton mot de passe.');
       }

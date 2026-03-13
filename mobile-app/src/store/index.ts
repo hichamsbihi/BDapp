@@ -150,8 +150,14 @@ export const useAppStore = create<AppState>()(
       },
       unlockUniverse: (universeId: string) => {
         const state = get();
-        if (!state.canAfford(UNIVERSE_UNLOCK_COST)) return false;
         if (state.unlockedUniverses?.includes(universeId)) return true;
+        if (state.isPremium) {
+          set((s) => ({
+            unlockedUniverses: [...(s.unlockedUniverses ?? []), universeId],
+          }));
+          return true;
+        }
+        if (!state.canAfford(UNIVERSE_UNLOCK_COST)) return false;
         if (!state.spendStars(UNIVERSE_UNLOCK_COST)) return false;
         set((s) => ({
           unlockedUniverses: [...(s.unlockedUniverses ?? []), universeId],
@@ -179,6 +185,7 @@ export const useAppStore = create<AppState>()(
           hasCompletedOnboarding: false,
           stars: INITIAL_STARS,
           unlockedUniverses: [],
+          isPremium: false,
           lastDailyBonusDate: null,
           lastCountdownClaimDate: null,
           currentStory: null,
@@ -196,8 +203,9 @@ export const useAppStore = create<AppState>()(
         unlockedUniverses: state.unlockedUniverses,
         lastDailyBonusDate: state.lastDailyBonusDate,
         lastCountdownClaimDate: state.lastCountdownClaimDate,
+        isPremium: state.isPremium,
       }),
-      version: 2,
+      version: 3,
       migrate: (persistedState: any) => {
         return {
           ...persistedState,
@@ -205,6 +213,7 @@ export const useAppStore = create<AppState>()(
           unlockedUniverses: persistedState?.unlockedUniverses ?? [],
           lastDailyBonusDate: persistedState?.lastDailyBonusDate ?? null,
           lastCountdownClaimDate: persistedState?.lastCountdownClaimDate ?? null,
+          isPremium: persistedState?.isPremium ?? false,
         };
       },
     }

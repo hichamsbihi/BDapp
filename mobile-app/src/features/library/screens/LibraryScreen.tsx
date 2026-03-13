@@ -38,6 +38,7 @@ export const LibraryScreen: React.FC = () => {
   const heroProfile = useAppStore((state) => state.heroProfile);
   const removeStory = useAppStore((state) => state.removeStory);
   const stars = useAppStore((state) => state.stars);
+  const isPremium = useAppStore((state) => state.isPremium);
   const canAfford = useAppStore((state) => state.canAfford);
   const spendStars = useAppStore((state) => state.spendStars);
   const rewardStar = useAppStore((state) => state.rewardStar);
@@ -87,7 +88,7 @@ export const LibraryScreen: React.FC = () => {
   const handleExportPDF = async () => {
     if (!selectedStory) return;
 
-    if (!canAfford(PDF_EXPORT_COST)) {
+    if (!isPremium && !canAfford(PDF_EXPORT_COST)) {
       setModalVisible(false);
       setShowNotEnoughStars(true);
       return;
@@ -95,9 +96,10 @@ export const LibraryScreen: React.FC = () => {
 
     setIsExporting(true);
     try {
-      const spent = spendStars(PDF_EXPORT_COST);
-      if (!spent) return;
-
+      if (!isPremium) {
+        const spent = spendStars(PDF_EXPORT_COST);
+        if (!spent) return;
+      }
       await exportAndSharePdf(selectedStory);
       setModalVisible(false);
     } catch (error) {
@@ -276,7 +278,7 @@ export const LibraryScreen: React.FC = () => {
             ) : (
               <>
                 <Text style={styles.modalActionSecondaryText}>
-                  Creer le livre PDF ({PDF_EXPORT_COST} etoiles)
+                  {isPremium ? 'Creer le livre PDF' : `Creer le livre PDF (${PDF_EXPORT_COST} etoiles)`}
                 </Text>
               </>
             )}

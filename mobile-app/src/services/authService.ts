@@ -245,6 +245,7 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
 
   await touchLastLogin(user.id);
   store.setStarsFromServer(profile.stars_balance);
+  store.setIsPremium(profile.is_premium ?? false);
   const fromServer = profile.unlocked_universe_ids ?? [];
   const currentLocal = store.unlockedUniverses ?? [];
   const merged = fromServer.length > 0
