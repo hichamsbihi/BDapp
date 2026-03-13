@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/theme';
 
 interface ViewerHeaderProps {
   title: string;
@@ -51,9 +52,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: 'rgba(255, 252, 245, 0.75)',
+    backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(232, 224, 213, 0.5)',
+    borderBottomColor: colors.border,
     zIndex: 10,
   },
 
@@ -61,13 +62,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5EBE0',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeIcon: {
     fontSize: 16,
-    color: '#5D4E37',
+    color: colors.ink,
     fontWeight: '400',
   },
 
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#4A3F32',
+    color: colors.ink,
     textAlign: 'center',
     marginHorizontal: 12,
   },

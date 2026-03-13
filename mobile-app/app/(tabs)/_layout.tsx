@@ -1,5 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { colors } from '@/theme';
 
 /**
  * Main app stack layout (previously tabs)
@@ -10,7 +11,7 @@ export default function MainLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#FFFCF5' },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="index" />

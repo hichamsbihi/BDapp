@@ -1,19 +1,25 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+/**
+ * @deprecated Use `import { colors } from '@/theme'` instead.
+ * This file is kept for backward compatibility only.
+ */
+import { colors } from '@/theme';
+
+const tintColorLight = colors.accent;
+const tintColorDark = colors.surface;
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
+    text: colors.ink,
+    background: colors.background,
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    tabIconDefault: colors.inkMuted,
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
+    text: colors.surface,
+    background: colors.ink,
     tint: tintColorDark,
-    tabIconDefault: '#ccc',
+    tabIconDefault: colors.inkMuted,
     tabIconSelected: tintColorDark,
   },
 };

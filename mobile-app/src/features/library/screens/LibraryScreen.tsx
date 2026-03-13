@@ -11,22 +11,21 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ScreenContainer, Modal, StarsBadge, NotEnoughStarsModal } from '@/shared';
+import {
+  ScreenContainer,
+  Modal,
+  StarsBadge,
+  NotEnoughStarsModal,
+  EmptyState,
+  Button,
+} from '@/shared';
 import { useAppStore } from '@/store';
 import { fetchUniverseById } from '@/services/storyService';
 import { exportAndSharePdf } from '@/utils/pdfGenerator';
 import { PDF_EXPORT_COST } from '@/constants/stars';
 import { Story, Universe } from '@/types';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 
-/**
- * LibraryScreen
- * 
- * A place of memories, not a list of content.
- * Each story is a treasure the child created.
- * 
- * The latest creation is highlighted.
- * Older stories rest quietly, ready to be revisited.
- */
 export const LibraryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
@@ -42,7 +41,6 @@ export const LibraryScreen: React.FC = () => {
   const spendStars = useAppStore((state) => state.spendStars);
   const rewardStar = useAppStore((state) => state.rewardStar);
 
-  // Cache universe data for story cards (color, name)
   const [universesMap, setUniversesMap] = useState<Record<string, Universe>>({});
 
   useEffect(() => {
@@ -55,14 +53,13 @@ export const LibraryScreen: React.FC = () => {
           setUniversesMap((prev) => ({ ...prev, [id]: universe }));
         }
       } catch {
-        // Silently skip if universe not found
+        // skip
       }
     });
   }, [stories]);
 
-  // Sort by most recent first
   const sortedStories = [...stories].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
   const latestStory = sortedStories[0];
@@ -86,18 +83,15 @@ export const LibraryScreen: React.FC = () => {
 
   const handleExportPDF = async () => {
     if (!selectedStory) return;
-
     if (!canAfford(PDF_EXPORT_COST)) {
       setModalVisible(false);
       setShowNotEnoughStars(true);
       return;
     }
-
     setIsExporting(true);
     try {
       const spent = spendStars(PDF_EXPORT_COST);
       if (!spent) return;
-
       await exportAndSharePdf(selectedStory);
       setModalVisible(false);
     } catch (error) {
@@ -120,7 +114,6 @@ export const LibraryScreen: React.FC = () => {
     router.push('/story/universe-select');
   };
 
-  // Featured story card (latest creation)
   const renderFeaturedStory = (story: Story) => {
     const universe = universesMap[story.universeId];
     const coverImage = story.pages[0]?.imageUrl;
@@ -134,9 +127,8 @@ export const LibraryScreen: React.FC = () => {
           {coverImage ? (
             <Image source={{ uri: coverImage }} style={styles.featuredImage} />
           ) : (
-            <View style={[styles.featuredPlaceholder, { backgroundColor: universe?.color || '#E5DDD3' }]} />
+            <View style={[styles.featuredPlaceholder, { backgroundColor: universe?.color || colors.surfaceAlt }]} />
           )}
-          <View style={styles.featuredOverlay} />
           <View style={styles.featuredBadge}>
             <Text style={styles.featuredBadgeText}>Derniere creation</Text>
           </View>
@@ -151,7 +143,6 @@ export const LibraryScreen: React.FC = () => {
     );
   };
 
-  // Smaller story card for older stories
   const renderStoryCard = (story: Story) => {
     const universe = universesMap[story.universeId];
     const coverImage = story.pages[0]?.imageUrl;
@@ -166,7 +157,7 @@ export const LibraryScreen: React.FC = () => {
           {coverImage ? (
             <Image source={{ uri: coverImage }} style={styles.storyImage} />
           ) : (
-            <View style={[styles.storyPlaceholder, { backgroundColor: universe?.color || '#E5DDD3' }]} />
+            <View style={[styles.storyPlaceholder, { backgroundColor: universe?.color || colors.surfaceAlt }]} />
           )}
           <View style={styles.bookSpine} />
         </View>
@@ -175,29 +166,19 @@ export const LibraryScreen: React.FC = () => {
     );
   };
 
-  // Empty state
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyTitle}>Rien encore...</Text>
-      <Text style={styles.emptyText}>
-        Ta premiere histoire attend{'\n'}d'etre ecrite.
-      </Text>
-      <Pressable
-        style={({ pressed }) => [styles.emptyButton, pressed && styles.buttonPressed]}
-        onPress={handleCreateNew}
-      >
-        <Text style={styles.emptyButtonText}>Commencer</Text>
-      </Pressable>
-    </View>
-  );
-
   if (stories.length === 0) {
     return (
       <ScreenContainer style={styles.container}>
         <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
           <StarsBadge count={stars} />
         </View>
-        {renderEmptyState()}
+        <EmptyState
+          title="Rien encore..."
+          message={'Ta premiere histoire attend\nd\'etre ecrite.'}
+          actionLabel="Commencer"
+          onAction={handleCreateNew}
+          illustrationVariant="empty"
+        />
       </ScreenContainer>
     );
   }
@@ -212,7 +193,6 @@ export const LibraryScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Poetic header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Les histoires de {heroName}</Text>
           <Text style={styles.headerSubtitle}>
@@ -220,14 +200,12 @@ export const LibraryScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Featured: latest creation */}
         {latestStory && (
           <View style={styles.featuredSection}>
             {renderFeaturedStory(latestStory)}
           </View>
         )}
 
-        {/* Older stories */}
         {olderStories.length > 0 && (
           <View style={styles.olderSection}>
             <Text style={styles.sectionTitle}>Histoires precedentes</Text>
@@ -237,7 +215,6 @@ export const LibraryScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Create new */}
         <View style={styles.createSection}>
           <Pressable
             style={({ pressed }) => [styles.createCard, pressed && styles.createCardPressed]}
@@ -248,19 +225,18 @@ export const LibraryScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Story actions modal */}
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={selectedStory?.title}
       >
         <View style={styles.modalContent}>
-          <Pressable
-            style={({ pressed }) => [styles.modalAction, pressed && styles.modalActionPressed]}
+          <Button
+            title="Relire cette histoire"
             onPress={handleReadStory}
-          >
-            <Text style={styles.modalActionText}>Relire cette histoire</Text>
-          </Pressable>
+            variant="primary"
+            size="medium"
+          />
 
           <Pressable
             style={({ pressed }) => [
@@ -272,13 +248,11 @@ export const LibraryScreen: React.FC = () => {
             disabled={isExporting}
           >
             {isExporting ? (
-              <ActivityIndicator color="#5D4E37" size="small" />
+              <ActivityIndicator color={colors.ink} size="small" />
             ) : (
-              <>
-                <Text style={styles.modalActionSecondaryText}>
-                  Creer le livre PDF ({PDF_EXPORT_COST} etoiles)
-                </Text>
-              </>
+              <Text style={styles.modalActionSecondaryText}>
+                Creer le livre PDF ({PDF_EXPORT_COST} etoiles)
+              </Text>
             )}
           </Pressable>
 
@@ -303,7 +277,7 @@ export const LibraryScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -313,45 +287,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: spacing.xl + spacing.md,
   },
 
-  // Header
   header: {
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    paddingBottom: 28,
+    paddingHorizontal: spacing.lg + 4,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg + 4,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4A3F32',
-    marginBottom: 4,
+    ...typography.title,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 14,
+    ...typography.caption,
     fontStyle: 'italic',
-    color: '#9A8B7A',
+    color: colors.inkMuted,
   },
 
-  // Featured (latest story)
   featuredSection: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   featuredCard: {
-    borderRadius: 16,
+    borderRadius: radius.xxl,
     overflow: 'hidden',
-    backgroundColor: '#FFFCF5',
-    // Elevation
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   cardPressed: {
-    opacity: 0.9,
+    transform: [{ scale: 0.97 }, { translateY: 2 }],
   },
   featuredCover: {
     height: 180,
@@ -365,69 +333,60 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  featuredOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(74, 63, 50, 0.1)',
-  },
   featuredBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#FF8A65',
-    paddingHorizontal: 10,
+    top: spacing.md - 4,
+    left: spacing.md - 4,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   featuredBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
   featuredContent: {
-    padding: 16,
+    padding: spacing.md,
   },
   featuredTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4A3F32',
-    marginBottom: 4,
+    ...typography.subtitle,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
   featuredMeta: {
-    fontSize: 13,
-    color: '#9A8B7A',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
 
-  // Older stories section
   olderSection: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: 14,
+    ...typography.caption,
     fontStyle: 'italic',
-    color: '#9A8B7A',
-    marginBottom: 16,
+    color: colors.inkMuted,
+    marginBottom: spacing.md,
   },
   storiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: spacing.md,
   },
   storyCard: {
     width: '47%',
   },
   storyCover: {
     aspectRatio: 3 / 4,
-    borderRadius: 8,
+    borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: '#F5EBE0',
+    backgroundColor: colors.surfaceAlt,
     position: 'relative',
-    // Book shadow
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   storyImage: {
     width: '100%',
@@ -443,88 +402,46 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 5,
-    backgroundColor: 'rgba(93, 78, 55, 0.15)',
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   storyTitle: {
-    fontSize: 13,
+    ...typography.caption,
     fontWeight: '500',
-    color: '#5D4E37',
-    marginTop: 10,
+    color: colors.inkLight,
+    marginTop: spacing.sm + 2,
     lineHeight: 18,
   },
 
-  // Create new section
   createSection: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
   },
   createCard: {
-    paddingVertical: 18,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.xl,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
     borderStyle: 'dashed',
     alignItems: 'center',
   },
   createCardPressed: {
-    backgroundColor: '#FAF6F0',
+    backgroundColor: colors.surfaceAlt,
   },
   createText: {
-    fontSize: 15,
-    color: '#9A8B7A',
+    ...typography.label,
+    fontWeight: '400',
+    color: colors.inkMuted,
   },
 
-  // Empty state
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#4A3F32',
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#8D7B68',
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 32,
-  },
-  emptyButton: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  emptyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-
-  // Modal
   modalContent: {
-    gap: 12,
-  },
-  modalAction: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    gap: spacing.md - 4,
   },
   modalActionSecondary: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.surface,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radius.xl,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   modalActionPressed: {
     opacity: 0.8,
@@ -532,23 +449,18 @@ const styles = StyleSheet.create({
   modalActionDisabled: {
     opacity: 0.5,
   },
-  modalActionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
   modalActionSecondaryText: {
-    fontSize: 15,
+    ...typography.label,
     fontWeight: '500',
-    color: '#5D4E37',
+    color: colors.ink,
   },
   modalActionDelete: {
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   modalActionDeleteText: {
-    fontSize: 14,
-    color: '#C4A898',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
 });

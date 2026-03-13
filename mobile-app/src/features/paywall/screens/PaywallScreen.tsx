@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Button, ScreenContainer } from '@/shared';
+import { colors, radius, spacing, typography, shadows } from '@/theme';
 import { useAppStore } from '@/store';
 
 interface FeatureItemProps {
@@ -141,28 +142,30 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   badge: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accentLight,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#1C1C1E',
-    letterSpacing: 1,
+    fontWeight: '800',
+    color: colors.ink,
+    letterSpacing: 1.5,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: colors.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.inkMuted,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.ink,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -187,7 +190,7 @@ const styles = StyleSheet.create({
   checkmark: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
   featureText: {
     flex: 1,
@@ -195,52 +198,55 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.ink,
     marginBottom: 2,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.inkMuted,
   },
   pricing: {
     marginBottom: 24,
   },
   priceCard: {
-    backgroundColor: '#F2F2F7',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#007AFF',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   priceLabel: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.inkMuted,
     marginBottom: 8,
   },
   price: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#007AFF',
+    fontWeight: '900',
+    color: colors.ink,
   },
   priceNote: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.inkMuted,
   },
   parentNotice: {
-    backgroundColor: '#E8F4FD',
-    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
     padding: 16,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
   },
   parentNoticeTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: colors.ink,
     marginBottom: 8,
   },
   parentNoticeText: {
     fontSize: 13,
-    color: '#1C1C1E',
+    color: colors.ink,
     lineHeight: 20,
   },
   footer: {
@@ -255,11 +261,11 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 14,
-    color: '#007AFF',
+    color: colors.accent,
   },
   footerDivider: {
     fontSize: 14,
-    color: '#C7C7CC',
+    color: colors.border,
     marginHorizontal: 12,
   },
 });

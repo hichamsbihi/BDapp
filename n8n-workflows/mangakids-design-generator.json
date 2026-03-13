@@ -1,0 +1,195 @@
+{
+  "name": "MangaKids - Complete Design Asset Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d0a0b0c0-0001-4000-8000-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nconst config = {\n  appName: 'MangaKids',\n  tagline: 'Create Your Own Comic Adventure',\n  outputPath: '/tmp/mangakids-assets',\n  geminiModel: 'gemini-2.0-flash-exp',\n  geminiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/',\n  openaiUrl: 'https://api.openai.com/v1/chat/completions',\n  geminiApiKey: process.env.GEMINI_API_KEY || 'PASTE_GEMINI_API_KEY_HERE',\n  openaiApiKey: process.env.OPENAI_API_KEY || 'PASTE_OPENAI_API_KEY_HERE',\n  designSystem: {\n    colors: {\n      ink: '#1A1A1A', inkLight: '#555555',\n      accent: '#E85D3A', accentDark: '#C94B2A', accentLight: '#FFF3EE',\n      background: '#FFFFFF', surface: '#F7F5F2',\n      success: '#3AAF6B', error: '#E04848',\n      golden: '#FFD93D', sky: '#7EC8E3', mint: '#6BCB77', lavender: '#B4A7D6'\n    },\n    typography: { heading: 'Fredoka One', body: 'Nunito', comic: 'Comic Neue' },\n    borderRadius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 100 },\n    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 }\n  },\n  stylePrefix: 'Children comic app illustration. Hand-drawn cartoon style, bold 2px black outlines (#1A1A1A), rounded friendly shapes, minimal shading, flat colors. Palette: warm orange (#E85D3A), cream (#F7F5F2), golden yellow (#FFD93D), sky blue (#7EC8E3), mint green (#6BCB77), lavender (#B4A7D6). Playful, expressive, child-friendly. Clean digital illustration with comic book energy.'\n};\n\nconst dirs = [\n  'branding', 'ui-components', 'characters', 'onboarding',\n  'empty-states', 'backgrounds', 'comic-elements', 'icons',\n  'avatars', 'animations', 'design-system'\n];\ndirs.forEach(d => fs.mkdirSync(config.outputPath + '/' + d, { recursive: true }));\n\nreturn [{ json: config }];"
+      },
+      "id": "d0a0b0c0-0002-4000-8000-000000000002",
+      "name": "Initialize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $input.first().json;\n\ntry {\n  const resp = await fetch(config.openaiUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'Authorization': 'Bearer ' + config.openaiApiKey\n    },\n    body: JSON.stringify({\n      model: 'gpt-4o-mini',\n      response_format: { type: 'json_object' },\n      messages: [\n        {\n          role: 'system',\n          content: 'You are a mobile design system expert for children cartoon/comic apps. Return a complete design system as a single JSON object.'\n        },\n        {\n          role: 'user',\n          content: 'Create a comprehensive design system JSON for ' + config.appName + ', a comic generator app for children aged 5-13. Base palette: ' + JSON.stringify(config.designSystem.colors) + '. Typography: ' + JSON.stringify(config.designSystem.typography) + '. Include: colorPalette with semantic names and usage rules, typographyScale (h1-h4 body caption button), spacingScale, borderRadiusScale, shadowDefinitions (card lifted soft comic), componentSpecs (button variants with states, card, badge, input, modal, bottomNav), iconStyle guidelines, illustrationRules (line weight colors expressions composition), animationTokens (durations easings spring configs), accessibilityNotes (contrast touch-targets font-sizes).'\n        }\n      ],\n      max_tokens: 3000\n    })\n  });\n\n  const data = await resp.json();\n  let enriched = {};\n  try {\n    enriched = JSON.parse(data.choices[0].message.content);\n  } catch (e) {\n    enriched = { raw: data.choices[0].message.content };\n  }\n\n  const fs = require('fs');\n  const dsOutput = {\n    base: config.designSystem,\n    enriched: enriched,\n    generatedAt: new Date().toISOString()\n  };\n  fs.writeFileSync(\n    config.outputPath + '/design-system/design-system.json',\n    JSON.stringify(dsOutput, null, 2)\n  );\n\n  return [{ json: { ...config, designSystemStatus: 'success' } }];\n} catch (e) {\n  return [{ json: { ...config, designSystemStatus: 'error', dsError: e.message } }];\n}"
+      },
+      "id": "d0a0b0c0-0003-4000-8000-000000000003",
+      "name": "Build Design System",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.first().json;\nconst p = c.stylePrefix;\nconst b = c.outputPath;\nconst cfg = {\n  geminiUrl: c.geminiUrl,\n  geminiModel: c.geminiModel,\n  geminiApiKey: c.geminiApiKey,\n  openaiUrl: c.openaiUrl,\n  openaiApiKey: c.openaiApiKey,\n  outputPath: c.outputPath\n};\n\nconst assets = [\n  {\n    id: 'branding-logo-full',\n    cat: 'branding',\n    name: 'Full Logo',\n    filename: b + '/branding/logo-full.png',\n    prompt: p + ' Create a playful logo for MangaKids comic app. Hand-drawn cartoon lettering with rounded bubbly letters, slightly tilted and bouncy baseline. Small comic elements around text: stars, tiny speech bubble, speed lines. Main text warm orange (#E85D3A) with bold black outlines. Accent elements in golden yellow and sky blue. Horizontal format, centered, white background, PNG.'\n  },\n  {\n    id: 'branding-app-icon',\n    cat: 'branding',\n    name: 'App Icon',\n    filename: b + '/branding/app-icon.png',\n    prompt: p + ' Square app icon for MangaKids. Cute cartoon child face with big expressive eyes, spiky hair, wide excited grin. Bold black outlines. Warm orange (#E85D3A) background with subtle comic halftone dots. Face fills 70% of frame. Rounded square. Simple, recognizable at small sizes. No text. Flat colors.'\n  },\n  {\n    id: 'branding-store-icon',\n    cat: 'branding',\n    name: 'App Store Icon',\n    filename: b + '/branding/store-icon.png',\n    prompt: p + ' Marketing app store icon 1024x1024 for MangaKids comic app. Cute mascot character (cartoon lavender cat with artist beret) holding pencil, surrounded by floating comic panels and stars. Warm orange (#E85D3A) gradient background. Bold outlines, vibrant soft colors. Professional yet playful. No text.'\n  },\n  {\n    id: 'branding-splash',\n    cat: 'branding',\n    name: 'Splash Screen',\n    filename: b + '/branding/splash-illustration.png',\n    prompt: p + ' Splash screen illustration. Group of diverse cartoon kids excitedly reading comics together. Comic books, speech bubbles, stars, sparkles floating around them. Centered composition, vertical format. Warm cream (#F7F5F2) background. Dynamic joyful poses. Vibrant accents.'\n  },\n  {\n    id: 'ui-button-primary',\n    cat: 'ui-components',\n    name: 'Primary Button States',\n    filename: b + '/ui-components/button-primary.png',\n    prompt: p + ' Three primary button states side by side. Rounded pill-shaped buttons with bold 2px black outline and comic-style hard shadow below. Normal: warm orange (#E85D3A) fill. Pressed: darker orange (#C94B2A), no shadow, slight inset. Disabled: light gray fill, thin gray outline. Each has placeholder text. White background.'\n  },\n  {\n    id: 'ui-button-secondary',\n    cat: 'ui-components',\n    name: 'Secondary Button States',\n    filename: b + '/ui-components/button-secondary.png',\n    prompt: p + ' Three secondary outline button states. Rounded pill-shaped, bold black outline, white fill. Normal: black outline white fill. Hover: light cream (#FFF3EE) fill. Disabled: dashed gray outline. Slightly wobbly hand-drawn edges for comic feel. White background.'\n  },\n  {\n    id: 'ui-card-decoration',\n    cat: 'ui-components',\n    name: 'Card Decorations',\n    filename: b + '/ui-components/card-decoration.png',\n    prompt: p + ' Decorative card UI elements set. (1) Corner decorations with small stars and swirls. (2) Card border with hand-drawn wavy line. (3) Comic-style hard shadow offset (5px right, 5px down, black). (4) Small ribbon banner decoration for card headers. All separate elements on white background. Bold outlines, orange and golden yellow accents.'\n  },\n  {\n    id: 'ui-badge-star',\n    cat: 'ui-components',\n    name: 'Star Badge Components',\n    filename: b + '/ui-components/badge-star.png',\n    prompt: p + ' Star badge set for rewards. (1) Single golden star (#FFD93D) with black outline and sparkle. (2) Star inside circular badge with number. (3) Row of 5 stars, 3 filled gold, 2 gray outline. (4) Achievement badge: star with ribbon below. Comic style, flat colors. White background.'\n  },\n  {\n    id: 'ui-step-indicator',\n    cat: 'ui-components',\n    name: 'Progress Steps',\n    filename: b + '/ui-components/step-indicator.png',\n    prompt: p + ' Progress step indicator for onboarding. Four circles connected by dotted line. Steps 1-2: filled sky blue (#7EC8E3) with checkmark. Step 3: current, warm orange (#E85D3A) fill with star decoration. Step 4: gray outline, upcoming. Bold comic outlines, hand-drawn quality. White background.'\n  },\n  {\n    id: 'ui-input-fields',\n    cat: 'ui-components',\n    name: 'Input Field Styles',\n    filename: b + '/ui-components/input-fields.png',\n    prompt: p + ' Input field elements for comic app UI. (1) Text input with hand-drawn black border, slight wobble. (2) Search input with comic magnifying glass icon. (3) Dropdown with comic arrow. (4) Text area with pencil icon. All have rounded corners, bold 2px outlines, light cream (#FFF3EE) fill. White background.'\n  },\n  {\n    id: 'ui-modal-elements',\n    cat: 'ui-components',\n    name: 'Modal Decorations',\n    filename: b + '/ui-components/modal-elements.png',\n    prompt: p + ' Modal dialog decorative elements. (1) Modal border frame with comic corners and small stars. (2) Close button: circle with X in comic style. (3) Celebration header: confetti and stars bursting from top. (4) Warning header: cartoon exclamation mark looking worried. Bold outlines, flat colors. White background.'\n  },\n  {\n    id: 'ui-nav-bar',\n    cat: 'ui-components',\n    name: 'Navigation Bar',\n    filename: b + '/ui-components/navigation-bar.png',\n    prompt: p + ' Bottom navigation bar design. Four tab icons in row: Home (house), Library (book), Create (plus in starburst), Profile (child face). Active tab Home has orange (#E85D3A) fill, others black outline only. Comic hand-drawn icons. Labels below each. White bar with subtle top border. Horizontal layout.'\n  },\n  {\n    id: 'char-boy-hero',\n    cat: 'characters',\n    name: 'Boy Hero',\n    filename: b + '/characters/boy-hero.png',\n    prompt: p + ' Full body cartoon boy hero age 8-10. Big round eyes with sparkle, spiky brown hair, wide excited grin. Orange (#E85D3A) t-shirt with star, blue shorts, red sneakers, small flowing cape. Dynamic jumping pose showing energy. Character sheet with 4 expressions: happy, surprised, determined, laughing. White background.'\n  },\n  {\n    id: 'char-girl-hero',\n    cat: 'characters',\n    name: 'Girl Hero',\n    filename: b + '/characters/girl-hero.png',\n    prompt: p + ' Full body cartoon girl hero age 8-10. Big expressive eyes, curly dark hair with sky blue (#7EC8E3) hair clip, bright confident smile. Mint green (#6BCB77) jacket, dark shorts, yellow boots. Confident stance holding comic book. Character sheet with 4 expressions: happy, curious, brave, silly. White background.'\n  },\n  {\n    id: 'char-mascot',\n    cat: 'characters',\n    name: 'App Mascot Cat',\n    filename: b + '/characters/mascot-cat.png',\n    prompt: p + ' Cute mascot for MangaKids. Small round cartoon cat creature with oversized head, tiny body. Lavender (#B4A7D6) fur, white belly. Big sparkly eyes, small smile. Wearing tiny artist beret, holding large pencil. Tail curled like question mark. Very simple and huggable. Sheet with 4 poses: waving, drawing, sleeping, celebrating. White background.'\n  },\n  {\n    id: 'char-villain',\n    cat: 'characters',\n    name: 'Friendly Villain',\n    filename: b + '/characters/friendly-villain.png',\n    prompt: p + ' Cartoon friendly villain for children app. NOT scary, silly and clumsy. Round body, dramatic cape, comically oversized curly mustache. Purple and dark blue with golden yellow accents. Over-the-top dramatic pose. Big expressive eyes showing silliness not menace. Should make children laugh. White background.'\n  },\n  {\n    id: 'char-robot',\n    cat: 'characters',\n    name: 'Robot Sidekick',\n    filename: b + '/characters/sidekick-robot.png',\n    prompt: p + ' Small cartoon robot sidekick. Friendly boxy design with rounded edges. Sky blue (#7EC8E3) body, orange (#E85D3A) accents. Big circular screen eyes showing emoji expressions. Small star antenna. Stubby arms and legs. 4 poses: happy, thinking, surprised, excited. White background.'\n  },\n  {\n    id: 'char-fox',\n    cat: 'characters',\n    name: 'Fox Sidekick',\n    filename: b + '/characters/sidekick-fox.png',\n    prompt: p + ' Small cartoon fox sidekick. Cute chibi proportions, big bushy tail. Warm orange (#E85D3A) and cream colors. Wearing tiny sky blue scarf. Playful mischievous expression with big eyes. 4 expressions: playful, sleepy, excited, grumpy-cute. White background.'\n  },\n  {\n    id: 'onboard-welcome',\n    cat: 'onboarding',\n    name: 'Welcome Screen',\n    filename: b + '/onboarding/welcome.png',\n    prompt: p + ' Welcome screen illustration. Cartoon child opening a magical glowing comic book, colorful characters and stars flying out of pages. Sparkles, speech bubbles, comic action lines creating wonder. Warm lighting from book. Centered vertical composition. Cream (#F7F5F2) background with subtle halftone. Magical inviting atmosphere.'\n  },\n  {\n    id: 'onboard-avatar',\n    cat: 'onboarding',\n    name: 'Avatar Selection',\n    filename: b + '/onboarding/avatar-select.png',\n    prompt: p + ' Avatar selection illustration. Large ornate comic-style mirror frame in center. Around it floating character faces in circular bubbles: boy, girl, robot, cat, fox. Each has different fun expression. Sparkles and arrows connecting faces to mirror. White background with comic dots. Orange and blue accents.'\n  },\n  {\n    id: 'onboard-create',\n    cat: 'onboarding',\n    name: 'Create First Story',\n    filename: b + '/onboarding/create-story.png',\n    prompt: p + ' Illustration of cartoon child creating first comic. Child holds oversized pencil, drawing on floating comic panel. Around them: characters coming to life, speech bubbles forming, stars and sparkles. Creative energy radiating outward. Warm cream background with grid pattern. Orange, blue, yellow accents.'\n  },\n  {\n    id: 'onboard-ready',\n    cat: 'onboarding',\n    name: 'All Set Ready',\n    filename: b + '/onboarding/ready-to-go.png',\n    prompt: p + ' Celebration illustration for onboarding final screen. Group of cartoon characters (boy hero, girl hero, mascot cat) cheering with arms up. Confetti, stars, comic action lines around them. Speech bubble with checkmark. Triumphant exciting mood. Centered vertical. Cream background. Bright orange, yellow, blue, green accents.'\n  },\n  {\n    id: 'empty-no-stories',\n    cat: 'empty-states',\n    name: 'No Stories Yet',\n    filename: b + '/empty-states/no-stories.png',\n    prompt: p + ' Empty state: no stories yet. Mascot cat sitting next to empty open book, curious tilted head, question mark above. Small lightbulb appearing faintly. Encouraging gentle mood, not sad. Muted pastels, soft expression. Centered on white background. Simple and clean.'\n  },\n  {\n    id: 'empty-no-wifi',\n    cat: 'empty-states',\n    name: 'No Connection',\n    filename: b + '/empty-states/no-connection.png',\n    prompt: p + ' Empty state: no internet. Mascot cat tangled in broken cable, confused but amused expression. Broken WiFi symbol floating above with comic crack lines. Humorous not frustrating. Muted colors with sky blue accent. Comic confusion lines. White background.'\n  },\n  {\n    id: 'empty-error',\n    cat: 'empty-states',\n    name: 'Error State',\n    filename: b + '/empty-states/error.png',\n    prompt: p + ' Empty state: error. Mascot cat next to broken comic panel with Oops in comic lettering. Panel has cartoon crack with small stars bursting. Cat surprised but not worried. Comic action lines. Muted warm colors, orange accent. Humorous and light, not alarming. White background.'\n  },\n  {\n    id: 'empty-loading',\n    cat: 'empty-states',\n    name: 'Loading Character',\n    filename: b + '/empty-states/loading.png',\n    prompt: p + ' Loading state: mascot cat drawing circle in air with pencil, creating swirling line forming loading circle shape. Sparkles following pencil tip. Cat focused and happy. Dynamic circular motion with speed lines. Lavender cat, orange pencil, golden sparkle trail. White background.'\n  },\n  {\n    id: 'bg-main-pattern',\n    cat: 'backgrounds',\n    name: 'Main Background Pattern',\n    filename: b + '/backgrounds/main-pattern.png',\n    prompt: p + ' Seamless tileable background pattern 512x512. Very subtle tiny repeating elements: stars, dots, exclamation marks, mini speech bubbles, lightning bolts, hearts. Extremely light pale warm gray on cream (#FFF9F0). Must be very subtle, not distracting. Hand-drawn quality thin lines. Seamless repeating.'\n  },\n  {\n    id: 'bg-reading',\n    cat: 'backgrounds',\n    name: 'Reading Background',\n    filename: b + '/backgrounds/reading-bg.png',\n    prompt: p + ' Background for comic reading mode 1024x1024. Subtle aged paper texture with faint comic halftone dot pattern. Warm cream (#F7F5F2) base. Very slight yellowed vignette at edges. Extremely faint speed lines in corners. Very subtle, readability is priority.'\n  },\n  {\n    id: 'bg-halftone',\n    cat: 'backgrounds',\n    name: 'Halftone Pattern',\n    filename: b + '/backgrounds/halftone.png',\n    prompt: p + ' Comic halftone dot pattern 512x512. Regular grid of circles gradually changing size creating gradient effect. Light warm orange (#E85D3A) at 10-15% opacity. Classic manga printing effect. Seamless tileable. Clean geometric. Very subtle decorative use.'\n  },\n  {\n    id: 'comic-speech-bubbles',\n    cat: 'comic-elements',\n    name: 'Speech Bubble Set',\n    filename: b + '/comic-elements/speech-bubbles.png',\n    prompt: p + ' Set of 6 speech bubbles. (1) Classic oval with pointed tail. (2) Cloud thought bubble with dot trail. (3) Spiky jagged shout bubble. (4) Whisper bubble dashed border. (5) Narration box with corner decorations. (6) Double-tail bubble for two speakers. Bold 2px black outlines, white fill, hand-drawn wobbly edges. Arranged on white background.'\n  },\n  {\n    id: 'comic-action-fx',\n    cat: 'comic-elements',\n    name: 'Action Effects',\n    filename: b + '/comic-elements/action-effects.png',\n    prompt: p + ' Comic action words in 2x2 grid. (1) POW with yellow starburst. (2) BOOM with orange explosion. (3) ZAP with blue lightning frame. (4) WHOOSH with green speed lines. Bold comic lettering, black outlines, colored fills. Each has matching background effect. Exaggerated dynamic. White background.'\n  },\n  {\n    id: 'comic-panels',\n    cat: 'comic-elements',\n    name: 'Panel Border Frames',\n    filename: b + '/comic-elements/panel-borders.png',\n    prompt: p + ' Four comic panel border frames in 2x2 grid. (1) Classic rectangle bold black border, star in corner. (2) Wavy organic border for dream scenes. (3) Jagged broken border for action. (4) Rounded rectangle with decorative corner swirls. Empty white centers for content. Bold outlines, hand-drawn quality. White background.'\n  },\n  {\n    id: 'comic-decorative',\n    cat: 'comic-elements',\n    name: 'Decorative Elements',\n    filename: b + '/comic-elements/decorative.png',\n    prompt: p + ' Collection of small decorative comic elements. Speed lines, impact star burst, sweat drops, sparkle shine, small hearts, exclamation and question marks, musical notes, anger vein, dizzy spiral, cloud puffs. All bold black line art, some with orange yellow blue fills. Small icon-like size. Neatly arranged on white background.'\n  },\n  {\n    id: 'comic-emotions',\n    cat: 'comic-elements',\n    name: 'Emotion Symbols',\n    filename: b + '/comic-elements/emotion-symbols.png',\n    prompt: p + ' Eight cartoon emotion stickers in 2x4 grid. (1) Red heart. (2) Yellow star with sparkle. (3) Blue teardrop. (4) Orange flame for excitement. (5) Green clover for luck. (6) Purple crystal ball for mystery. (7) Rainbow for happiness. (8) Golden crown for achievement. Bold cartoon style, black outlines. White background.'\n  },\n  {\n    id: 'icons-nav',\n    cat: 'icons',\n    name: 'Navigation Icons',\n    filename: b + '/icons/navigation-icons.png',\n    prompt: p + ' Eight navigation icons in 2x4 grid. Comic hand-drawn style, bold rounded 3px outlines. (1) Home house. (2) Open book library. (3) Gear settings. (4) Child face profile. (5) Bell notifications. (6) Compass explore. (7) Bookmark save. (8) Clock history. Simple friendly, slightly imperfect hand-drawn quality. Black on white. Each ~64x64.'\n  },\n  {\n    id: 'icons-actions',\n    cat: 'icons',\n    name: 'Action Icons',\n    filename: b + '/icons/action-icons.png',\n    prompt: p + ' Eight action icons in 2x4 grid. Comic hand-drawn style, bold 3px outlines. (1) Star favorite. (2) Heart like. (3) Plus in circle create. (4) Left arrow back. (5) Share send. (6) Download save. (7) Magnifying glass search. (8) Pencil edit. Some with orange (#E85D3A) fill accents. Black outlines on white.'\n  },\n  {\n    id: 'avatars-kids',\n    cat: 'avatars',\n    name: 'Kid Character Avatars',\n    filename: b + '/avatars/kid-avatars.png',\n    prompt: p + ' Eight child character face avatars in circular frames, 2x4 grid. Diverse cartoon kids: different hair styles, skin tones, expressions (happy, cool, silly, shy, excited, brave, chill, goofy). Each in colored circle border alternating orange, blue, green, lavender. Big eyes, friendly faces. Bold outlines, flat colors. White background.'\n  },\n  {\n    id: 'avatars-creatures',\n    cat: 'avatars',\n    name: 'Creature Avatars',\n    filename: b + '/avatars/creature-avatars.png',\n    prompt: p + ' Eight creature/animal face avatars in circular frames, 2x4 grid. Cute cartoon: cat, dog, fox, rabbit, owl, dragon, panda, unicorn. Each in colored circle border alternating colors. Big friendly eyes, cute expressions, distinctive features. Bold outlines, flat pastel colors. White background. Adorable child-friendly.'\n  }\n];\n\nreturn assets.map(a => ({\n  json: {\n    id: a.id,\n    category: a.cat,\n    name: a.name,\n    filename: a.filename,\n    prompt: a.prompt,\n    config: cfg\n  }\n}));"
+      },
+      "id": "d0a0b0c0-0004-4000-8000-000000000004",
+      "name": "Generate Image Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d0a0b0c0-0005-4000-8000-000000000005",
+      "name": "Loop Images",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst fs = require('fs');\n\ntry {\n  const url = item.config.geminiUrl + item.config.geminiModel + ':generateContent?key=' + item.config.geminiApiKey;\n\n  const resp = await fetch(url, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      contents: [{ parts: [{ text: item.prompt }] }],\n      generationConfig: {\n        responseModalities: ['IMAGE', 'TEXT'],\n        temperature: 0.8\n      }\n    })\n  });\n\n  const data = await resp.json();\n\n  if (data.error) {\n    return [{ json: { id: item.id, name: item.name, category: item.category, status: 'api_error', error: data.error.message || JSON.stringify(data.error) } }];\n  }\n\n  const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];\n  const imgPart = parts.find(function(p) { return p.inlineData; });\n\n  if (imgPart) {\n    const buf = Buffer.from(imgPart.inlineData.data, 'base64');\n    fs.writeFileSync(item.filename, buf);\n    return [{ json: { id: item.id, name: item.name, category: item.category, filename: item.filename, status: 'success', sizeBytes: buf.length } }];\n  }\n\n  return [{ json: { id: item.id, name: item.name, category: item.category, status: 'no_image', response: JSON.stringify(data).substring(0, 500) } }];\n} catch (e) {\n  return [{ json: { id: item.id, name: item.name, category: item.category, status: 'error', error: e.message } }];\n}"
+      },
+      "id": "d0a0b0c0-0006-4000-8000-000000000006",
+      "name": "Generate & Save Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "await new Promise(function(r) { setTimeout(r, 2500); });\nreturn $input.all();"
+      },
+      "id": "d0a0b0c0-0007-4000-8000-000000000007",
+      "name": "Image Rate Limit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 550]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = '/tmp/mangakids-assets';\nconst cfg = $input.first().json.config || {\n  openaiUrl: process.env.OPENAI_URL || 'https://api.openai.com/v1/chat/completions',\n  openaiApiKey: process.env.OPENAI_API_KEY || 'PASTE_OPENAI_API_KEY_HERE',\n  outputPath: '/tmp/mangakids-assets'\n};\n\nconst animations = [\n  {\n    id: 'anim-loading',\n    name: 'Loading Spinner',\n    filename: b + '/animations/loading-spinner.json',\n    lottiePrompt: 'Create complete valid Lottie JSON animation for a loading spinner. A cartoon cat character (lavender #B4A7D6 body) draws a circle in the air with a pencil. The pencil tip leaves an orange (#E85D3A) glowing trail forming a rotating circle. Smooth loop, 2 second duration, 30fps. Include all required Lottie fields: v, fr, ip, op, w (200), h (200), layers with shapes and keyframes. Output ONLY the JSON.'\n  },\n  {\n    id: 'anim-success',\n    name: 'Success Celebration',\n    filename: b + '/animations/success-celebration.json',\n    lottiePrompt: 'Create complete valid Lottie JSON for a success celebration animation. A golden star (#FFD93D) drops from top, bounces with ease-out-bounce timing, then bursts into 12 confetti particles in colors #E85D3A #7EC8E3 #FFD93D #6BCB77. A green checkmark (#3AAF6B) stroke-animates in center. 1.5s duration, 30fps, 200x200. Include v, fr, ip, op, w, h, layers. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-star-collect',\n    name: 'Star Collection',\n    filename: b + '/animations/star-collect.json',\n    lottiePrompt: 'Create valid Lottie JSON for a star reward collection. Golden star (#FFD93D) scales from 0 to 1.15 to 1.0 with bounce. Brief glow pulse (white circle behind, opacity 0-0.5-0). Star then translates to top-right with ease-in. Sparkle particles trail behind. 1s duration, 30fps, 200x200. All required Lottie fields. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-wave',\n    name: 'Character Wave',\n    filename: b + '/animations/character-wave.json',\n    lottiePrompt: 'Create valid Lottie JSON for a cartoon cat mascot waving. Lavender (#B4A7D6) cat body, right arm waves via rotation keyframes oscillating -20 to 20 degrees. Body has subtle vertical bounce. Eyes blink at 1.5s (scaleY 1 to 0.1 to 1). Small star sparkle near hand. 3s loop, 30fps, 200x200. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-page-turn',\n    name: 'Page Turn Effect',\n    filename: b + '/animations/page-turn.json',\n    lottiePrompt: 'Create valid Lottie JSON for a comic page turn. White page with faint gray panel lines rotates via skewX from 0 to -180 degrees simulating 3D flip. Shadow grows at midpoint. New page appears from right. 0.6s duration, 30fps, 300x200, ease-in-out. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-confetti',\n    name: 'Confetti Burst',\n    filename: b + '/animations/confetti-burst.json',\n    lottiePrompt: 'Create valid Lottie JSON for confetti burst. 16 small particles burst outward radially from center. Mix of circles and rectangles. Colors: #E85D3A #7EC8E3 #FFD93D #6BCB77 #B4A7D6. After burst, particles drift down with gravity ease-in and slight rotation. 2s duration, 30fps, 200x200. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-bounce-in',\n    name: 'Bounce In Entrance',\n    filename: b + '/animations/bounce-in.json',\n    lottiePrompt: 'Create valid Lottie JSON for bounce-in entrance animation. A circle placeholder scales: 0 to 1.15 overshoot to 0.95 undershoot to 1.0. Simultaneous rotation: 0 to -3 to 2 to 0 degrees. Small sparkle particles at settle. 0.5s, 30fps, 200x200. Generic reusable entrance. Output ONLY JSON.'\n  },\n  {\n    id: 'anim-heart-pop',\n    name: 'Heart Pop Like',\n    filename: b + '/animations/heart-pop.json',\n    lottiePrompt: 'Create valid Lottie JSON for heart pop animation. Heart shape scales 0.5 to 1.3 to 1.0 with pop timing. Transitions from black (#1A1A1A) stroke-only to solid orange-red (#E85D3A) fill. 3 small hearts float upward fading out. Circular burst ring expands and fades. 0.8s, 30fps, 200x200. Output ONLY JSON.'\n  }\n];\n\nreturn animations.map(function(a) {\n  return { json: { ...a, config: cfg } };\n});"
+      },
+      "id": "d0a0b0c0-0008-4000-8000-000000000008",
+      "name": "Build Animation Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 700]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d0a0b0c0-0009-4000-8000-000000000009",
+      "name": "Loop Animations",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1250, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst fs = require('fs');\n\ntry {\n  const apiKey = item.config.openaiApiKey || process.env.OPENAI_API_KEY;\n  const apiUrl = item.config.openaiUrl || 'https://api.openai.com/v1/chat/completions';\n\n  const resp = await fetch(apiUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'Authorization': 'Bearer ' + apiKey\n    },\n    body: JSON.stringify({\n      model: 'gpt-4o-mini',\n      messages: [\n        {\n          role: 'system',\n          content: 'You are a Lottie animation expert. Generate valid Lottie JSON animation files. Output ONLY the raw Lottie JSON object. No markdown, no explanation, no code fences. Just the JSON object starting with { and ending with }.'\n        },\n        {\n          role: 'user',\n          content: item.lottiePrompt\n        }\n      ],\n      temperature: 0.2,\n      max_tokens: 4000\n    })\n  });\n\n  const data = await resp.json();\n  const content = data.choices[0].message.content;\n\n  let lottieJson;\n  try {\n    lottieJson = JSON.parse(content);\n  } catch (parseErr) {\n    var match = content.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n    if (match) {\n      lottieJson = JSON.parse(match[1].trim());\n    } else {\n      var braceStart = content.indexOf('{');\n      var braceEnd = content.lastIndexOf('}');\n      if (braceStart !== -1 && braceEnd !== -1) {\n        lottieJson = JSON.parse(content.substring(braceStart, braceEnd + 1));\n      } else {\n        lottieJson = { error: 'Could not parse Lottie JSON', rawResponse: content.substring(0, 500) };\n      }\n    }\n  }\n\n  fs.writeFileSync(item.filename, JSON.stringify(lottieJson, null, 2));\n  return [{ json: { id: item.id, name: item.name, filename: item.filename, status: 'success' } }];\n} catch (e) {\n  return [{ json: { id: item.id, name: item.name, status: 'error', error: e.message } }];\n}"
+      },
+      "id": "d0a0b0c0-0010-4000-8000-000000000010",
+      "name": "Generate & Save Lottie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "await new Promise(function(r) { setTimeout(r, 1500); });\nreturn $input.all();"
+      },
+      "id": "d0a0b0c0-0011-4000-8000-000000000011",
+      "name": "Animation Rate Limit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 950]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst basePath = '/tmp/mangakids-assets';\n\nfunction scanDir(dir) {\n  var results = [];\n  try {\n    var items = fs.readdirSync(dir, { withFileTypes: true });\n    for (var i = 0; i < items.length; i++) {\n      var fullPath = dir + '/' + items[i].name;\n      if (items[i].isDirectory()) {\n        results = results.concat(scanDir(fullPath));\n      } else {\n        var stats = fs.statSync(fullPath);\n        results.push({\n          path: fullPath.replace(basePath + '/', ''),\n          filename: items[i].name,\n          sizeBytes: stats.size,\n          type: items[i].name.endsWith('.json') ? 'json' : 'image',\n          modified: stats.mtime.toISOString()\n        });\n      }\n    }\n  } catch (e) {}\n  return results;\n}\n\nvar allFiles = scanDir(basePath);\nvar categories = {};\nvar catNames = ['branding', 'ui-components', 'characters', 'onboarding', 'empty-states', 'backgrounds', 'comic-elements', 'icons', 'avatars', 'animations', 'design-system'];\ncatNames.forEach(function(cat) {\n  categories[cat] = allFiles.filter(function(f) { return f.path.startsWith(cat + '/'); });\n});\n\nvar manifest = {\n  workflow: 'MangaKids Design Asset Generator',\n  generatedAt: new Date().toISOString(),\n  appName: 'MangaKids',\n  totalAssets: allFiles.length,\n  summary: {\n    images: allFiles.filter(function(f) { return f.type === 'image'; }).length,\n    jsonConfigs: allFiles.filter(function(f) { return f.type === 'json'; }).length,\n    totalSizeBytes: allFiles.reduce(function(sum, f) { return sum + f.sizeBytes; }, 0)\n  },\n  categories: categories,\n  outputStructure: {\n    branding: 'Logo, app icon, store icon, splash screen',\n    uiComponents: 'Buttons, cards, badges, steps, inputs, modals, navigation',\n    characters: 'Boy hero, girl hero, mascot cat, villain, robot, fox sidekicks',\n    onboarding: 'Welcome, avatar select, create story, ready-to-go illustrations',\n    emptyStates: 'No stories, no connection, error, loading illustrations',\n    backgrounds: 'Main pattern, reading texture, halftone pattern',\n    comicElements: 'Speech bubbles, action effects, panel borders, decorative, emotions',\n    icons: 'Navigation icon set, action icon set',\n    avatars: 'Kid character avatars, creature avatars',\n    animations: 'Loading, success, star collect, wave, page turn, confetti, bounce, heart Lottie JSONs',\n    designSystem: 'Complete design system JSON with enriched tokens'\n  }\n};\n\nfs.writeFileSync(basePath + '/manifest.json', JSON.stringify(manifest, null, 2));\n\nreturn [{ json: { status: 'workflow_complete', totalAssets: manifest.totalAssets, manifest: manifest } }];"
+      },
+      "id": "d0a0b0c0-0012-4000-8000-000000000012",
+      "name": "Create Manifest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1750, 700]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [{ "node": "Initialize", "type": "main", "index": 0 }]
+      ]
+    },
+    "Initialize": {
+      "main": [
+        [{ "node": "Build Design System", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Design System": {
+      "main": [
+        [{ "node": "Generate Image Prompts", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Image Prompts": {
+      "main": [
+        [{ "node": "Loop Images", "type": "main", "index": 0 }]
+      ]
+    },
+    "Loop Images": {
+      "main": [
+        [{ "node": "Generate & Save Image", "type": "main", "index": 0 }],
+        [{ "node": "Build Animation Prompts", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate & Save Image": {
+      "main": [
+        [{ "node": "Image Rate Limit", "type": "main", "index": 0 }]
+      ]
+    },
+    "Image Rate Limit": {
+      "main": [
+        [{ "node": "Loop Images", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Animation Prompts": {
+      "main": [
+        [{ "node": "Loop Animations", "type": "main", "index": 0 }]
+      ]
+    },
+    "Loop Animations": {
+      "main": [
+        [{ "node": "Generate & Save Lottie", "type": "main", "index": 0 }],
+        [{ "node": "Create Manifest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate & Save Lottie": {
+      "main": [
+        [{ "node": "Animation Rate Limit", "type": "main", "index": 0 }]
+      ]
+    },
+    "Animation Rate Limit": {
+      "main": [
+        [{ "node": "Loop Animations", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "mangakids-design-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

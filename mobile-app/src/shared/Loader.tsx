@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { colors, spacing, typography } from '@/theme';
 
 interface LoaderProps {
   size?: 'small' | 'large';
@@ -8,12 +9,9 @@ interface LoaderProps {
   fullScreen?: boolean;
 }
 
-/**
- * Reusable loading indicator component
- */
 export const Loader: React.FC<LoaderProps> = ({
   size = 'large',
-  color = '#007AFF',
+  color = colors.accent,
   text,
   fullScreen = false,
 }) => {
@@ -35,18 +33,18 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.lg - 4,
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
+    marginTop: spacing.md - 4,
+    ...typography.body,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 });

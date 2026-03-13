@@ -21,21 +21,18 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge, NotEnoughStarsModal } from '@/shared';
+import { ScreenContainer, StarsBadge, NotEnoughStarsModal, StepIndicator, Button } from '@/shared';
 import { useAppStore } from '@/store';
 import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { UniverseConfig } from '@/types';
 import { useUniverses } from '@/hooks/useStoryData';
 import { generateStoryId } from '@/utils/ids';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
-const ANIMATION_DURATION = 700;
-const EASING = Easing.out(Easing.cubic);
+const EASE = Easing.out(Easing.cubic);
 
-/**
- * Animated universe card - "Magic Door" design
- */
 interface UniverseCardProps {
   universe: UniverseConfig;
   index: number;
@@ -54,51 +51,29 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
   const progress = useSharedValue(0);
   const scale = useSharedValue(1);
   const shakeX = useSharedValue(0);
-  const glowOpacity = useSharedValue(0);
-  const sparkle = useSharedValue(1);
 
-  // Entrance animation
   useEffect(() => {
     progress.value = withDelay(
       400 + index * 180,
-      withTiming(1, { duration: 600, easing: EASING })
+      withTiming(1, { duration: 600, easing: EASE }),
     );
-
-    // Subtle glow animation for unlocked universe
-    if (!universe.isLocked) {
-      glowOpacity.value = withDelay(
-        800 + index * 180,
-        withRepeat(
-          withTiming(0.6, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-          -1,
-          true
-        )
-      );
-    }
   }, [index, universe.isLocked]);
 
   const handlePress = () => {
     if (universe.isLocked) {
-      // "Blocked magic" animation - shake + flash
       shakeX.value = withSequence(
-        withTiming(-10, { duration: 40 }),
-        withTiming(10, { duration: 40 }),
         withTiming(-8, { duration: 40 }),
         withTiming(8, { duration: 40 }),
-        withTiming(-4, { duration: 40 }),
-        withTiming(0, { duration: 40 })
-      );
-      sparkle.value = withSequence(
-        withTiming(1.1, { duration: 100 }),
-        withTiming(0.9, { duration: 100 }),
-        withTiming(1, { duration: 100 })
+        withTiming(-6, { duration: 40 }),
+        withTiming(6, { duration: 40 }),
+        withTiming(0, { duration: 40 }),
       );
       onLockedPress(universe);
     } else {
       scale.value = withSequence(
         withSpring(0.96, { damping: 10, stiffness: 400 }),
-        withSpring(1.03, { damping: 10, stiffness: 300 }),
-        withSpring(1, { damping: 12, stiffness: 400 })
+        withSpring(1.02, { damping: 10, stiffness: 300 }),
+        withSpring(1, { damping: 12, stiffness: 400 }),
       );
       onSelect(universe.id);
     }
@@ -112,14 +87,6 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
     ],
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
-  const sparkleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sparkle.value }],
-  }));
-
   return (
     <Animated.View style={[styles.cardWrapper, animatedStyle]}>
       <Pressable
@@ -130,17 +97,6 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
         ]}
         onPress={handlePress}
       >
-        {/* Animated glow for unlocked */}
-        {!universe.isLocked && (
-          <Animated.View
-            style={[
-              styles.cardGlow,
-              { backgroundColor: universe.color },
-              glowStyle,
-            ]}
-          />
-        )}
-
         {/* Universe visual */}
         <View
           style={[
@@ -149,30 +105,20 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
             universe.isLocked && styles.cardVisualLocked,
           ]}
         >
-          <Animated.Text style={[styles.cardEmoji, sparkleStyle]}>
-            {universe.emoji}
-          </Animated.Text>
+          <Text style={styles.cardEmoji}>{universe.emoji}</Text>
 
-          {/* FREE badge for unlocked */}
           {!universe.isLocked && (
-            <View style={styles.freeBadge}>
-              <Text style={styles.freeBadgeText}>OUVERT</Text>
+            <View style={styles.openBadge}>
+              <Text style={styles.openBadgeText}>OUVERT</Text>
             </View>
           )}
 
-          {/* Locked overlay - "endormi" */}
           {universe.isLocked && (
             <View style={styles.lockedOverlay}>
               <View style={styles.lockBadge}>
                 <Text style={styles.lockIcon}>✨</Text>
               </View>
-              <Text style={styles.lockedHint}>Tu peux le réveiller ✨</Text>
             </View>
-          )}
-
-          {/* Selection glow */}
-          {isSelected && (
-            <View style={[styles.selectedGlow, { backgroundColor: universe.color }]} />
           )}
         </View>
 
@@ -183,29 +129,20 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
               {universe.name}
             </Text>
             {!universe.isLocked && isSelected && (
-              <View style={styles.selectedBadge}>
-                <Text style={styles.selectedBadgeText}>✓</Text>
+              <View style={styles.checkBadge}>
+                <Text style={styles.checkText}>✓</Text>
               </View>
             )}
           </View>
-          <Text style={[styles.cardDescription, universe.isLocked && styles.cardDescriptionLocked]}>
-            {universe.isLocked
-              ? "Ce monde dort encore..."
-              : universe.description}
+          <Text style={[styles.cardDesc, universe.isLocked && styles.cardDescLocked]}>
+            {universe.isLocked ? 'Ce monde dort encore...' : universe.description}
           </Text>
-          {!universe.isLocked && !isSelected && (
-            <Text style={styles.availableHint}>Disponible maintenant ✨</Text>
-          )}
         </View>
       </Pressable>
     </Animated.View>
   );
 };
 
-/**
- * Locked universe modal - ton magique et rassurant pour l'enfant
- * Message émotionnel : "Ce monde dort encore", pas de wording technique
- */
 interface LockedModalProps {
   visible: boolean;
   universe: UniverseConfig | null;
@@ -244,8 +181,6 @@ const LockedModal: React.FC<LockedModalProps> = ({
     setShowGainStars(true);
   };
 
-  // Après la "magie", si assez d'étoiles : débloquer + fermer tout.
-  // UX fluide : l'enfant entre DIRECTEMENT sans frustration.
   const handleWatchMagicForUnlock = async () => {
     await onWatchMagic();
     if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
@@ -265,23 +200,35 @@ const LockedModal: React.FC<LockedModalProps> = ({
             <Text style={styles.modalSubtitle}>Ce monde dort encore...</Text>
             <Text style={styles.modalMessage}>
               {canAfford
-                ? "Tu as assez d'étoiles pour le réveiller ! ✨"
-                : "Tu peux le réveiller avec un peu de magie ✨\nIl lui manque encore quelques étoiles..."}
+                ? "Tu as assez d'etoiles pour le reveiller !"
+                : "Il lui manque encore quelques etoiles..."}
             </Text>
 
-            <View style={styles.modalButtonsColumn}>
+            <View style={styles.modalButtons}>
               {canAfford ? (
-                <Pressable style={styles.modalButtonPrimary} onPress={handleUseStars}>
-                  <Text style={styles.modalButtonPrimaryText}>Utiliser 3 étoiles ✨</Text>
-                </Pressable>
+                <Button
+                  title="Utiliser 3 etoiles"
+                  onPress={handleUseStars}
+                  variant="primary"
+                  size="medium"
+                  style={styles.modalBtn}
+                />
               ) : (
-                <Pressable style={styles.modalButtonPrimary} onPress={handleGainStars}>
-                  <Text style={styles.modalButtonPrimaryText}>Gagner des étoiles ✨</Text>
-                </Pressable>
+                <Button
+                  title="Gagner des etoiles"
+                  onPress={handleGainStars}
+                  variant="primary"
+                  size="medium"
+                  style={styles.modalBtn}
+                />
               )}
-              <Pressable style={styles.modalButtonSecondary} onPress={onClose}>
-                <Text style={styles.modalButtonSecondaryText}>⏳ Plus tard</Text>
-              </Pressable>
+              <Button
+                title="Plus tard"
+                onPress={onClose}
+                variant="secondary"
+                size="medium"
+                style={styles.modalBtn}
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -297,9 +244,6 @@ const LockedModal: React.FC<LockedModalProps> = ({
   );
 };
 
-/**
- * Universe selection screen - "Magic Doors" experience
- */
 export const UniverseSelectScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
@@ -318,11 +262,9 @@ export const UniverseSelectScreen: React.FC = () => {
   const rewardStar = useAppStore((state) => state.rewardStar);
 
   const isNewUser = !hasCompletedOnboarding;
-
   const gender = heroProfile?.gender || 'boy';
   const { data: rawUniverses, loading: universesLoading } = useUniverses(gender);
 
-  // isLocked is computed client-side from unlockedUniverses / isPremium
   const universes = useMemo(() => {
     if (isPremium) {
       return rawUniverses.map((u) => ({ ...u, isLocked: false }));
@@ -333,37 +275,19 @@ export const UniverseSelectScreen: React.FC = () => {
     });
   }, [rawUniverses, isPremium, unlockedUniverses]);
 
-  // Animation values
   const introProgress = useSharedValue(0);
   const headerProgress = useSharedValue(0);
   const buttonProgress = useSharedValue(0);
-  const buttonPulse = useSharedValue(1);
 
   useEffect(() => {
-    // Intro appears first (narrative moment)
-    introProgress.value = withTiming(1, { duration: 800, easing: EASING });
-
-    // Header follows
-    headerProgress.value = withDelay(200, withTiming(1, { duration: ANIMATION_DURATION, easing: EASING }));
-
-    // Button last
-    buttonProgress.value = withDelay(1200, withTiming(1, { duration: 700, easing: EASING }));
-
-    // Subtle pulse on button when visible
-    setTimeout(() => {
-      buttonPulse.value = withRepeat(
-        withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
-        -1,
-        true
-      );
-    }, 2000);
+    introProgress.value = withTiming(1, { duration: 800, easing: EASE });
+    headerProgress.value = withDelay(200, withTiming(1, { duration: 700, easing: EASE }));
+    buttonProgress.value = withDelay(1200, withTiming(1, { duration: 700, easing: EASE }));
   }, []);
 
   const introStyle = useAnimatedStyle(() => ({
     opacity: introProgress.value,
-    transform: [
-      { scale: interpolate(introProgress.value, [0, 1], [0.95, 1]) },
-    ],
+    transform: [{ scale: interpolate(introProgress.value, [0, 1], [0.95, 1]) }],
   }));
 
   const headerStyle = useAnimatedStyle(() => ({
@@ -373,9 +297,7 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const buttonStyle = useAnimatedStyle(() => ({
     opacity: buttonProgress.value,
-    transform: [
-      { scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) * buttonPulse.value },
-    ],
+    transform: [{ scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) }],
   }));
 
   const handleLockedPress = (universe: UniverseConfig) => {
@@ -385,12 +307,9 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const handleContinue = () => {
     if (!selectedUniverseId) return;
-
-    // Mark onboarding as complete when user proceeds (keeps step 3 visible until now)
     if (!hasCompletedOnboarding) {
       setHasCompletedOnboarding(true);
     }
-
     setCurrentStory({
       id: generateStoryId(),
       universeId: selectedUniverseId,
@@ -400,7 +319,6 @@ export const UniverseSelectScreen: React.FC = () => {
       updatedAt: new Date(),
       isComplete: false,
     });
-
     router.push('/story/start-select');
   };
 
@@ -416,25 +334,16 @@ export const UniverseSelectScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Step indicator - only for new users */}
         {isNewUser && (
-          <View style={styles.stepIndicator}>
-            <Text style={styles.stepText}>Étape 3</Text>
-            <View style={styles.stepDots}>
-              <View style={styles.stepDot} />
-              <View style={styles.stepDot} />
-              <View style={[styles.stepDot, styles.stepDotActive]} />
-            </View>
+          <View style={styles.stepWrap}>
+            <StepIndicator currentStep={3} totalSteps={3} />
           </View>
         )}
 
-        {/* Narrative intro */}
         <Animated.View style={[styles.introContainer, introStyle]}>
-          <Text style={styles.introEmoji}>✨🚪✨</Text>
           <Text style={styles.introText}>Une grande aventure t'attend...</Text>
         </Animated.View>
 
-        {/* Header */}
         <Animated.View style={[styles.header, headerStyle]}>
           <Text style={styles.greeting}>
             {heroProfile?.name ? `${heroProfile.name}, ` : ''}c'est le moment !
@@ -443,7 +352,6 @@ export const UniverseSelectScreen: React.FC = () => {
           <Text style={styles.subtitle}>Chaque monde cache des secrets...</Text>
         </Animated.View>
 
-        {/* Universe cards */}
         <View style={styles.cardsContainer}>
           {universes.map((universe, index) => (
             <UniverseCard
@@ -457,25 +365,17 @@ export const UniverseSelectScreen: React.FC = () => {
           ))}
         </View>
 
-        {/* Motivation hint */}
-        <Text style={styles.hintText}>D'autres mondes t'attendent bientôt... ✨</Text>
+        <Text style={styles.hintText}>D'autres mondes t'attendent bientot...</Text>
       </ScrollView>
 
-      {/* Footer with CTA */}
       <Animated.View style={[styles.footer, buttonStyle]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !selectedUniverseId && styles.buttonDisabled,
-            pressed && selectedUniverseId && styles.buttonPressed,
-          ]}
+        <Button
+          title={selectedUniverse ? 'Entrer dans ce monde' : 'Choisis une porte magique'}
           onPress={handleContinue}
+          variant="primary"
+          size="large"
           disabled={!selectedUniverseId}
-        >
-          <Text style={[styles.buttonText, !selectedUniverseId && styles.buttonTextDisabled]}>
-            {selectedUniverse ? `Entrer dans ce monde ✨` : 'Choisis une porte magique'}
-          </Text>
-        </Pressable>
+        />
       </Animated.View>
 
       <LockedModal
@@ -494,135 +394,86 @@ export const UniverseSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
     zIndex: 10,
-    // top/right appliqués dynamiquement via useSafeAreaInsets
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 16,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
 
-  // Step indicator
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
-  },
-  stepText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  stepDots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
-  },
-  stepDotActive: {
-    backgroundColor: '#FF8A65',
-    width: 20,
+  stepWrap: {
+    marginBottom: spacing.md,
   },
 
-  // Narrative intro
   introContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  introEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+    marginBottom: spacing.lg,
   },
   introText: {
-    fontSize: 18,
+    ...typography.subtitle,
     fontWeight: '500',
-    color: '#8D7B68',
+    color: colors.inkLight,
     fontStyle: 'italic',
     textAlign: 'center',
   },
 
-  // Header
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
     alignItems: 'center',
   },
   greeting: {
-    fontSize: 15,
+    ...typography.label,
     fontWeight: '500',
-    color: '#B8A99A',
-    marginBottom: 4,
+    color: colors.inkMuted,
+    marginBottom: spacing.xs,
   },
   title: {
+    ...typography.title,
     fontSize: 26,
-    fontWeight: '700',
-    color: '#5D4E37',
+    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm - 2,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#8D7B68',
+    ...typography.body,
+    color: colors.inkLight,
     textAlign: 'center',
   },
 
-  // Cards
   cardsContainer: {
-    gap: 20,
+    gap: spacing.lg - 4,
     alignItems: 'center',
   },
   cardWrapper: {
     width: CARD_WIDTH,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xxl,
     overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: '#F5EBE0',
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
-    position: 'relative',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   cardSelected: {
-    borderColor: '#FF8A65',
-    shadowColor: '#FF8A65',
-    shadowOpacity: 0.3,
+    borderColor: colors.accent,
+    ...shadows.cardLifted,
   },
   cardLocked: {
-    borderColor: '#E5DDD3',
-    shadowOpacity: 0.06,
-  },
-  cardGlow: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 28,
-    zIndex: -1,
+    borderColor: colors.inkMuted,
+    opacity: 0.7,
   },
   cardVisual: {
     width: '100%',
-    height: 150,
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -631,218 +482,142 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   cardEmoji: {
-    fontSize: 70,
+    fontSize: 64,
   },
-  freeBadge: {
+  openBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    top: spacing.md - 4,
+    right: spacing.md - 4,
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.md - 4,
+    paddingVertical: spacing.sm - 2,
+    borderRadius: radius.md,
   },
-  freeBadgeText: {
-    fontSize: 12,
+  openBadgeText: {
+    ...typography.caption,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
     letterSpacing: 0.5,
   },
   lockedOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(93, 78, 55, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   lockBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
   lockIcon: {
-    fontSize: 28,
-  },
-  lockedHint: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  selectedGlow: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.2,
+    fontSize: 24,
   },
   cardContent: {
-    padding: 18,
-    backgroundColor: '#FFFCF5',
+    padding: spacing.md + 2,
+    backgroundColor: colors.background,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm - 2,
   },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#5D4E37',
+    ...typography.title,
+    fontSize: 20,
+    color: colors.ink,
   },
   cardTitleLocked: {
-    color: '#A99A8A',
+    color: colors.inkMuted,
   },
-  cardDescription: {
+  cardDesc: {
+    ...typography.body,
     fontSize: 15,
-    color: '#8D7B68',
-    lineHeight: 22,
+    color: colors.inkLight,
   },
-  cardDescriptionLocked: {
-    color: '#B8A99A',
+  cardDescLocked: {
+    color: colors.inkMuted,
     fontStyle: 'italic',
   },
-  availableHint: {
-    fontSize: 13,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  selectedBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF8A65',
+  checkBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  selectedBadgeText: {
-    fontSize: 18,
+  checkText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
 
-  // Hint
   hintText: {
-    fontSize: 14,
-    color: '#B8A99A',
+    ...typography.caption,
+    color: colors.inkMuted,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.lg,
     fontStyle: 'italic',
   },
 
-  // Footer
   footer: {
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: '#FFFCF5',
-  },
-  button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 18,
-    alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  buttonDisabled: {
-    backgroundColor: '#E5DDD3',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  buttonTextDisabled: {
-    color: '#B8AFA3',
+    padding: spacing.lg,
+    paddingBottom: spacing.xl + spacing.sm,
+    backgroundColor: colors.background,
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(93, 78, 55, 0.6)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.lg,
   },
   modalContent: {
-    backgroundColor: '#FFFCF5',
-    borderRadius: 28,
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    padding: spacing.xl,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   modalEmoji: {
-    fontSize: 64,
-    marginBottom: 12,
+    fontSize: 56,
+    marginBottom: spacing.md - 4,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#5D4E37',
-    marginBottom: 8,
+    ...typography.title,
+    color: colors.ink,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '500',
-    color: '#8D7B68',
-    marginBottom: 12,
+    color: colors.inkLight,
+    marginBottom: spacing.md - 4,
   },
   modalMessage: {
+    ...typography.body,
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.inkLight,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButtonsColumn: {
     width: '100%',
-    gap: 12,
-    alignItems: 'stretch',
+    gap: spacing.md - 4,
   },
-  modalButtonSecondary: {
+  modalBtn: {
     width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    backgroundColor: '#F5EBE0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalButtonSecondaryText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#8D7B68',
-  },
-  modalButtonPrimary: {
-    width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    backgroundColor: '#FF8A65',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalButtonPrimaryText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 });

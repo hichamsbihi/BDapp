@@ -17,20 +17,16 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StepIndicator, Button } from '@/shared';
 import { useAppStore } from '@/store';
 import { getAvatarsByGender } from '@/data';
 import { Avatar } from '@/types';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AVATAR_SIZE = (SCREEN_WIDTH - 72) / 2;
-const ANIMATION_DURATION = 600;
-const EASING = Easing.out(Easing.cubic);
+const EASE = Easing.out(Easing.cubic);
 
-/**
- * Individual animated avatar component
- * Each instance has its own animation hooks (valid React pattern)
- */
 interface AnimatedAvatarProps {
   avatar: Avatar;
   index: number;
@@ -47,20 +43,18 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
   const progress = useSharedValue(0);
   const scale = useSharedValue(1);
 
-  // Entrance animation with stagger
   useEffect(() => {
     progress.value = withDelay(
       250 + index * 120,
-      withTiming(1, { duration: 500, easing: EASING })
+      withTiming(1, { duration: 500, easing: EASE }),
     );
   }, [index]);
 
-  // Bounce animation on selection
   const handlePress = () => {
     scale.value = withSequence(
       withSpring(0.95, { damping: 10, stiffness: 400 }),
-      withSpring(1.08, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 12, stiffness: 400 })
+      withSpring(1.05, { damping: 10, stiffness: 300 }),
+      withSpring(1, { damping: 12, stiffness: 400 }),
     );
     onSelect(avatar.id);
   };
@@ -76,10 +70,7 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
         style={[styles.avatarCard, isSelected && styles.avatarCardSelected]}
         onPress={handlePress}
       >
-        {isSelected && (
-          <View style={[styles.glowEffect, { backgroundColor: avatar.color }]} />
-        )}
-
+        {/* Character silhouette placeholder */}
         <View style={[styles.avatarCircle, { backgroundColor: avatar.color }]}>
           <Text style={styles.avatarInitial}>{avatar.name.charAt(0)}</Text>
         </View>
@@ -98,37 +89,31 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
   );
 };
 
-/**
- * Avatar selection screen - final step of onboarding
- */
 export const AvatarSelectScreen: React.FC = () => {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
 
   const updateHeroProfile = useAppStore((state) => state.updateHeroProfile);
   const heroProfile = useAppStore((state) => state.heroProfile);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  
-  // Show step indicator only for new users
+
   const isNewUser = !hasCompletedOnboarding;
 
-  // Get avatars filtered by gender
   const avatars = useMemo(() => {
     const gender = heroProfile?.gender || 'boy';
     return getAvatarsByGender(gender);
   }, [heroProfile?.gender]);
 
-  // Animation values
   const headerProgress = useSharedValue(0);
   const buttonProgress = useSharedValue(0);
-  const confirmMessageProgress = useSharedValue(0);
+  const confirmProgress = useSharedValue(0);
 
   useEffect(() => {
-    headerProgress.value = withTiming(1, { duration: ANIMATION_DURATION, easing: EASING });
-    buttonProgress.value = withDelay(800, withTiming(1, { duration: 700, easing: EASING }));
+    headerProgress.value = withTiming(1, { duration: 600, easing: EASE });
+    buttonProgress.value = withDelay(800, withTiming(1, { duration: 700, easing: EASE }));
   }, []);
 
   useEffect(() => {
-    confirmMessageProgress.value = selectedAvatarId
+    confirmProgress.value = selectedAvatarId
       ? withSpring(1, { damping: 12, stiffness: 200 })
       : withTiming(0, { duration: 200 });
   }, [selectedAvatarId]);
@@ -143,51 +128,40 @@ export const AvatarSelectScreen: React.FC = () => {
     transform: [{ scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) }],
   }));
 
-  const confirmMessageStyle = useAnimatedStyle(() => ({
-    opacity: confirmMessageProgress.value,
+  const confirmStyle = useAnimatedStyle(() => ({
+    opacity: confirmProgress.value,
     transform: [
-      { scale: interpolate(confirmMessageProgress.value, [0, 1], [0.8, 1]) },
-      { translateY: interpolate(confirmMessageProgress.value, [0, 1], [10, 0]) },
+      { scale: interpolate(confirmProgress.value, [0, 1], [0.8, 1]) },
+      { translateY: interpolate(confirmProgress.value, [0, 1], [10, 0]) },
     ],
   }));
 
   const handleComplete = () => {
     if (!selectedAvatarId) return;
     updateHeroProfile({ avatarId: selectedAvatarId });
-    // Note: setHasCompletedOnboarding is called in UniverseSelectScreen
-    // after user selects a universe (to keep step 3 visible)
     router.replace('/story/universe-select');
   };
 
-  const getConfirmationMessage = () => {
-    const name = heroProfile?.name || '';
-    return name
-      ? `Parfait ${name} ! Ton héros est prêt ✨`
-      : 'Super choix ! Ton héros est prêt ✨';
-  };
+  const confirmMessage = heroProfile?.name
+    ? `Parfait ${heroProfile.name} ! Ton heros est pret`
+    : 'Super choix ! Ton heros est pret';
 
   return (
     <ScreenContainer style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={[styles.header, headerStyle]}>
           {isNewUser && (
-            <View style={styles.stepContainer}>
-              <Text style={styles.stepLabel}>Étape 2</Text>
-              <View style={styles.stepDots}>
-                <View style={styles.stepDot} />
-                <View style={[styles.stepDot, styles.stepDotActive]} />
-                <View style={styles.stepDot} />
-              </View>
+            <View style={styles.stepWrap}>
+              <StepIndicator currentStep={2} totalSteps={3} />
             </View>
           )}
-          <Text style={styles.headerIcon}>🦸‍♂️</Text>
-          <Text style={styles.title}>Voici tes héros !</Text>
+          <Text style={styles.title}>Voici tes heros !</Text>
           <Text style={styles.subtitle}>
             {heroProfile?.name
               ? `${heroProfile.name}, choisis celui qui te ressemble`
               : 'Choisis celui qui te ressemble'}
           </Text>
-          <Text style={styles.subtitleHint}>
+          <Text style={styles.hint}>
             C'est lui qui vivra toutes tes aventures !
           </Text>
         </Animated.View>
@@ -219,23 +193,17 @@ export const AvatarSelectScreen: React.FC = () => {
       </View>
 
       <Animated.View style={[styles.footer, buttonStyle]}>
-        <Animated.Text style={[styles.confirmMessage, confirmMessageStyle]}>
-          {getConfirmationMessage()}
+        <Animated.Text style={[styles.confirmMessage, confirmStyle]}>
+          {confirmMessage}
         </Animated.Text>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !selectedAvatarId && styles.buttonDisabled,
-            pressed && selectedAvatarId && styles.buttonPressed,
-          ]}
+        <Button
+          title="L'aventure commence !"
           onPress={handleComplete}
+          variant="primary"
+          size="large"
           disabled={!selectedAvatarId}
-        >
-          <Text style={[styles.buttonText, !selectedAvatarId && styles.buttonTextDisabled]}>
-            L'aventure commence !
-          </Text>
-        </Pressable>
+        />
       </Animated.View>
     </ScreenContainer>
   );
@@ -243,68 +211,40 @@ export const AvatarSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    paddingTop: 16,
-    paddingHorizontal: 24,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
-  stepContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
-  },
-  stepLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  stepDots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
-  },
-  stepDotActive: {
-    backgroundColor: '#FF8A65',
-    width: 20,
-  },
-  headerIcon: {
-    fontSize: 44,
-    marginBottom: 10,
+  stepWrap: {
+    marginBottom: spacing.md,
   },
   title: {
+    ...typography.title,
     fontSize: 26,
-    fontWeight: '700',
-    color: '#5D4E37',
+    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm - 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#8D7B68',
+    ...typography.body,
+    color: colors.inkLight,
     textAlign: 'center',
   },
-  subtitleHint: {
-    fontSize: 14,
+  hint: {
+    ...typography.caption,
     fontWeight: '500',
-    color: '#FF8A65',
+    color: colors.accent,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
+
   avatarGrid: {
     flex: 1,
     justifyContent: 'center',
@@ -312,38 +252,26 @@ const styles = StyleSheet.create({
   avatarRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   avatarWrapper: {
     width: AVATAR_SIZE,
   },
   avatarCard: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.md,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#F5EBE0',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
     position: 'relative',
     overflow: 'hidden',
+    ...shadows.comic,
   },
   avatarCardSelected: {
-    borderColor: '#FF8A65',
-    backgroundColor: '#FFF3E8',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  glowEffect: {
-    position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    opacity: 0.15,
-    borderRadius: 30,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    ...shadows.cardLifted,
   },
   avatarCircle: {
     width: AVATAR_SIZE - 48,
@@ -351,20 +279,20 @@ const styles = StyleSheet.create({
     borderRadius: (AVATAR_SIZE - 48) / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md - 4,
   },
   avatarInitial: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
   avatarName: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '600',
-    color: '#5D4E37',
+    color: colors.ink,
   },
   avatarNameSelected: {
-    color: '#FF8A65',
+    color: colors.accent,
   },
   selectedBadge: {
     position: 'absolute',
@@ -373,54 +301,25 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedBadgeText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
+
   footer: {
-    padding: 24,
-    paddingBottom: 40,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl + spacing.sm,
   },
   confirmMessage: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '600',
-    color: '#FF8A65',
+    color: colors.accent,
     textAlign: 'center',
-    marginBottom: 14,
-  },
-  button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#E5DDD3',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
-  buttonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  buttonTextDisabled: {
-    color: '#B8AFA3',
+    marginBottom: spacing.md - 2,
   },
 });

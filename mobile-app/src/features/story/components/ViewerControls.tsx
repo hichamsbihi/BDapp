@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { colors } from '@/theme';
 
 interface ViewerControlsProps {
   currentPage: number;
@@ -61,31 +62,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: 'rgba(255, 252, 245, 0.95)',
+    backgroundColor: colors.background,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E8E0D5',
+    borderTopColor: colors.border,
   },
 
   navButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F5EBE0',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
   navButtonDisabled: {
-    backgroundColor: '#F5F0EA',
+    backgroundColor: colors.surfaceAlt,
     opacity: 0.4,
   },
   navIcon: {
     fontSize: 28,
-    color: '#5D4E37',
+    color: colors.ink,
     fontWeight: '300',
     marginTop: -2,
   },
   navIconDisabled: {
-    color: '#C4B5A5',
+    color: colors.inkMuted,
   },
 
   indicator: {
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
   },
   indicatorText: {
     fontSize: 13,
-    color: '#9A8B7A',
+    color: colors.inkMuted,
     fontStyle: 'italic',
     letterSpacing: 0.5,
   },

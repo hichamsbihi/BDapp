@@ -1,17 +1,18 @@
 import React from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { colors, radius, spacing, typography, shadows } from '@/theme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -19,9 +20,6 @@ interface ButtonProps {
   textStyle?: TextStyle;
 }
 
-/**
- * Reusable button component with multiple variants
- */
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
@@ -35,94 +33,100 @@ export const Button: React.FC<ButtonProps> = ({
   const isDisabled = disabled || loading;
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        styles[variant],
-        styles[size],
+    <Pressable
+      style={({ pressed }) => [
+        styles.base,
+        variantStyles[variant],
+        sizeStyles[size],
+        variant === 'primary' && shadows.comic,
         isDisabled && styles.disabled,
+        pressed && !isDisabled && styles.pressed,
         style,
       ]}
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' ? '#007AFF' : '#FFFFFF'}
+          color={variant === 'outline' || variant === 'ghost' ? colors.ink : colors.surface}
           size="small"
         />
       ) : (
         <Text
           style={[
             styles.text,
-            styles[`${variant}Text`],
-            styles[`${size}Text`],
+            variantTextStyles[variant],
+            sizeTextStyles[size],
             textStyle,
           ]}
         >
           {title}
         </Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
-    borderRadius: 12,
+  base: {
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
-  // Variants
+  disabled: {
+    opacity: 0.4,
+  },
+  pressed: {
+    transform: [{ scale: 0.96 }, { translateY: 2 }],
+  },
+  text: {
+    ...typography.button,
+  },
+});
+
+const variantStyles: Record<string, ViewStyle> = {
   primary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.ink,
   },
   secondary: {
-    backgroundColor: '#5856D6',
+    backgroundColor: colors.surfaceAlt,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#007AFF',
   },
-  // Sizes
+  ghost: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+};
+
+const variantTextStyles: Record<string, TextStyle> = {
+  primary: { color: colors.surface },
+  secondary: { color: colors.ink },
+  outline: { color: colors.ink },
+  ghost: { color: colors.inkLight },
+};
+
+const sizeStyles: Record<string, ViewStyle> = {
   small: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   medium: {
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
   },
   large: {
-    paddingVertical: 18,
-    paddingHorizontal: 32,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl,
   },
-  // States
-  disabled: {
-    opacity: 0.5,
-  },
-  // Text styles
-  text: {
-    fontWeight: '600',
-  },
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: '#FFFFFF',
-  },
-  outlineText: {
-    color: '#007AFF',
-  },
-  smallText: {
-    fontSize: 14,
-  },
-  mediumText: {
-    fontSize: 16,
-  },
-  largeText: {
-    fontSize: 18,
-  },
-});
+};
+
+const sizeTextStyles: Record<string, TextStyle> = {
+  small: { ...typography.buttonSmall },
+  medium: { ...typography.subtitle },
+  large: { ...typography.button },
+};

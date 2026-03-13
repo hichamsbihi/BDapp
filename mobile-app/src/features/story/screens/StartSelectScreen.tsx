@@ -11,6 +11,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
+import { colors, radius, typography } from '@/theme';
 import { useAppStore } from '@/store';
 import { useStoryStarts } from '@/hooks/useStoryData';
 import { StoryStart } from '@/types';
@@ -232,7 +233,7 @@ export const StartSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '500',
     fontStyle: 'italic',
-    color: '#5D4E37',
+    color: colors.ink,
     textAlign: 'center',
     lineHeight: 38,
     letterSpacing: 0.3,
@@ -269,14 +270,14 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingVertical: 32,
     paddingHorizontal: 26,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#EBE3D8',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   chapterSelected: {
-    borderColor: '#FF8A65',
-    backgroundColor: '#FFFAF6',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
   },
   chapterDimmed: {
     opacity: 0.45, // Softer than before (was 0.38)
@@ -286,22 +287,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 21,
     fontWeight: '700',
-    color: '#4A3F32',
+    color: colors.ink,
     marginBottom: 16,
   },
   titleSelected: {
-    color: '#D4694B',
+    color: colors.accentDark,
   },
 
   // Paragraph — THE HERO, the sacred text
   paragraph: {
     fontSize: 19,
     fontStyle: 'italic',
-    color: '#5D4E37',
+    color: colors.ink,
     lineHeight: 32,
   },
   paragraphSelected: {
-    color: '#3D3328',
+    color: colors.ink,
   },
 
   // Hint — poetic, disappears on selection
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 14,
     fontStyle: 'italic',
-    color: '#B8A99A',
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 
@@ -321,20 +322,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 16,
     paddingBottom: 44,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   button: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
     paddingVertical: 18,
-    borderRadius: 14,
+    borderRadius: radius.xl,
     alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   buttonPressed: {
-    opacity: 0.85,
+    transform: [{ scale: 0.96 }, { translateY: 2 }],
   },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...typography.button,
+    color: colors.surface,
   },
 });

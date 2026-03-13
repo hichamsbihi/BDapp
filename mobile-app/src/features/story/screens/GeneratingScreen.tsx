@@ -15,11 +15,14 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { colors } from '@/theme';
 import {
   getCreationPhraseByProgress,
   CREATION_PHRASES,
   getRandomPhrase,
 } from '@/constants/magicWords';
+
+const DARK_BG = '#1A1625';
 
 /**
  * Magical Brush Stroke Component
@@ -352,7 +355,7 @@ export const GeneratingScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1A1625', // Deep, magical night sky color
+    backgroundColor: DARK_BG,
   },
   content: {
     flex: 1,
@@ -374,7 +377,7 @@ const styles = StyleSheet.create({
   },
   canvas: {
     borderRadius: 24,
-    backgroundColor: '#FFFCF5', // Warm paper color
+    backgroundColor: colors.background,
     overflow: 'hidden',
     // Subtle shadow for depth
     shadowColor: '#000',
@@ -399,7 +402,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: 0.5,

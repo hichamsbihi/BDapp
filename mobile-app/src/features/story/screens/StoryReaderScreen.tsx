@@ -9,6 +9,7 @@ import {
 import PagerView from 'react-native-pager-view';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/theme';
 import { useAppStore } from '@/store';
 import { ComicPage } from '../components/ComicPage';
 import { ViewerControls } from '../components/ViewerControls';
@@ -118,30 +119,30 @@ export const StoryReaderScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
     padding: 20,
   },
   errorText: {
     fontSize: 18,
-    color: '#4A3F32',
+    color: colors.ink,
     marginBottom: 20,
     textAlign: 'center',
   },
   errorButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.accent,
     borderRadius: 12,
   },
   errorButtonText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.surface,
     fontWeight: '600',
   },
 
@@ -169,8 +170,8 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 13,
-    color: '#9A8B7A',
-    backgroundColor: 'rgba(255, 252, 245, 0.9)',
+    color: colors.inkMuted,
+    backgroundColor: colors.background,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,

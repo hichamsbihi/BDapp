@@ -7,20 +7,15 @@ import {
   Modal as RNModal,
   ActivityIndicator,
 } from 'react-native';
+import { colors, spacing, typography, radius } from '@/theme';
 
 interface NotEnoughStarsModalProps {
   visible: boolean;
   onClose: () => void;
   needed: number;
-  /** Rituel magique (jamais "pub" ou "ad") - ex: rewardStar('watch_ad') */
   onWatchMagic: () => Promise<unknown>;
 }
 
-/**
- * Modal "pas assez d'étoiles"
- * Ton rassurant, magique, jamais bloquant
- * Jamais de mot "pub", "ad", "advertising"
- */
 export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
   visible,
   onClose,
@@ -41,8 +36,8 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
 
   const message =
     needed === 1
-      ? "Il te manque une petite étoile ✨"
-      : `Il te manque ${needed} étoiles ✨`;
+      ? 'Il te manque une petite etoile'
+      : `Il te manque ${needed} etoiles`;
 
   return (
     <RNModal
@@ -54,7 +49,7 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.emoji}>✨</Text>
-          <Text style={styles.title}>Presque là !</Text>
+          <Text style={styles.title}>Presque la !</Text>
           <Text style={styles.message}>{message}</Text>
           <Text style={styles.submessage}>
             Tu peux en gagner en regardant une courte magie, ou en finissant une
@@ -72,7 +67,7 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
               disabled={isWatching}
             >
               {isWatching ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={colors.surface} size="small" />
               ) : (
                 <View style={styles.buttonPrimaryContent}>
                   <Text style={styles.buttonPrimaryIcon}>✨</Text>
@@ -91,7 +86,7 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
               onPress={onClose}
               disabled={isWatching}
             >
-              <Text style={styles.buttonSecondaryText}>⏳ Plus tard</Text>
+              <Text style={styles.buttonSecondaryText}>Plus tard</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -103,56 +98,60 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(93, 78, 55, 0.6)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.lg,
   },
   content: {
-    backgroundColor: '#FFFCF5',
-    borderRadius: 28,
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    padding: spacing.xl,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   emoji: {
     fontSize: 48,
-    marginBottom: 12,
+    marginBottom: spacing.md - 4,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#5D4E37',
-    marginBottom: 12,
+    ...typography.title,
+    color: colors.ink,
+    marginBottom: spacing.md - 4,
     textAlign: 'center',
   },
   message: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#5D4E37',
+    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   submessage: {
+    ...typography.body,
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.inkLight,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   buttons: {
     width: '100%',
-    gap: 12,
+    gap: spacing.md - 4,
   },
   buttonPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
+    backgroundColor: colors.ink,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   buttonPrimaryContent: {
     flexDirection: 'row',
@@ -173,12 +172,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   buttonPrimaryText: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.surface,
   },
   buttonSecondaryText: {
+    ...typography.body,
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.inkLight,
   },
 });

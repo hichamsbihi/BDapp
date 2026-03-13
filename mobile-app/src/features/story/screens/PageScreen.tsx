@@ -22,6 +22,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
+import { colors, shadows, radius, typography, spacing } from '@/theme';
 import { useAppStore } from '@/store';
 import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
@@ -391,7 +392,7 @@ export const PageScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -417,12 +418,12 @@ const styles = StyleSheet.create({
   },
   imageGlow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: colors.accentLight,
   },
   heroImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F5EBE0',
+    backgroundColor: colors.surfaceAlt,
   },
   shimmerOverlay: {
     position: 'absolute',
@@ -445,7 +446,7 @@ const styles = StyleSheet.create({
   pivotText: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: '#8D7B68',
+    color: colors.inkLight,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -453,29 +454,28 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   choiceCard: {
-    backgroundColor: '#FFFCF5',
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   choiceCardSelected: {
-    borderColor: '#FF8A65',
-    borderWidth: 2,
-    backgroundColor: '#FFFAF6',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
   },
   choiceCardDimmed: {
     opacity: 0.4,
   },
   choiceText: {
     fontSize: 15,
-    color: '#5D4E37',
+    color: colors.ink,
     lineHeight: 22,
     textAlign: 'center',
   },
   choiceTextSelected: {
-    color: '#4A3F32',
+    color: colors.ink,
     fontWeight: '500',
   },
 
@@ -487,12 +487,12 @@ const styles = StyleSheet.create({
   endTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#5D4E37',
+    color: colors.ink,
     marginBottom: 10,
   },
   endText: {
     fontSize: 15,
-    color: '#8D7B68',
+    color: colors.inkLight,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -503,23 +503,19 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   button: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
     paddingVertical: 18,
-    borderRadius: 14,
+    borderRadius: radius.xl,
     alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.96 }, { translateY: 2 }],
   },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...typography.button,
+    color: colors.surface,
   },
 });

@@ -5,3 +5,6 @@ export { Card } from './Card';
 export { ScreenContainer } from './ScreenContainer';
 export { StarsBadge } from './StarsBadge';
 export { NotEnoughStarsModal } from './NotEnoughStarsModal';
+export { ComicIllustration } from './ComicIllustration';
+export { StepIndicator } from './StepIndicator';
+export { EmptyState } from './EmptyState';

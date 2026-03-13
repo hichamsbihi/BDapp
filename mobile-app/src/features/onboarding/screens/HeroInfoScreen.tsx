@@ -19,20 +19,12 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StepIndicator, Button } from '@/shared';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 import { useAppStore } from '@/store';
 
 type Gender = 'boy' | 'girl';
 
-/**
- * Hero info screen - collect hero name, age, and gender
- * Designed as a warm, engaging experience for children (6-10 years)
- * 
- * Animation sequence matches WelcomeScreen philosophy:
- * - Progressive reveal (storytelling)
- * - Soft, non-aggressive transitions
- * - Micro-interactions on selection
- */
 export const HeroInfoScreen: React.FC = () => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -41,89 +33,53 @@ export const HeroInfoScreen: React.FC = () => {
   const ageInputRef = useRef<TextInput>(null);
   const setHeroProfile = useAppStore((state) => state.setHeroProfile);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  
-  // Show step indicator only for new users
   const isNewUser = !hasCompletedOnboarding;
 
-  // Animation progress values (0 = hidden, 1 = visible)
   const headerProgress = useSharedValue(0);
   const nameInputProgress = useSharedValue(0);
   const ageInputProgress = useSharedValue(0);
   const genderProgress = useSharedValue(0);
   const buttonProgress = useSharedValue(0);
-
-  // Scale values for gender selection bounce effect
   const boyScale = useSharedValue(1);
   const girlScale = useSharedValue(1);
-
-  // Ready message animation
   const readyMessageProgress = useSharedValue(0);
 
   const ANIMATION_DURATION = 600;
   const EASING = Easing.out(Easing.cubic);
 
   useEffect(() => {
-    // Staggered entrance animation
     headerProgress.value = withTiming(1, { duration: ANIMATION_DURATION, easing: EASING });
-    
-    nameInputProgress.value = withDelay(
-      250,
-      withTiming(1, { duration: ANIMATION_DURATION, easing: EASING })
-    );
-    
-    ageInputProgress.value = withDelay(
-      400,
-      withTiming(1, { duration: ANIMATION_DURATION, easing: EASING })
-    );
-    
-    genderProgress.value = withDelay(
-      550,
-      withTiming(1, { duration: ANIMATION_DURATION, easing: EASING })
-    );
-    
-    buttonProgress.value = withDelay(
-      750,
-      withTiming(1, { duration: 700, easing: EASING })
-    );
+    nameInputProgress.value = withDelay(250, withTiming(1, { duration: ANIMATION_DURATION, easing: EASING }));
+    ageInputProgress.value = withDelay(400, withTiming(1, { duration: ANIMATION_DURATION, easing: EASING }));
+    genderProgress.value = withDelay(550, withTiming(1, { duration: ANIMATION_DURATION, easing: EASING }));
+    buttonProgress.value = withDelay(750, withTiming(1, { duration: 700, easing: EASING }));
   }, []);
 
-  // Animated styles
   const headerStyle = useAnimatedStyle(() => ({
     opacity: headerProgress.value,
-    transform: [
-      { translateY: interpolate(headerProgress.value, [0, 1], [20, 0]) },
-    ],
+    transform: [{ translateY: interpolate(headerProgress.value, [0, 1], [20, 0]) }],
   }));
 
   const nameInputStyle = useAnimatedStyle(() => ({
     opacity: nameInputProgress.value,
-    transform: [
-      { translateY: interpolate(nameInputProgress.value, [0, 1], [15, 0]) },
-    ],
+    transform: [{ translateY: interpolate(nameInputProgress.value, [0, 1], [15, 0]) }],
   }));
 
   const ageInputStyle = useAnimatedStyle(() => ({
     opacity: ageInputProgress.value,
-    transform: [
-      { translateY: interpolate(ageInputProgress.value, [0, 1], [15, 0]) },
-    ],
+    transform: [{ translateY: interpolate(ageInputProgress.value, [0, 1], [15, 0]) }],
   }));
 
   const genderStyle = useAnimatedStyle(() => ({
     opacity: genderProgress.value,
-    transform: [
-      { translateY: interpolate(genderProgress.value, [0, 1], [15, 0]) },
-    ],
+    transform: [{ translateY: interpolate(genderProgress.value, [0, 1], [15, 0]) }],
   }));
 
   const buttonStyle = useAnimatedStyle(() => ({
     opacity: buttonProgress.value,
-    transform: [
-      { scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) },
-    ],
+    transform: [{ scale: interpolate(buttonProgress.value, [0, 1], [0.9, 1]) }],
   }));
 
-  // Gender button bounce animations
   const boyButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: boyScale.value }],
   }));
@@ -132,7 +88,6 @@ export const HeroInfoScreen: React.FC = () => {
     transform: [{ scale: girlScale.value }],
   }));
 
-  // Ready message animated style (fade + scale + slide)
   const readyMessageStyle = useAnimatedStyle(() => ({
     opacity: readyMessageProgress.value,
     transform: [
@@ -143,7 +98,6 @@ export const HeroInfoScreen: React.FC = () => {
 
   const isValid = name.trim().length > 0 && age.length > 0 && gender !== null;
 
-  // Animate ready message when form becomes valid
   useEffect(() => {
     if (isValid) {
       readyMessageProgress.value = withSpring(1, { damping: 12, stiffness: 200 });
@@ -176,15 +130,12 @@ export const HeroInfoScreen: React.FC = () => {
 
   const handleGenderSelect = (selected: Gender) => {
     Keyboard.dismiss();
-    
-    // Bounce animation on the selected button
     const targetScale = selected === 'boy' ? boyScale : girlScale;
     targetScale.value = withSequence(
       withSpring(0.95, { damping: 10, stiffness: 400 }),
       withSpring(1.05, { damping: 10, stiffness: 400 }),
       withSpring(1, { damping: 10, stiffness: 400 })
     );
-    
     setGender(selected);
   };
 
@@ -199,34 +150,29 @@ export const HeroInfoScreen: React.FC = () => {
           keyboardDismissMode="on-drag"
         >
           <Pressable onPress={Keyboard.dismiss} style={styles.content}>
-            {/* Header with icon */}
             <Animated.View style={[styles.header, headerStyle]}>
               {isNewUser && (
-                <View style={styles.stepIndicator}>
-                  <Text style={styles.stepText}>Étape 1</Text>
-                  <View style={styles.stepDots}>
-                    <View style={[styles.stepDot, styles.stepDotActive]} />
-                    <View style={styles.stepDot} />
-                    <View style={styles.stepDot} />
-                  </View>
+                <View style={styles.stepIndicatorWrapper}>
+                  <StepIndicator currentStep={1} totalSteps={3} />
                 </View>
               )}
-              <Text style={styles.headerIcon}>🦸</Text>
+              <View style={styles.headerIconWrap}>
+                <Text style={styles.headerIcon}>🦸</Text>
+              </View>
               <Text style={styles.title}>Dis-moi qui tu es !</Text>
               <Text style={styles.subtitle}>
-                Chaque héros a besoin d'un nom...
+                Chaque heros a besoin d'un nom...
               </Text>
             </Animated.View>
 
-            {/* Name input */}
             <Animated.View style={[styles.inputGroup, nameInputStyle]}>
-              <Text style={styles.label}>Ton prénom de héros</Text>
+              <Text style={styles.label}>TON PRENOM DE HEROS</Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Ecris ton prénom ici"
-                placeholderTextColor="#C4B8A8"
+                placeholder="Ecris ton prenom ici"
+                placeholderTextColor={colors.inkMuted}
                 autoCapitalize="words"
                 maxLength={20}
                 returnKeyType="next"
@@ -234,16 +180,15 @@ export const HeroInfoScreen: React.FC = () => {
               />
             </Animated.View>
 
-            {/* Age input */}
             <Animated.View style={[styles.inputGroup, ageInputStyle]}>
-              <Text style={styles.label}>Tu as quel âge ?</Text>
+              <Text style={styles.label}>TU AS QUEL AGE ?</Text>
               <TextInput
                 ref={ageInputRef}
                 style={styles.input}
                 value={age}
                 onChangeText={handleAgeChange}
-                placeholder="Ton âge"
-                placeholderTextColor="#C4B8A8"
+                placeholder="Ton age"
+                placeholderTextColor={colors.inkMuted}
                 keyboardType="number-pad"
                 maxLength={2}
                 returnKeyType="done"
@@ -252,9 +197,8 @@ export const HeroInfoScreen: React.FC = () => {
               <Text style={styles.inputHint}>Entre 6 et 12 ans</Text>
             </Animated.View>
 
-            {/* Gender selection */}
             <Animated.View style={[styles.inputGroup, genderStyle]}>
-              <Text style={styles.label}>Tu es plutôt...</Text>
+              <Text style={styles.label}>TU ES PLUTOT...</Text>
               <View style={styles.genderContainer}>
                 <Animated.View style={[styles.genderButtonWrapper, boyButtonStyle]}>
                   <Pressable
@@ -300,25 +244,16 @@ export const HeroInfoScreen: React.FC = () => {
           </Pressable>
         </ScrollView>
 
-        {/* Bouton C'est moi - sticky en bas, ne bouge pas avec le clavier */}
         <Animated.View style={[styles.footer, buttonStyle]}>
-          {/* Feedback message when form is complete - animated */}
-          <Animated.Text style={[styles.readyMessage, readyMessageStyle]}>
-            Parfait ! Ton héros est prêt
-          </Animated.Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              !isValid && styles.buttonDisabled,
-              pressed && isValid && styles.buttonPressed,
-            ]}
+          <Animated.View style={[styles.readyBubble, readyMessageStyle]}>
+            <Text style={styles.readyMessage}>Parfait ! Ton heros est pret</Text>
+          </Animated.View>
+          <Button
+            title="C'est moi !"
             onPress={handleContinue}
             disabled={!isValid}
-          >
-            <Text style={[styles.buttonText, !isValid && styles.buttonTextDisabled]}>
-              C'est moi !
-            </Text>
-          </Pressable>
+            size="large"
+          />
         </Animated.View>
       </View>
     </ScreenContainer>
@@ -327,101 +262,78 @@ export const HeroInfoScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5', // Same warm background as WelcomeScreen
+    backgroundColor: colors.background,
   },
   main: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 160, // Espace pour le bouton sticky
+    paddingBottom: 160,
   },
   content: {
     flex: 1,
-    paddingTop: 32,
-    paddingHorizontal: 24,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
-
-  // Step indicator
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
+  stepIndicatorWrapper: {
+    marginBottom: spacing.md,
   },
-  stepText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  stepDots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
-  },
-  stepDotActive: {
-    backgroundColor: '#FF8A65',
-    width: 20,
-  },
-
-  // Header
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xl,
+  },
+  headerIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 28,
+    backgroundColor: colors.accentLight,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    ...shadows.comic,
   },
   headerIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+    fontSize: 36,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#5D4E37', // Warm brown (same as WelcomeScreen)
+    ...typography.title,
+    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: 16,
-    color: '#8D7B68', // Muted warm brown
+    color: colors.inkLight,
     textAlign: 'center',
   },
-
-  // Input groups
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#5D4E37',
+    ...typography.label,
+    color: colors.ink,
     marginBottom: 10,
   },
   input: {
-    backgroundColor: '#FFF8F0', // Soft warm white
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     paddingHorizontal: 18,
     paddingVertical: 16,
     fontSize: 17,
-    color: '#5D4E37',
-    borderWidth: 2,
-    borderColor: '#F5EBE0', // Subtle border
+    color: colors.ink,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    fontWeight: '500',
   },
   inputHint: {
     fontSize: 13,
-    color: '#B8A99A',
+    color: colors.inkMuted,
     marginTop: 6,
     marginLeft: 4,
   },
-
-  // Gender selection
   genderContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -430,75 +342,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   genderButton: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     paddingVertical: 20,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#F5EBE0',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   genderButtonSelected: {
-    borderColor: '#FF8A65', // Coral (same as WelcomeScreen accent)
-    backgroundColor: '#FFF3E8',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
   },
   genderIcon: {
     fontSize: 40,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   genderText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#8D7B68',
+    fontWeight: '700',
+    color: colors.inkLight,
   },
   genderTextSelected: {
-    color: '#FF8A65',
+    color: colors.accent,
   },
-
-  // Footer & Button - sticky en bas, position fixe
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
+    padding: spacing.lg,
     paddingBottom: 40,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
+  },
+  readyBubble: {
+    backgroundColor: colors.accentLight,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignSelf: 'center',
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
   },
   readyMessage: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF8A65', // Coral - same as accent color
-    textAlign: 'center',
-    marginBottom: 14,
-  },
-  button: {
-    backgroundColor: '#FF8A65', // Coral (same as WelcomeScreen)
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#E5DDD3',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
-  buttonText: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  buttonTextDisabled: {
-    color: '#B8AFA3',
+    color: colors.accent,
+    textAlign: 'center',
   },
 });

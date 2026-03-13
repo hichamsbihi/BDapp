@@ -14,6 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadge } from '@/shared';
+import { colors, radius, typography } from '@/theme';
 import { useAppStore } from '@/store';
 import { useParagraph } from '@/hooks/useStoryData';
 import {
@@ -54,7 +55,7 @@ const MagicSparkle: React.FC<{ delay: number; x: number; y: number }> = ({ delay
     height: 12,
     opacity: opacity.value,
     transform: [{ scale: scale.value }, { rotate: '45deg' }],
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.accent,
     borderRadius: 2,
   }));
 
@@ -350,7 +351,7 @@ export const ParagraphScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
   paragraph: {
     fontSize: 20,
     fontStyle: 'italic',
-    color: '#4A3F32',
+    color: colors.ink,
     lineHeight: 34,
     textAlign: 'center',
   },
@@ -388,10 +389,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E5DDD3',
+    backgroundColor: colors.borderLight,
   },
   dotFilled: {
-    backgroundColor: '#C4B5A5',
+    backgroundColor: colors.ink,
   },
 
   // Footer
@@ -399,27 +400,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 16,
     paddingBottom: 44,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   button: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
     paddingVertical: 18,
-    borderRadius: 14,
+    borderRadius: radius.xl,
     alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   buttonPressed: {
-    opacity: 0.85,
+    transform: [{ scale: 0.96 }, { translateY: 2 }],
   },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...typography.button,
+    color: colors.surface,
   },
 
   // Creation overlay
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 252, 245, 0.97)',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -445,7 +447,7 @@ const styles = StyleSheet.create({
   creationText: {
     fontSize: 18,
     fontStyle: 'italic',
-    color: '#5D4E37',
+    color: colors.ink,
     letterSpacing: 0.3,
     textAlign: 'center',
     paddingHorizontal: 32,

@@ -6,17 +6,13 @@ import Animated, {
   withSequence,
   withSpring,
 } from 'react-native-reanimated';
+import { colors, spacing, radius, shadows } from '@/theme';
 
 interface StarsBadgeProps {
   count: number;
   style?: object;
 }
 
-/**
- * Stars badge - affichage étoiles
- * Animation douce à chaque changement (scale + sparkle)
- * Le parent doit utiliser useSafeAreaInsets pour le positionner (top/right)
- */
 export const StarsBadge: React.FC<StarsBadgeProps> = ({ count, style }) => {
   const scale = useSharedValue(1);
   const prevCount = React.useRef(count);
@@ -24,10 +20,9 @@ export const StarsBadge: React.FC<StarsBadgeProps> = ({ count, style }) => {
   useEffect(() => {
     if (prevCount.current !== count) {
       prevCount.current = count;
-      // Sparkle animation on change
       scale.value = withSequence(
         withSpring(1.2, { damping: 8 }),
-        withSpring(1, { damping: 12 })
+        withSpring(1, { damping: 12 }),
       );
     }
   }, [count]);
@@ -49,17 +44,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.surface,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F5EBE0',
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   icon: {
     fontSize: 18,
@@ -67,6 +57,6 @@ const styles = StyleSheet.create({
   count: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#5D4E37',
+    color: colors.ink,
   },
 });

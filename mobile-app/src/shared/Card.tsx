@@ -4,9 +4,10 @@ import {
   Text,
   Image,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ViewStyle,
 } from 'react-native';
+import { colors, radius, spacing, typography, shadows } from '@/theme';
 
 interface CardProps {
   title: string;
@@ -15,11 +16,10 @@ interface CardProps {
   onPress?: () => void;
   style?: ViewStyle;
   children?: React.ReactNode;
+  illustration?: React.ReactNode;
+  selected?: boolean;
 }
 
-/**
- * Reusable card component for displaying content
- */
 export const Card: React.FC<CardProps> = ({
   title,
   subtitle,
@@ -27,9 +27,12 @@ export const Card: React.FC<CardProps> = ({
   onPress,
   style,
   children,
+  illustration,
+  selected = false,
 }) => {
-  const CardContent = (
-    <View style={[styles.card, style]}>
+  const content = (
+    <View style={[styles.card, selected && styles.cardSelected, style]}>
+      {illustration && <View style={styles.illustrationSlot}>{illustration}</View>}
       {imageUrl && (
         <Image
           source={{ uri: imageUrl }}
@@ -53,43 +56,57 @@ export const Card: React.FC<CardProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        {CardContent}
-      </TouchableOpacity>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        {content}
+      </Pressable>
     );
   }
 
-  return CardContent;
+  return content;
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
+  },
+  cardSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    ...shadows.cardLifted,
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }, { translateY: 2 }],
+  },
+  illustrationSlot: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   image: {
     width: '100%',
     height: 150,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.surfaceAlt,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4,
+    ...typography.subtitle,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
+    ...typography.caption,
+    color: colors.inkMuted,
     lineHeight: 20,
   },
 });

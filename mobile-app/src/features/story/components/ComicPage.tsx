@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { StoryPage } from '@/types';
+import { colors } from '@/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.55;
@@ -72,7 +73,7 @@ export const ComicPage = React.memo(ComicPageInner);
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,
@@ -86,8 +87,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#F0EAE0',
-    shadowColor: '#5D4E37',
+    backgroundColor: colors.surfaceAlt,
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -108,13 +109,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0D5C5',
+    backgroundColor: colors.border,
   },
   dividerDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#D4C4AE',
+    backgroundColor: colors.border,
     marginHorizontal: 12,
   },
 
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   paragraph: {
     fontSize: 17,
     lineHeight: 30,
-    color: '#3D3229',
+    color: colors.ink,
     fontStyle: 'italic',
     textAlign: 'center',
     letterSpacing: 0.2,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   pageNumber: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#B8A99A',
+    color: colors.inkMuted,
     marginTop: 24,
     letterSpacing: 2,
   },

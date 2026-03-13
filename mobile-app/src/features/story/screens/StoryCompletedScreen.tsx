@@ -12,7 +12,8 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadge } from '@/shared';
+import { ScreenContainer, StarsBadge, Button } from '@/shared';
+import { colors, radius, typography, shadows, spacing } from '@/theme';
 import { useAppStore } from '@/store';
 
 /**
@@ -193,7 +194,7 @@ export const StoryCompletedScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -223,13 +224,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 80,
     height: 100,
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
     borderRadius: 6,
-    // Subtle shadow
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   bookPages: {
     position: 'absolute',
@@ -237,7 +235,7 @@ const styles = StyleSheet.create({
     top: 4,
     bottom: 4,
     width: 6,
-    backgroundColor: '#FAF6F0',
+    backgroundColor: colors.accentLight,
     borderTopRightRadius: 2,
     borderBottomRightRadius: 2,
   },
@@ -246,7 +244,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
   },
   sparkle1: {
     top: 20,
@@ -278,13 +276,13 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#4A3F32',
+    color: colors.ink,
     marginBottom: 8,
   },
   storyTitle: {
     fontSize: 20,
     fontStyle: 'italic',
-    color: '#8D7B68',
+    color: colors.inkLight,
   },
 
   // Message
@@ -295,7 +293,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 17,
-    color: '#6B5E50',
+    color: colors.ink,
     textAlign: 'center',
     lineHeight: 28,
     marginBottom: 16,
@@ -303,7 +301,7 @@ const styles = StyleSheet.create({
   submessage: {
     fontSize: 15,
     fontStyle: 'italic',
-    color: '#9A8B7A',
+    color: colors.inkMuted,
   },
 
   // Actions
@@ -313,34 +311,36 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   primaryButton: {
-    backgroundColor: '#FF8A65',
+    backgroundColor: colors.ink,
     paddingVertical: 18,
-    borderRadius: 14,
+    borderRadius: radius.xl,
     alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    ...shadows.comic,
   },
   buttonPressed: {
-    opacity: 0.85,
+    transform: [{ scale: 0.96 }, { translateY: 2 }],
   },
   primaryButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...typography.button,
+    color: colors.surface,
   },
   secondaryButton: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.surface,
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: radius.xl,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderWidth: 2.5,
+    borderColor: colors.ink,
   },
   secondaryButtonPressed: {
-    backgroundColor: '#FAF6F0',
+    backgroundColor: colors.surfaceAlt,
   },
   secondaryButtonText: {
+    ...typography.button,
     fontSize: 16,
-    fontWeight: '500',
-    color: '#5D4E37',
+    color: colors.ink,
   },
   tertiaryButton: {
     paddingVertical: 12,
@@ -351,6 +351,6 @@ const styles = StyleSheet.create({
   },
   tertiaryButtonText: {
     fontSize: 14,
-    color: '#9A8B7A',
+    color: colors.inkMuted,
   },
 });

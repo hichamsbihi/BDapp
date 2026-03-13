@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "browsermcp": {
+            "command": "npx",
+            "args": ["@browsermcp/mcp@latest"]
+        },
+        "marp-mcp": {
+          "command": "npx",
+          "args": ["-y", "@masaki39/marp-mcp"]
+        }
+    }
+}
