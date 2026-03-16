@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "5678:5678"
+    networks:
+      - n8n_default
     environment:
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - N8N_RUNNERS_ENABLED=true
@@ -14,14 +16,28 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
 
-  # n8n-mcp:
-  #   image: ghcr.io/czlonkowski/n8n-mcp:latest
-  #   container_name: n8n-mcp
-  #   restart: unless-stopped
-  #   environment:
-  #     - MCP_MODE=stdio
-  #     - LOG_LEVEL=error
-  #     - DISABLE_CONSOLE_OUTPUT=true
+  n8n-mcp:
+    image: ghcr.io/czlonkowski/n8n-mcp:latest
+    container_name: n8n-mcp
+    restart: unless-stopped
+    depends_on:
+      - n8n
+    networks:
+      - n8n_default
+    ports:
+      - "3001:3001"
+    environment:
+      - MCP_MODE=sse
+      - MCP_PORT=3001
+      - LOG_LEVEL=error
+      - DISABLE_CONSOLE_OUTPUT=true
+      - N8N_API_URL=http://n8n:5678
+      - N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNDcxNmM0My1mZjkyLTRlZWQtYWE5Mi1jNmQwYmNmNzA0ZDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzczNjc5NDExLCJleHAiOjE3NzYyMjU2MDB9.Or8hw6pKLSYzEMWb1GeUuGwA4k8AIq0wrAhAenD6X-I
+      - WEBHOOK_SECURITY_MODE=moderate
+
+networks:
+  n8n_default:
+    driver: bridge
 
 volumes:
   n8n_data:
