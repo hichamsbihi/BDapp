@@ -13,6 +13,93 @@
 
     {
       "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "chatInput", "value": "={{ $json.chatInput }}", "type": "string" },
+            { "id": "a2", "name": "characterName", "value": "Hana", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-320, 0],
+      "id": "set-char-and-input",
+      "name": "Set character names + chatInput"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst raw = (item.characterName != null && item.characterName !== '') ? String(item.characterName) : 'Hana';\nconst names = raw.split(',').map(s => s.trim()).filter(Boolean);\nif (names.length === 0) names.push('Hana');\nconst base = 'https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/avatars';\nconst inFilter = 'in.(' + names.map(n => '\"' + n.replace(/\"/g, '') + '\"').join(',') + ')';\nconst url = base + '?select=character_name,character_prompt,gender&character_name=' + encodeURIComponent(inFilter);\nreturn [{ json: { chatInput: item.chatInput, characterName: item.characterName, avatarFetchUrl: url } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-120, -180],
+      "id": "prep-fetch-avatars",
+      "name": "Prepare fetch avatars URL"
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.avatarFetchUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "responseFormat": "json",
+          "alwaysOutputData": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [100, -180],
+      "id": "fetch-avatars-supabase",
+      "name": "Fetch avatars (character_prompt)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rows = [];\nitems.forEach(i => {\n  const j = i.json;\n  if (Array.isArray(j)) rows.push(...j);\n  else if (j && typeof j === 'object' && (j.character_name != null || j.body != null)) {\n    if (Array.isArray(j.body)) rows.push(...j.body);\n    else rows.push(j);\n  }\n});\nconst byName = {};\nlet avatarGender = 'girl';\nrows.forEach(r => {\n  const n = r.character_name;\n  const p = r.character_prompt;\n  const g = r.gender;\n  if (n) byName[n] = (p != null && p !== '') ? p : '(personnage principal, apparence à respecter selon le contexte)';\n  if (g && (g === 'boy' || g === 'girl')) avatarGender = g;\n});\nconst characterBible = Object.entries(byName)\n  .map(([name, prompt]) => name + ': ' + prompt)\n  .join('\\n');\nreturn [{ json: { characterBible: characterBible || 'No characters found. Use default style.', avatarGender } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, -180],
+      "id": "build-character-bible",
+      "name": "Build character bible"
+    },
+
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [320, -380],
+      "id": "merge-input-and-bible",
+      "name": "Merge chatInput + character bible"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const merge = $('Merge chatInput + character bible').first().json;\nconst storyInput = (merge.chatInput || '').trim();\nconst characterBible = merge.characterBible || '';\nconst fullPrompt = `Tu es un auteur narratif manga pour enfants (6-10 ans). Tu crées une histoire courte ADAPTÉE aux personnages dont la bible visuelle est donnée ci-dessous.\\n\\nBIBLE VISUELLE DES PERSONNAGES (source : base de données, à respecter STRICTEMENT pour les panels et scene_summary) :\\n${characterBible}\\n\\nENTRÉE UTILISATEUR (thème, synopsis, ou texte d'histoire - peut être vide) :\\n${storyInput || '(aucun - invente une aventure courte qui correspond aux personnages)'}\\n\\nTÂCHE :\\n- Si l'utilisateur a fourni un thème ou synopsis : invente une histoire de 5 pages qui le respecte et met en scène les personnages de la bible.\\n- Si l'utilisateur a fourni un texte d'histoire complet : découpe-le en 5 pages narratives.\\n- Si l'utilisateur n'a rien fourni : invente une aventure de 5 pages adaptée au design et à l'univers des personnages.\\n- Les personnages dans chaque scene_summary et dans chaque panel doivent correspondre EXACTEMENT à la bible visuelle. Ne pas modifier leur apparence.\\n- Produire : paragraph_text, scene_summary, panels (descriptions visuelles pures, pas de bulles ni texte), 2 choix par page sauf la dernière. Générer aussi story_starts (2-3 accroches) et universe (métadonnées dérivées de l'histoire).\\n\\nFORMAT DE SORTIE : JSON strict uniquement. Pas de markdown. Schéma : universe (id, name, description, image_url, color, emoji, gender, display_order), story_starts (id, title, text, paragraph_text, scene_summary), pages (universe_id, page_number, paragraph_text, scene_summary, panels[], choices[]).`;\nreturn [{ json: { fullPrompt, characterBible } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -380],
+      "id": "build-story-prompt",
+      "name": "Build story prompt with bible"
+    },
+
+    {
+      "parameters": {
         "modelId": {
           "__rl": true,
           "value": "gpt-5.2",
@@ -20,7 +107,7 @@
           "cachedResultName": "GPT-5.2"
         },
         "responses": {
-          "values": [{ "content": "={{$json.chatInput}}" }]
+          "values": [{ "content": "={{ $json.fullPrompt }}" }]
         },
         "simplify": false,
         "builtInTools": {},
@@ -28,7 +115,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
-      "position": [-140, 0],
+      "position": [760, -380],
       "id": "176326da-b95f-4557-a222-20bcaf7d0731",
       "name": "Generate story JSON",
       "credentials": {
@@ -41,7 +128,7 @@
 
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json.output[0].content[0].text;\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();\n}\n\nconst parsed = JSON.parse(cleaned);\nconst pages = parsed.pages || [parsed.page];\nconst universe = parsed.universe || null;\n\nconst BUCKET = 'BD-Pages';\nconst SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst now = new Date().toISOString();\n\nconst CHARACTER_LOCK = `\\nMain character reference (STRICT - MUST remain identical in every image):\\n\\n8-year-old girl\\nshort straight black bob haircut\\nsmall red ribbon on the LEFT side of her head\\nlarge emerald green eyes\\nsoft round child face\\nblue adventure tunic with golden trim\\nbrown leather boots\\nsmall side satchel\\nglowing star-shaped pendant around her neck\\n\\nDO NOT change character design.\\nDO NOT change outfit.\\nDO NOT move ribbon.\\n`;\n\nreturn pages.map(page => {\n  const universeId = page.universe_id;\n  const pageNumber = page.page_number;\n  const fileName = `${universeId}-page-${pageNumber}.png`;\n  const storagePath = `${universeId}/${fileName}`;\n\n  return {\n    json: {\n      universe,\n      universeId,\n      pageNumber,\n      paragraphText: page.paragraph_text,\n      sceneSummary: page.scene_summary,\n      panels: page.panels,\n      choices: page.choices || [],\n      storyStarts: parsed.story_starts || [],\n      bucket: BUCKET,\n      fileName,\n      storagePath,\n      supabaseUrl: SUPABASE_URL,\n      createdAt: now,\n      geminiPrompt: `Create a full children manga page illustration.\\n\\nSTYLE:\\nSoft pastel Japanese children manga style.\\nNo text. No speech bubbles. No typography.\\n\\n${CHARACTER_LOCK}\\n\\nSCENE:\\n${page.scene_summary}\\n\\nPANELS:\\n${JSON.stringify(page.panels, null, 2)}\\n\\nMaintain strict character consistency.`\n    }\n  };\n});"
+        "jsCode": "const raw = $input.first().json.output[0].content[0].text;\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();\n}\n\nconst parsed = JSON.parse(cleaned);\nconst pages = parsed.pages || [parsed.page];\nconst universe = parsed.universe || null;\n\nconst BUCKET = 'BD-Pages';\nconst SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst now = new Date().toISOString();\n\nlet characterBible = '';\nlet avatarGender = 'girl';\ntry { const m = $('Merge chatInput + character bible').first().json; characterBible = m.characterBible || ''; avatarGender = m.avatarGender || 'girl'; } catch (e) {}\nconst CHARACTER_LOCK = characterBible\n  ? '\\nCharacter reference (STRICT - MUST remain identical in every image):\\n\\n' + characterBible + '\\n\\nDO NOT change character design.\\n'\n  : '\\nMain character: 8-year-old girl, short black bob, red ribbon left, emerald eyes, blue tunic, brown boots. DO NOT change design.\\n';\n\nreturn pages.map(page => {\n  const universeId = page.universe_id;\n  const pageNumber = page.page_number;\n  const fileName = `${universeId}-page-${pageNumber}.png`;\n  const storagePath = `${universeId}/${fileName}`;\n\n  return {\n    json: {\n      universe,\n      universeId,\n      pageNumber,\n      paragraphText: page.paragraph_text,\n      sceneSummary: page.scene_summary,\n      panels: page.panels,\n      choices: page.choices || [],\n      storyStarts: parsed.story_starts || [],\n      avatarGender,\n      bucket: BUCKET,\n      fileName,\n      storagePath,\n      supabaseUrl: SUPABASE_URL,\n      createdAt: now,\n      geminiPrompt: `Create a full children manga page illustration.\\n\\nSTYLE:\\nSoft pastel Japanese children manga style.\\nNo text. No speech bubbles. No typography.\\n\\n${CHARACTER_LOCK}\\n\\nSCENE:\\n${page.scene_summary}\\n\\nPANELS:\\n${JSON.stringify(page.panels, null, 2)}\\n\\nMaintain strict character consistency.`\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -52,7 +139,7 @@
 
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst u = item.universe;\nif (!u) return [];\nreturn [{\n  json: {\n    id: u.id,\n    name: u.name,\n    description: u.description,\n    image_url: u.image_url || '',\n    color: u.color,\n    emoji: u.emoji,\n    gender: u.gender,\n    display_order: u.display_order\n  }\n}];"
+        "jsCode": "const item = $input.first().json;\nconst u = item.universe;\nif (!u) return [];\nconst gender = item.avatarGender || u.gender || 'girl';\nreturn [{\n  json: {\n    id: u.id,\n    name: u.name,\n    description: u.description,\n    image_url: u.image_url || '',\n    color: u.color,\n    emoji: u.emoji,\n    gender: gender,\n    display_order: u.display_order\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -175,7 +262,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/storage/v1/object/{{$json.bucket}}/{{$json.storagePath}}",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/storage/v1/object/{{ $json.bucket }}/{{ $json.storagePath }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -292,6 +379,37 @@
 
   "connections": {
     "When chat message received": {
+      "main": [[
+        { "node": "Set character names + chatInput", "type": "main", "index": 0 }
+      ]]
+    },
+    "Set character names + chatInput": {
+      "main": [[
+        { "node": "Prepare fetch avatars URL", "type": "main", "index": 0 },
+        { "node": "Merge chatInput + character bible", "type": "main", "index": 0 }
+      ]]
+    },
+    "Prepare fetch avatars URL": {
+      "main": [[
+        { "node": "Fetch avatars (character_prompt)", "type": "main", "index": 0 }
+      ]]
+    },
+    "Fetch avatars (character_prompt)": {
+      "main": [[
+        { "node": "Build character bible", "type": "main", "index": 0 }
+      ]]
+    },
+    "Build character bible": {
+      "main": [[
+        { "node": "Merge chatInput + character bible", "type": "main", "index": 1 }
+      ]]
+    },
+    "Merge chatInput + character bible": {
+      "main": [[
+        { "node": "Build story prompt with bible", "type": "main", "index": 0 }
+      ]]
+    },
+    "Build story prompt with bible": {
       "main": [[
         { "node": "Generate story JSON", "type": "main", "index": 0 }
       ]]
