@@ -1,0 +1,27 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_USER_MANAGEMENT_DISABLED=true
+    env_file:
+      - .env
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+  # n8n-mcp:
+  #   image: ghcr.io/czlonkowski/n8n-mcp:latest
+  #   container_name: n8n-mcp
+  #   restart: unless-stopped
+  #   environment:
+  #     - MCP_MODE=stdio
+  #     - LOG_LEVEL=error
+  #     - DISABLE_CONSOLE_OUTPUT=true
+
+volumes:
+  n8n_data:
