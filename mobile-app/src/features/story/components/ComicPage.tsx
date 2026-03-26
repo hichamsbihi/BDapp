@@ -1,17 +1,14 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   Image,
   StyleSheet,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
 } from 'react-native';
 import { StoryPage } from '@/types';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.55;
 
 interface ComicPageProps {
   page: StoryPage;
@@ -24,6 +21,21 @@ interface ComicPageProps {
  * Wrapped in React.memo to prevent re-renders when PagerView swipes.
  */
 const ComicPageInner: React.FC<ComicPageProps> = ({ page, totalPages, onTap }) => {
+  const { width: screenWidth } = useWindowDimensions();
+  const imageWidth = screenWidth - 32; // 16px margin each side
+
+  // Dynamic height based on real image aspect ratio
+  const [imageHeight, setImageHeight] = useState(imageWidth); // default square
+  const handleImageLoad = useCallback(
+    (e: { nativeEvent: { source: { width: number; height: number } } }) => {
+      const { width: w, height: h } = e.nativeEvent.source;
+      if (w > 0 && h > 0) {
+        setImageHeight(imageWidth * (h / w));
+      }
+    },
+    [imageWidth]
+  );
+
   return (
     <TouchableOpacity
       style={styles.root}
@@ -36,13 +48,14 @@ const ComicPageInner: React.FC<ComicPageProps> = ({ page, totalPages, onTap }) =
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Image container with subtle shadow frame */}
+        {/* Image container — height adapts to real aspect ratio */}
         <View style={styles.imageFrame}>
           <Image
             source={{ uri: page.imageUrl }}
-            style={styles.image}
-            resizeMode="cover"
+            style={[styles.image, { width: imageWidth, height: imageHeight }]}
+            resizeMode="contain"
             fadeDuration={300}
+            onLoad={handleImageLoad}
           />
         </View>
 
@@ -78,6 +91,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingBottom: 100,
   },
 
@@ -86,7 +101,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#F0EAE0',
+    backgroundColor: '#FFFCF5',
     shadowColor: '#5D4E37',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -94,8 +109,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   image: {
-    width: '100%',
-    height: IMAGE_HEIGHT,
+    borderRadius: 12,
   },
 
   divider: {

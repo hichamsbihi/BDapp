@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   Pressable,
   useWindowDimensions,
@@ -10,12 +9,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withDelay,
-  withSequence,
   withSpring,
   Easing,
   interpolate,
@@ -39,84 +38,201 @@ import {
 
 /**
  * Image Reveal Component
- * 
- * The spectacular moment when the image appears.
- * Uses a "unveiling" effect - like pulling back a curtain.
+ *
+ * Shimmer reveal, then pinch-to-zoom + pan via react-native-gesture-handler.
+ * Runs on the UI thread via Reanimated worklets = perfectly smooth.
+ * Image starts fully visible (contain). Resets on each new image.
  */
 interface ImageRevealProps {
   imageUrl: string;
   onRevealComplete: () => void;
+  isTablet: boolean;
+  onInteractionChange: (active: boolean) => void;
 }
 
-const ImageReveal: React.FC<ImageRevealProps> = ({ imageUrl, onRevealComplete }) => {
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  
-  const imageScale = useSharedValue(1.1);
+const ImageReveal: React.FC<ImageRevealProps> = ({
+  imageUrl,
+  onRevealComplete,
+  isTablet,
+  onInteractionChange,
+}) => {
+  const { width: windowWidth } = useWindowDimensions();
+  const maxZoom = isTablet ? 2.5 : 3;
+
+  // Reveal animations
+  const revealScale = useSharedValue(1.1);
   const imageOpacity = useSharedValue(0);
   const curtainProgress = useSharedValue(0);
   const glowOpacity = useSharedValue(0);
+  const [revealed, setRevealed] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(0);
 
+  // Zoom + pan shared values (UI thread)
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  // Reset zoom/pan when imageUrl changes (new page)
   useEffect(() => {
-    // Glow appears first - builds anticipation
-    glowOpacity.value = withTiming(0.6, { duration: 400 });
-    
-    // Image fades in with subtle scale (like emerging from mist)
-    imageOpacity.value = withDelay(
-      200,
-      withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) })
-    );
-    
-    // Image settles to normal scale
-    imageScale.value = withDelay(
-      200,
-      withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) })
-    );
-    
-    // Curtain reveals (shimmer effect)
-    curtainProgress.value = withDelay(
-      100,
-      withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) })
-    );
+    scale.value = 1;
+    savedScale.value = 1;
+    translateX.value = 0;
+    translateY.value = 0;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  }, [imageUrl]);
 
-    // Signal completion after reveal
+  // Reveal animation
+  useEffect(() => {
+    glowOpacity.value = withTiming(0.6, { duration: 400 });
+    imageOpacity.value = withDelay(200, withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) }));
+    revealScale.value = withDelay(200, withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) }));
+    curtainProgress.value = withDelay(100, withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) }));
     const timer = setTimeout(() => {
+      setRevealed(true);
       runOnJS(onRevealComplete)();
     }, 1500);
-
     return () => clearTimeout(timer);
   }, [onRevealComplete]);
 
+  // --- Gestures (all worklets, UI thread) ---
+
+  const pinchGesture = Gesture.Pinch()
+    .enabled(revealed)
+    .onStart(() => {
+      savedScale.value = scale.value;
+      runOnJS(onInteractionChange)(true);
+    })
+    .onUpdate((e) => {
+      scale.value = Math.max(1, Math.min(maxZoom, savedScale.value * e.scale));
+    })
+    .onEnd(() => {
+      if (scale.value < 1.1) {
+        // Snap back to 1
+        scale.value = withSpring(1, { damping: 15 });
+        translateX.value = withSpring(0, { damping: 15 });
+        translateY.value = withSpring(0, { damping: 15 });
+        savedScale.value = 1;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        savedScale.value = scale.value;
+        // Clamp translate at new scale
+        const maxX = (windowWidth * (scale.value - 1)) / 2;
+        const maxY = ((containerHeight || windowWidth) * (scale.value - 1)) / 2;
+        const clampedX = Math.max(-maxX, Math.min(maxX, translateX.value));
+        const clampedY = Math.max(-maxY, Math.min(maxY, translateY.value));
+        translateX.value = withSpring(clampedX, { damping: 15 });
+        translateY.value = withSpring(clampedY, { damping: 15 });
+        savedTranslateX.value = clampedX;
+        savedTranslateY.value = clampedY;
+      }
+      runOnJS(onInteractionChange)(false);
+    });
+
+  const panGesture = Gesture.Pan()
+    .enabled(revealed)
+    .minPointers(1)
+    .maxPointers(2)
+    .onStart(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      runOnJS(onInteractionChange)(true);
+    })
+    .onUpdate((e) => {
+      if (scale.value > 1.05) {
+        const maxX = (windowWidth * (scale.value - 1)) / 2;
+        const maxY = ((containerHeight || windowWidth) * (scale.value - 1)) / 2;
+        translateX.value = Math.max(-maxX, Math.min(maxX, savedTranslateX.value + e.translationX));
+        translateY.value = Math.max(-maxY, Math.min(maxY, savedTranslateY.value + e.translationY));
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      runOnJS(onInteractionChange)(false);
+    });
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .enabled(revealed)
+    .onEnd(() => {
+      if (scale.value > 1.1) {
+        // Reset
+        scale.value = withSpring(1, { damping: 15 });
+        translateX.value = withSpring(0, { damping: 15 });
+        translateY.value = withSpring(0, { damping: 15 });
+        savedScale.value = 1;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        // Zoom to 2x
+        const zoomTo = isTablet ? 1.8 : 2;
+        scale.value = withSpring(zoomTo, { damping: 15 });
+        savedScale.value = zoomTo;
+      }
+    });
+
+  // Compose: simultaneous pinch+pan, race with double-tap
+  const composedGesture = Gesture.Race(
+    doubleTapGesture,
+    Gesture.Simultaneous(pinchGesture, panGesture)
+  );
+
+  // Animated styles
   const imageStyle = useAnimatedStyle(() => ({
     opacity: imageOpacity.value,
-    transform: [{ scale: imageScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
-  // Shimmer overlay that sweeps across the image
-  const shimmerStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: interpolate(curtainProgress.value, [0, 1], [-windowWidth, windowWidth * 2]) },
+      { scale: revealScale.value * scale.value },
+      { translateX: translateX.value },
+      { translateY: translateY.value },
     ],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(curtainProgress.value, [0, 1], [-windowWidth, windowWidth * 2]) }],
     opacity: interpolate(curtainProgress.value, [0, 0.5, 1], [0.8, 0.4, 0]),
   }));
 
+  // Hint
+  const hintOpacity = useSharedValue(0);
+  useEffect(() => {
+    if (revealed) {
+      hintOpacity.value = withDelay(400, withTiming(1, { duration: 300 }));
+      const t = setTimeout(() => { hintOpacity.value = withTiming(0, { duration: 500 }); }, 3500);
+      return () => clearTimeout(t);
+    }
+  }, [revealed]);
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }));
+
+  const handleLayout = useCallback(
+    (e: { nativeEvent: { layout: { height: number } } }) => setContainerHeight(e.nativeEvent.layout.height),
+    []
+  );
+
   return (
-    <View style={styles.imageRevealContainer}>
-      {/* Glow behind image */}
+    <View style={styles.imageRevealContainer} onLayout={handleLayout}>
       <Animated.View style={[styles.imageGlow, glowStyle]} />
-      
-      {/* The hero image */}
-      <Animated.Image
-        source={{ uri: imageUrl }}
-        style={[styles.heroImage, imageStyle]}
-        resizeMode="cover"
-      />
-      
-      {/* Shimmer reveal effect */}
+
+      <GestureDetector gesture={composedGesture}>
+        <Animated.Image
+          source={{ uri: imageUrl }}
+          style={[styles.heroImage, imageStyle]}
+          resizeMode="contain"
+        />
+      </GestureDetector>
+
       <Animated.View style={[styles.shimmerOverlay, shimmerStyle]} />
+
+      {revealed && (
+        <Animated.View style={[styles.zoomHint, hintStyle]}>
+          <Text style={styles.zoomHintText}>🔍 Pince pour zoomer</Text>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -214,7 +330,8 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
  */
 export const PageScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTablet = Math.min(windowWidth, windowHeight) >= 600;
   const { paragraphText, imageUrl: paramImageUrl } = useLocalSearchParams<{
     paragraphText: string;
     imageUrl: string;
@@ -224,6 +341,11 @@ export const PageScreen: React.FC = () => {
   const [phase, setPhase] = useState<'image' | 'choices' | 'ready'>('image');
   const [selectedChoice, setSelectedChoice] = useState<NarrativeChoice | null>(null);
   const [isExiting, setIsExiting] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  const handleImageInteraction = useCallback((active: boolean) => {
+    setScrollEnabled(!active);
+  }, []);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
@@ -249,8 +371,8 @@ export const PageScreen: React.FC = () => {
   const imageUrl = paramImageUrl
     || `https://picsum.photos/seed/${currentStory?.universeId ?? 'default'}-${currentPageNumber}/400/300`;
 
-  // Image takes ~55% of screen to leave room for choices + CTA
-  const imageHeight = windowHeight * 0.55;
+  // Image takes more space on tablets where there's room
+  const imageHeight = windowHeight * (isTablet ? 0.6 : 0.55);
 
   // Dynamic CTA text
   const ctaText = useMemo(() => {
@@ -355,10 +477,16 @@ export const PageScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={true}
+        scrollEnabled={scrollEnabled}
       >
         {/* THE HERO: The illustrated scene */}
         <View style={[styles.imageContainer, { height: imageHeight }]}>
-          <ImageReveal imageUrl={imageUrl} onRevealComplete={handleImageRevealComplete} />
+          <ImageReveal
+            imageUrl={imageUrl}
+            onRevealComplete={handleImageRevealComplete}
+            isTablet={isTablet}
+            onInteractionChange={handleImageInteraction}
+          />
         </View>
 
         {/* Secondary content area - below the image */}
@@ -431,9 +559,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF8F0',
   },
   heroImage: {
+    flex: 1,
     width: '100%',
-    height: '100%',
-    backgroundColor: '#F5EBE0',
+    backgroundColor: '#FFFCF5',
+  },
+  zoomHint: {
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  zoomHintText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
   shimmerOverlay: {
     position: 'absolute',
