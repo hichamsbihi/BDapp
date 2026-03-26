@@ -178,17 +178,20 @@ const styles = StyleSheet.create({
   gradientRingSelected: {
     ...shadows.md,
   },
-  imageContainer: {
-    width: INNER_SIZE,
-    height: INNER_SIZE,
-    borderRadius: INNER_SIZE / 2,
-    overflow: 'hidden',
-    backgroundColor: colors.background,
-  },
-  avatarImage: {
-    width: INNER_SIZE,
-    height: INNER_SIZE,
-  },
+ // AFTER — image is scaled up 115%, overflow:hidden clips the padding invisibly
+imageContainer: {
+  width: INNER_SIZE,
+  height: INNER_SIZE,
+  borderRadius: INNER_SIZE / 2,
+  overflow: 'hidden',
+  backgroundColor: 'transparent',       // ← no background bleeds through
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+avatarImage: {
+  width: INNER_SIZE * 1.25 ,             // ← 15% bigger than the container
+  height: INNER_SIZE * 1.25,            // ← overflow:hidden clips the excess
+},
   sparkleOverlay: {
     position: 'absolute',
     top: -AVATAR_SIZE * 0.3,
