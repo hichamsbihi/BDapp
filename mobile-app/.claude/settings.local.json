@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(npx expo:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
