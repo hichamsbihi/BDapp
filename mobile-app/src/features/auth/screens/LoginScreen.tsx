@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
+  TextInputProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -63,7 +64,114 @@ function getAuthErrorMessage(error: AuthError | null): string {
 
 const AVATAR_SIZE = 96;
 
-/** Animated success card shown after account creation. Wrapper has layout animation, inner has opacity/scale to avoid Reanimated conflict. */
+// ─── AuthInput ────────────────────────────────────────────────────────────────
+
+type AuthInputProps = {
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder: string;
+  icon: string;
+  secureTextEntry?: boolean;
+  keyboardType?: TextInputProps['keyboardType'];
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  editable?: boolean;
+  showToggle?: boolean;
+};
+
+function AuthInput({
+  value,
+  onChangeText,
+  placeholder,
+  icon,
+  secureTextEntry = false,
+  keyboardType,
+  autoCapitalize = 'none',
+  editable = true,
+  showToggle = false,
+}: AuthInputProps) {
+  const [secure, setSecure] = useState(secureTextEntry);
+  const borderAnim = useSharedValue(0); // 0 = blur, 1 = focus
+  const scaleAnim = useSharedValue(1);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    borderColor: borderAnim.value === 1 ? colors.primary : colors.border,
+    transform: [{ scale: scaleAnim.value }],
+  }));
+
+  const onFocus = () => {
+    borderAnim.value = withTiming(1, { duration: 200 });
+    scaleAnim.value = withSpring(1.01, { damping: 14 });
+  };
+
+  const onBlur = () => {
+    borderAnim.value = withTiming(0, { duration: 200 });
+    scaleAnim.value = withSpring(1, { damping: 14 });
+  };
+
+  return (
+    <Animated.View style={[styles.authInputContainer, containerStyle]}>
+      <Text style={styles.authInputIcon}>{icon}</Text>
+      <TextInput
+        style={styles.authInputField}
+        placeholder={placeholder}
+        placeholderTextColor={colors.text.muted}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secure}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
+        editable={editable}
+        onFocus={onFocus}
+        onBlur={onBlur}
+      />
+      {showToggle && (
+        <Pressable hitSlop={8} onPress={() => setSecure((s) => !s)} style={styles.authInputToggle}>
+          <Text style={styles.authInputToggleIcon}>{secure ? '👁' : '🙈'}</Text>
+        </Pressable>
+      )}
+    </Animated.View>
+  );
+}
+
+// ─── ErrorChip ────────────────────────────────────────────────────────────────
+
+function ErrorChip({ error }: { error: string | null }) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(8);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setVisible(true);
+      opacity.value = withTiming(1, { duration: 250 });
+      translateY.value = withSpring(0, { damping: 16 });
+    } else {
+      opacity.value = withTiming(0, { duration: 200 });
+      translateY.value = withTiming(8, { duration: 200 });
+      const timeout = setTimeout(() => setVisible(false), 220);
+      return () => clearTimeout(timeout);
+    }
+  }, [error]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[styles.errorChip, animStyle]}>
+      <Text style={styles.errorChipIcon}>⚠</Text>
+      <Text style={styles.errorChipText}>{error}</Text>
+    </Animated.View>
+  );
+}
+
+// ─── SuccessMessageCard ───────────────────────────────────────────────────────
+
+/** Animated success card shown after account creation. */
 function SuccessMessageCard({ message }: { message: string }) {
   const scale = useSharedValue(0.9);
   const opacity = useSharedValue(0);
@@ -83,7 +191,9 @@ function SuccessMessageCard({ message }: { message: string }) {
 
   return (
     <Animated.View entering={FadeIn.duration(300)}>
+      {/* TODO: replace rgba with theme token semantic.successLight once added */}
       <Animated.View style={[styles.successCard, animatedStyle]}>
+        {/* TODO: replace width/height 40 with theme token once spacing supports it */}
         <View style={styles.successIconWrap}>
           <Text style={styles.successIconText}>✓</Text>
         </View>
@@ -94,9 +204,102 @@ function SuccessMessageCard({ message }: { message: string }) {
   );
 }
 
-/**
- * Sign up view: avatar that "talks", welcome message with name, email + password + confirm.
- */
+// ─── AvatarSection ────────────────────────────────────────────────────────────
+
+function AvatarSection({
+  avatarImageUrl,
+  displayName,
+}: {
+  avatarImageUrl: string | null;
+  displayName: string;
+}) {
+  const pulseScale = useSharedValue(1);
+
+  useEffect(() => {
+    let active = true;
+    function pulse() {
+      if (!active) return;
+      pulseScale.value = withSequence(
+        withTiming(1.04, { duration: 1200 }),
+        withTiming(1, { duration: 1200 })
+      );
+      setTimeout(pulse, 2500);
+    }
+    pulse();
+    return () => { active = false; };
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  return (
+    <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
+      <Animated.View style={[styles.avatarRing, pulseStyle]}>
+        {avatarImageUrl ? (
+          <Image source={{ uri: avatarImageUrl }} style={styles.avatarImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarPlaceholderText}>?</Text>
+          </View>
+        )}
+      </Animated.View>
+      <View style={styles.bubbleContainer}>
+        {/* Triangle pointing up toward avatar */}
+        <View style={styles.speechBubbleArrow} />
+        <View style={styles.speechBubble}>
+          <Text style={styles.speechBubbleText}>
+            <Text style={styles.speechBubbleName}>{displayName}, </Text>
+            bienvenue dans ce monde de magie. En créant ton compte, tu deviens un vrai créateur :
+            tes histoires et ton avatar seront sauvegardés pour toujours.
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── WelcomeBanner ────────────────────────────────────────────────────────────
+
+function WelcomeBanner() {
+  return (
+    <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
+      <View style={styles.welcomeMessageOnly}>
+        <View style={styles.speechBubble}>
+          <Text style={styles.welcomeMessageTitle}>Deviens un vrai créateur</Text>
+          <Text style={styles.speechBubbleText}>
+            Crée ton compte pour sauvegarder tes histoires, débloquer des mondes et garder ton avatar. Bienvenue dans l'aventure.
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── SignInHeader ─────────────────────────────────────────────────────────────
+
+function SignInHeader() {
+  return (
+    <View style={styles.signInHeader}>
+      <Animated.View entering={FadeInDown.duration(350).delay(0)}>
+        <View style={styles.signInBadge}>
+          <Text style={styles.signInBadgeText}>✨ Bon retour</Text>
+        </View>
+      </Animated.View>
+      <Animated.View entering={FadeInDown.duration(350).delay(80)}>
+        <Text style={styles.signInTitle}>Content de te revoir</Text>
+      </Animated.View>
+      <Animated.View entering={FadeInDown.duration(350).delay(160)}>
+        <Text style={styles.signInSubtitle}>
+          Connecte-toi pour retrouver tes histoires et ton avatar.
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
+// ─── SignUpView ───────────────────────────────────────────────────────────────
+
 function SignUpView({
   heroName,
   avatarImageUrl,
@@ -137,77 +340,49 @@ function SignUpView({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
-        {hasOnboardingData ? (
-          <>
-            <View style={styles.avatarRing}>
-              {avatarImageUrl ? (
-                <Image source={{ uri: avatarImageUrl }} style={styles.avatarImage} resizeMode="cover" />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarPlaceholderText}>?</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.bubbleContainer}>
-              <View style={styles.speechBubble}>
-                <Text style={styles.speechBubbleText}>
-                  <Text style={styles.speechBubbleName}>{displayName}, </Text>
-                  bienvenue dans ce monde de magie. En créant ton compte, tu deviens un vrai créateur :
-                  tes histoires et ton avatar seront sauvegardés pour toujours.
-                </Text>
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={styles.welcomeMessageOnly}>
-            <View style={styles.speechBubble}>
-              <Text style={styles.welcomeMessageTitle}>Deviens un vrai créateur</Text>
-              <Text style={styles.speechBubbleText}>
-                Crée ton compte pour sauvegarder tes histoires, débloquer des mondes et garder ton avatar. Bienvenue dans l’aventure.
-              </Text>
-            </View>
-          </View>
-        )}
-      </Animated.View>
+      {hasOnboardingData ? (
+        <AvatarSection avatarImageUrl={avatarImageUrl} displayName={displayName} />
+      ) : (
+        <WelcomeBanner />
+      )}
 
       <Animated.View entering={FadeIn.delay(250)} style={styles.formBlock}>
         <Text style={styles.formTitle}>Créer mon compte</Text>
-        <TextInput
-          style={styles.input}
+        <AuthInput
+          icon="📧"
           placeholder="Email"
-          placeholderTextColor={colors.text.muted}
           value={email}
           onChangeText={(t) => { setEmail(t); setError(null); }}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCorrect={false}
           editable={!loading}
         />
-        <TextInput
-          style={styles.input}
+        <AuthInput
+          icon="🔒"
           placeholder="Mot de passe (6 caractères min.)"
-          placeholderTextColor={colors.text.muted}
           value={password}
           onChangeText={(t) => { setPassword(t); setError(null); }}
           secureTextEntry
+          showToggle
           editable={!loading}
         />
-        <TextInput
-          style={styles.input}
+        <AuthInput
+          icon="🔒"
           placeholder="Confirmer le mot de passe"
-          placeholderTextColor={colors.text.muted}
           value={confirmPassword}
           onChangeText={(t) => { setConfirmPassword(t); setError(null); }}
           secureTextEntry
+          showToggle
           editable={!loading}
         />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        {successMessage ? (
-          <SuccessMessageCard message={successMessage} />
-        ) : null}
+        <ErrorChip error={error} />
+        {successMessage ? <SuccessMessageCard message={successMessage} /> : null}
         <Pressable
-          style={[styles.primaryBtn, loading && styles.btnDisabled]}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            pressed && styles.primaryBtnPressed,
+            loading && styles.btnDisabled,
+          ]}
           onPress={onSubmit}
           disabled={loading}
         >
@@ -232,9 +407,8 @@ function SignUpView({
   );
 }
 
-/**
- * Sign in view: distinct layout, short message, email + password.
- */
+// ─── SignInView ───────────────────────────────────────────────────────────────
+
 function SignInView({
   email,
   setEmail,
@@ -262,38 +436,34 @@ function SignInView({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.signInHeader}>
-        <Text style={styles.signInEmoji}>✨</Text>
-        <Text style={styles.signInTitle}>Content de te revoir</Text>
-        <Text style={styles.signInSubtitle}>
-          Connecte-toi pour retrouver tes histoires et ton avatar.
-        </Text>
-      </Animated.View>
+      <SignInHeader />
 
-      <Animated.View entering={FadeIn.delay(200)} style={styles.formBlock}>
-        <TextInput
-          style={styles.input}
+      <Animated.View entering={FadeIn.delay(260)} style={styles.formBlock}>
+        <AuthInput
+          icon="📧"
           placeholder="Email"
-          placeholderTextColor={colors.text.muted}
           value={email}
           onChangeText={(t) => { setEmail(t); setError(null); }}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCorrect={false}
           editable={!loading}
         />
-        <TextInput
-          style={styles.input}
+        <AuthInput
+          icon="🔒"
           placeholder="Mot de passe"
-          placeholderTextColor={colors.text.muted}
           value={password}
           onChangeText={(t) => { setPassword(t); setError(null); }}
           secureTextEntry
+          showToggle
           editable={!loading}
         />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <ErrorChip error={error} />
         <Pressable
-          style={[styles.primaryBtn, loading && styles.btnDisabled]}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            pressed && styles.primaryBtnPressed,
+            loading && styles.btnDisabled,
+          ]}
           onPress={onSubmit}
           disabled={loading}
         >
@@ -318,9 +488,8 @@ function SignInView({
   );
 }
 
-/**
- * Login / sign up screen. Two distinct UIs: sign up (avatar + welcome) and sign in (minimal).
- */
+// ─── LoginScreen ──────────────────────────────────────────────────────────────
+
 export function LoginScreen() {
   const params = useLocalSearchParams<{ from?: string; mode?: string }>();
   const fromOnboarding = params.from === 'onboarding';
@@ -347,11 +516,11 @@ export function LoginScreen() {
   const runSignUp = useCallback(async () => {
     const trimmed = email.trim();
     if (!trimmed) {
-      setError('Indiquez votre email.');
+      setError("L'adresse email est requise.");
       return;
     }
     if (!password) {
-      setError('Indiquez un mot de passe.');
+      setError('Le mot de passe est requis.');
       return;
     }
     if (password.length < 6) {
@@ -397,11 +566,11 @@ export function LoginScreen() {
   const runSignIn = useCallback(async () => {
     const trimmed = email.trim();
     if (!trimmed) {
-      setError('Indiquez votre email.');
+      setError("L'adresse email est requise.");
       return;
     }
     if (!password) {
-      setError('Indiquez votre mot de passe.');
+      setError('Le mot de passe est requis.');
       return;
     }
     if (password.length < 6) {
@@ -449,8 +618,8 @@ export function LoginScreen() {
       <LinearGradient
         colors={
           mode === 'signup'
-            ? [colors.surface, colors.background]
-            : [colors.background, colors.surface]
+            ? [colors.surface, colors.background, colors.surfaceElevated]
+            : [colors.background, colors.surface, colors.background]
         }
         style={StyleSheet.absoluteFill}
       />
@@ -488,10 +657,14 @@ export function LoginScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // ── Scrolls
   signUpScroll: {
     flexGrow: 1,
     paddingBottom: spacing.xxl,
@@ -502,15 +675,17 @@ const styles = StyleSheet.create({
     minHeight: '100%',
     paddingBottom: spacing.xxl,
   },
+
+  // ── Avatar section
   avatarSection: {
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
   avatarRing: {
-    width: AVATAR_SIZE + 16,
-    height: AVATAR_SIZE + 16,
-    borderRadius: (AVATAR_SIZE + 16) / 2,
-    padding: 8,
+    width: AVATAR_SIZE + spacing.lg,
+    height: AVATAR_SIZE + spacing.lg,
+    borderRadius: (AVATAR_SIZE + spacing.lg) / 2,
+    padding: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
@@ -540,6 +715,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingHorizontal: spacing.md,
     maxWidth: 320,
+    alignItems: 'center',
+  },
+  speechBubbleArrow: {
+    // Triangle pointing upward toward the avatar using border-trick
+    width: 0,
+    height: 0,
+    borderLeftWidth: spacing.md,
+    borderRightWidth: spacing.md,
+    borderBottomWidth: spacing.md,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.border,
+    marginBottom: -1, // overlap 1px to hide gap
   },
   welcomeMessageOnly: {
     paddingHorizontal: spacing.md,
@@ -563,7 +751,7 @@ const styles = StyleSheet.create({
   },
   speechBubbleText: {
     fontSize: typography.size.md,
-    lineHeight: 22,
+    lineHeight: spacing.xl,
     color: colors.text.primary,
     textAlign: 'center',
   },
@@ -571,6 +759,8 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color: colors.primary,
   },
+
+  // ── Form block
   formBlock: {
     maxWidth: 360,
     width: '100%',
@@ -583,43 +773,67 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     textAlign: 'center',
   },
-  signInHeader: {
+
+  // ── AuthInput
+  authInputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  signInEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  signInTitle: {
-    fontSize: typography.size.xxl,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  signInSubtitle: {
-    fontSize: typography.size.md,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  input: {
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    // shadow for focused depth
+    ...shadows.sm,
+  },
+  authInputIcon: {
+    fontSize: typography.size.lg,
+    marginRight: spacing.sm,
+  },
+  authInputField: {
+    flex: 1,
     paddingVertical: spacing.md + 2,
     fontSize: typography.size.md,
     color: colors.text.primary,
-    marginBottom: spacing.md,
   },
-  errorText: {
+  authInputToggle: {
+    paddingLeft: spacing.sm,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  authInputToggleIcon: {
+    fontSize: typography.size.lg,
+  },
+
+  // ── ErrorChip
+  errorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,83,80,0.10)',
+    borderWidth: 1,
+    borderColor: colors.semantic.error,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  errorChipIcon: {
+    fontSize: typography.size.md,
+    marginRight: spacing.xs,
+    color: colors.semantic.error,
+  },
+  errorChipText: {
     fontSize: typography.size.sm,
     color: colors.semantic.error,
-    marginBottom: spacing.md,
+    flexShrink: 1,
   },
+
+  // ── SuccessCard
+  // TODO: replace rgba values with theme tokens semantic.successLight / semantic.successBorder once added
   successCard: {
     backgroundColor: 'rgba(102, 187, 106, 0.12)',
     borderRadius: radius.lg,
@@ -629,6 +843,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     alignItems: 'center',
   },
+  // TODO: replace 40/20 with spacing token once a suitable one exists
   successIconWrap: {
     width: 40,
     height: 40,
@@ -639,9 +854,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   successIconText: {
-    fontSize: 22,
+    fontSize: typography.size.xl,
     color: colors.text.inverse,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
   },
   successCardTitle: {
     fontSize: typography.size.lg,
@@ -653,8 +868,45 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: spacing.xl,
   },
+
+  // ── SignIn header
+  signInHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  signInBadge: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  signInBadgeText: {
+    fontSize: typography.size.md,
+    fontFamily: typography.family.accent,
+    color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
+  },
+  signInTitle: {
+    fontSize: typography.size.display,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  signInSubtitle: {
+    fontSize: typography.size.md,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.md * 1.5,
+  },
+
+  // ── Primary button
   primaryBtn: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -662,8 +914,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.sm,
   },
+  primaryBtnPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.97 }],
+  },
   primaryBtnGradient: {
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
@@ -676,6 +932,8 @@ const styles = StyleSheet.create({
   btnDisabled: {
     opacity: 0.7,
   },
+
+  // ── Switch mode link
   switchModeBtn: {
     alignSelf: 'center',
     paddingVertical: spacing.md,
