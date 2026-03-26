@@ -64,14 +64,6 @@ export const fetchAvatarCharacters = async (
     query = query.in('gender', [gender, 'all']);
   }
   const { data, error } = await query;
-  console.log('data', data);
-  // Debug: also check unfiltered count to diagnose empty results
-  if (!data?.length) {
-    const { data: allRows } = await supabase.from('avatars').select('id, character_name, gender').limit(5);
-    console.log('avatarService - filtered rows: 0, unfiltered sample:', JSON.stringify(allRows));
-  } else {
-    console.log('avatarService - rows:', data.length);
-  }
 
   if (error) throw error;
 

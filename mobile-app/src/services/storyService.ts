@@ -65,7 +65,7 @@ export const fetchUniversesByGender = async (
     .select('*')
     .eq('gender', gender)
     .order('display_order', { ascending: true });
-    console.log('data', data);
+
   if (error) throw error;
   return (data ?? []).map(toUniverseConfig);
 };

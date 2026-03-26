@@ -4,15 +4,18 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withDelay,
+  withTiming,
   FadeInDown,
   FadeIn,
 } from 'react-native-reanimated';
@@ -21,11 +24,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getCurrentUser } from '@/services/authService';
 import { useAppStore } from '@/store';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import {
   STARS_PACK_SMALL,
   STARS_PACK_MEDIUM,
   STARS_PACK_LARGE,
   PREMIUM_LIFETIME,
+  FIRST_PURCHASE_BONUS_STARS,
 } from '@/constants/stars';
 import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
 
@@ -38,56 +43,77 @@ type PackType = 'small' | 'medium' | 'large';
 interface StarPackCardProps {
   stars: number;
   priceEur: number;
-  universes: number;
-  books: number;
   index: number;
   onPress: () => void;
   loading?: boolean;
+  /** Promo badge shown on first purchase (small pack doubles to 20 stars) */
+  promoLabel?: string;
+  highlight?: boolean;
 }
 
-function StarPackCard({ stars, priceEur, universes, books, index, onPress, loading }: StarPackCardProps) {
+function StarPackCard({ stars, priceEur, index, onPress, loading, promoLabel, highlight }: StarPackCardProps) {
   const scale = useSharedValue(1);
+  const promoScale = useSharedValue(0.8);
+
+  useEffect(() => {
+    if (promoLabel) {
+      promoScale.value = withDelay(
+        index * 80 + 200,
+        withSequence(
+          withSpring(1.12, { damping: 8, stiffness: 140 }),
+          withSpring(1, { damping: 12 })
+        )
+      );
+    }
+  }, [promoLabel]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const promoAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: promoScale.value }],
+  }));
+
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 80).springify().damping(14)}
-      style={[styles.starPackCard, animatedStyle]}
-    >
-      <Pressable
-        onPressIn={() => {
-          scale.value = withSpring(0.98, { damping: 15 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1);
-        }}
+    <Animated.View entering={FadeInDown.delay(index * 80).springify().damping(14)}>
+      <Animated.View
+        style={[
+          styles.starPackCard,
+          animatedStyle,
+          highlight && styles.starPackCardHighlight,
+        ]}
+      >
+      <AnimatedPressable
+        scaleValue={1}
+        onPressIn={() => { scale.value = withSpring(0.98, { damping: 15 }); }}
+        onPressOut={() => { scale.value = withSpring(1); }}
         onPress={onPress}
         disabled={loading}
-        style={({ pressed }) => [styles.starPackInner, pressed && styles.pressed]}
+        style={styles.starPackInner}
       >
         <LinearGradient
-          colors={['#FFFBF5', '#FFF5E8', '#FFF9F0'] as const}
+          colors={highlight ? ['#FFF8E1', '#FFECB3', '#FFE082'] as const : ['#FFFBF5', '#FFF5E8', '#FFF9F0'] as const}
           style={styles.starPackGradient}
         >
+          {promoLabel && (
+            <Animated.View style={[styles.promoBadge, promoAnimStyle]}>
+              <Text style={styles.promoBadgeText}>{promoLabel}</Text>
+            </Animated.View>
+          )}
           <View style={styles.starPackHeader}>
             <Text style={styles.starPackStars} allowFontScaling={false}>{stars}</Text>
             <Text style={styles.starPackLabel}>étoiles</Text>
           </View>
           <Text style={styles.starPackPrice}>{priceEur.toFixed(2).replace('.', ',')} €</Text>
-          <View style={styles.starPackFeatures}>
-            <Text style={styles.starPackFeature}>{universes} univers</Text>
-            <Text style={styles.starPackFeature}>{books} livres</Text>
-          </View>
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} style={styles.cardLoader} />
           ) : (
             <Text style={styles.starPackCta}>Choisir</Text>
           )}
         </LinearGradient>
-      </Pressable>
+      </AnimatedPressable>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -105,17 +131,15 @@ function PremiumCard({ onPress, loading }: PremiumCardProps) {
   }));
 
   return (
-    <Animated.View entering={FadeInDown.delay(320).springify().damping(14)} style={animatedStyle}>
-      <Pressable
-        onPressIn={() => {
-          scale.value = withSpring(0.98, { damping: 15 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1);
-        }}
+    <Animated.View entering={FadeInDown.delay(320).springify().damping(14)}>
+      <Animated.View style={animatedStyle}>
+      <AnimatedPressable
+        scaleValue={1}
+        onPressIn={() => { scale.value = withSpring(0.98, { damping: 15 }); }}
+        onPressOut={() => { scale.value = withSpring(1); }}
         onPress={onPress}
         disabled={loading}
-        style={({ pressed }) => [styles.premiumCard, pressed && styles.pressed]}
+        style={styles.premiumCard}
       >
         <LinearGradient
           colors={['#FFE082', '#FFD54F', '#FFB300'] as const}
@@ -135,20 +159,27 @@ function PremiumCard({ onPress, loading }: PremiumCardProps) {
             <Text style={styles.premiumCta}>Débloquer tout</Text>
           )}
         </LinearGradient>
-      </Pressable>
+      </AnimatedPressable>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 /**
  * Paywall: packs d'étoiles + option Premium à vie.
- * Si l'utilisateur n'est pas connecté, redirection vers login?from=paywall.
+ * First purchase on small pack gives FIRST_PURCHASE_BONUS_STARS instead of base.
  */
 export function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const setIsPremium = useAppStore((s) => s.setIsPremium);
   const [authChecked, setAuthChecked] = useState(false);
   const [loadingPack, setLoadingPack] = useState<PackType | 'premium' | null>(null);
+
+  // Track first purchase via store — once any pack is bought, promo is gone
+  const hasEverPurchased = useAppStore((s) => s.hasEverPurchased);
+  const setHasEverPurchased = useAppStore((s) => s.setHasEverPurchased);
+
+  const isFirstPurchase = !hasEverPurchased;
 
   useEffect(() => {
     let cancelled = false;
@@ -165,33 +196,62 @@ export function PaywallScreen() {
   }, []);
 
   const handleStarPack = async (pack: PackType) => {
+    if (!__DEV__) {
+      Alert.alert('Achats bientôt disponibles');
+      return;
+    }
     setLoadingPack(pack);
     try {
-      // TODO: IAP - for now mock success and add stars
+      // MOCK: Replace with real IAP SDK (e.g. RevenueCat) before production
       await new Promise((r) => setTimeout(r, 800));
       const addStars = useAppStore.getState().addStars;
-      if (pack === 'small') addStars(STARS_PACK_SMALL.stars);
-      else if (pack === 'medium') addStars(STARS_PACK_MEDIUM.stars);
-      else addStars(STARS_PACK_LARGE.stars);
-      router.back();
+      let gained = 0;
+
+      if (pack === 'small') {
+        gained = isFirstPurchase ? FIRST_PURCHASE_BONUS_STARS : STARS_PACK_SMALL.stars;
+      } else if (pack === 'medium') {
+        gained = STARS_PACK_MEDIUM.stars;
+      } else {
+        gained = STARS_PACK_LARGE.stars;
+      }
+
+      addStars(gained);
+      setHasEverPurchased(true);
+
+      Alert.alert(
+        'Bravo !',
+        `Tu as recu ${gained} étoiles !`,
+        [{ text: 'Super !', onPress: () => router.back() }],
+      );
     } finally {
       setLoadingPack(null);
     }
   };
 
   const handlePremium = async () => {
+    if (!__DEV__) {
+      Alert.alert('Achats bientôt disponibles');
+      return;
+    }
     setLoadingPack('premium');
     try {
+      // MOCK: Replace with real IAP SDK (e.g. RevenueCat) before production
       await new Promise((r) => setTimeout(r, 600));
       setIsPremium(true);
-      router.back();
+      setHasEverPurchased(true);
+
+      Alert.alert(
+        'Premium activé !',
+        'Tous les univers sont débloqués. Bonne aventure !',
+        [{ text: 'Génial !', onPress: () => router.back() }],
+      );
     } finally {
       setLoadingPack(null);
     }
   };
 
   const handleRestore = () => {
-    // TODO: restore purchases
+    // TODO: restore purchases via RevenueCat
   };
 
   const handleClose = () => {
@@ -206,6 +266,9 @@ export function PaywallScreen() {
       </View>
     );
   }
+
+  // Show promo stars count for small pack if first purchase
+  const smallPackStars = isFirstPurchase ? FIRST_PURCHASE_BONUS_STARS : STARS_PACK_SMALL.stars;
 
   return (
     <ScreenContainer>
@@ -222,8 +285,8 @@ export function PaywallScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ÉTOILES</Text>
+          <View style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>ÉTOILES</Text>
           </View>
           <Text style={styles.title}>Choisis ton pack</Text>
           <Text style={styles.subtitle}>
@@ -233,19 +296,17 @@ export function PaywallScreen() {
 
         <View style={styles.packs}>
           <StarPackCard
-            stars={STARS_PACK_SMALL.stars}
+            stars={smallPackStars}
             priceEur={STARS_PACK_SMALL.priceEur}
-            universes={STARS_PACK_SMALL.universes}
-            books={STARS_PACK_SMALL.books}
             index={0}
             onPress={() => handleStarPack('small')}
             loading={loadingPack === 'small'}
+            promoLabel={isFirstPurchase ? 'OFFRE DE BIENVENUE  x2 !' : undefined}
+            highlight={isFirstPurchase}
           />
           <StarPackCard
             stars={STARS_PACK_MEDIUM.stars}
             priceEur={STARS_PACK_MEDIUM.priceEur}
-            universes={STARS_PACK_MEDIUM.universes}
-            books={STARS_PACK_MEDIUM.books}
             index={1}
             onPress={() => handleStarPack('medium')}
             loading={loadingPack === 'medium'}
@@ -253,8 +314,6 @@ export function PaywallScreen() {
           <StarPackCard
             stars={STARS_PACK_LARGE.stars}
             priceEur={STARS_PACK_LARGE.priceEur}
-            universes={STARS_PACK_LARGE.universes}
-            books={STARS_PACK_LARGE.books}
             index={2}
             onPress={() => handleStarPack('large')}
             loading={loadingPack === 'large'}
@@ -276,12 +335,12 @@ export function PaywallScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Pressable onPress={handleRestore} style={({ pressed }) => [styles.footerLink, pressed && styles.pressed]}>
+        <AnimatedPressable onPress={handleRestore} style={styles.footerLink}>
           <Text style={styles.footerLinkText}>Restaurer mes achats</Text>
-        </Pressable>
-        <Pressable onPress={handleClose} style={({ pressed }) => [styles.footerLink, pressed && styles.pressed]}>
+        </AnimatedPressable>
+        <AnimatedPressable onPress={handleClose} style={styles.footerLink}>
           <Text style={styles.footerLinkText}>Fermer</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </ScreenContainer>
   );
@@ -310,22 +369,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  badge: {
+  headerBadge: {
     backgroundColor: colors.accent,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     marginBottom: spacing.md,
   },
-  badgeText: {
+  headerBadgeText: {
     fontSize: typography.size.sm,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
     letterSpacing: 1,
   },
   title: {
     fontSize: typography.size.display,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
     textAlign: 'center',
     marginBottom: spacing.sm,
@@ -351,6 +410,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 193, 7, 0.35)',
     ...shadows.md,
   },
+  starPackCardHighlight: {
+    borderColor: '#FFB300',
+    borderWidth: 2.5,
+    ...shadows.lg,
+    shadowColor: '#FFB300',
+  },
   starPackInner: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -358,6 +423,19 @@ const styles = StyleSheet.create({
   starPackGradient: {
     padding: spacing.xl,
     alignItems: 'center',
+  },
+  promoBadge: {
+    backgroundColor: '#FF6D00',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    marginBottom: spacing.md,
+  },
+  promoBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   starPackHeader: {
     flexDirection: 'row',
@@ -367,7 +445,7 @@ const styles = StyleSheet.create({
   },
   starPackStars: {
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: typography.weight.extrabold,
     color: colors.text.primary,
   },
   starPackLabel: {
@@ -376,27 +454,18 @@ const styles = StyleSheet.create({
   },
   starPackPrice: {
     fontSize: typography.size.xxl,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.primary,
-    marginBottom: spacing.md,
-  },
-  starPackFeatures: {
-    flexDirection: 'row',
-    gap: spacing.lg,
     marginBottom: spacing.lg,
-  },
-  starPackFeature: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
   },
   starPackCta: {
     fontSize: typography.size.md,
-    fontWeight: '600',
+    fontWeight: typography.weight.semibold,
     color: colors.primary,
   },
   premiumSectionTitle: {
     fontSize: typography.size.lg,
-    fontWeight: '600',
+    fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: spacing.lg,
@@ -425,13 +494,13 @@ const styles = StyleSheet.create({
   },
   premiumBadgeText: {
     fontSize: typography.size.xs,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
     letterSpacing: 1,
   },
   premiumTitle: {
     fontSize: typography.size.xxl,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
@@ -442,20 +511,17 @@ const styles = StyleSheet.create({
   },
   premiumPrice: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: typography.weight.extrabold,
     color: colors.text.primary,
     marginBottom: spacing.lg,
   },
   premiumCta: {
     fontSize: typography.size.md,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
   },
   cardLoader: {
     marginTop: spacing.sm,
-  },
-  pressed: {
-    opacity: 0.9,
   },
   parentNotice: {
     backgroundColor: 'rgba(255, 138, 101, 0.12)',
@@ -465,7 +531,7 @@ const styles = StyleSheet.create({
   },
   parentNoticeTitle: {
     fontSize: typography.size.sm,
-    fontWeight: '600',
+    fontWeight: typography.weight.semibold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
@@ -487,6 +553,6 @@ const styles = StyleSheet.create({
   footerLinkText: {
     fontSize: typography.size.sm,
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: typography.weight.medium,
   },
 });

@@ -6,25 +6,10 @@ import {
   INITIAL_STARS,
   UNIVERSE_UNLOCK_COST,
   REWARD_WATCH_AD,
-  REWARD_STORY_COMPLETE,
-  REWARD_DAILY_BONUS,
   COUNTDOWN_REWARD,
   COUNTDOWN_HOURS,
 } from '@/constants/stars';
 
-/**
- * Check if we're in a new calendar day (for daily bonus)
- */
-const isNewDay = (lastDate: string | null): boolean => {
-  if (!lastDate) return true;
-  const last = new Date(lastDate);
-  const now = new Date();
-  return (
-    last.getFullYear() !== now.getFullYear() ||
-    last.getMonth() !== now.getMonth() ||
-    last.getDate() !== now.getDate()
-  );
-};
 
 /**
  * Check if 12h have passed since last countdown claim
@@ -88,7 +73,6 @@ export const useAppStore = create<AppState>()(
       // Stars (narrative currency - non-monetary)
       stars: INITIAL_STARS,
       unlockedUniverses: [],
-      lastDailyBonusDate: null,
       lastCountdownClaimDate: null,
       addStars: (amount: number) =>
         set((state) => ({
@@ -123,14 +107,6 @@ export const useAppStore = create<AppState>()(
           case 'watch_ad':
             await mockWatchAd();
             amount = REWARD_WATCH_AD;
-            break;
-          case 'story_complete':
-            amount = REWARD_STORY_COMPLETE;
-            break;
-          case 'daily_bonus':
-            if (!isNewDay(state.lastDailyBonusDate)) return 0;
-            amount = REWARD_DAILY_BONUS;
-            set({ lastDailyBonusDate: new Date().toISOString() });
             break;
           case 'countdown_bonus':
             if (!canClaimCountdown(state.lastCountdownClaimDate)) return 0;
@@ -169,6 +145,10 @@ export const useAppStore = create<AppState>()(
       isPremium: false,
       setIsPremium: (status: boolean) => set({ isPremium: status }),
 
+      // Purchase tracking (first-purchase promo)
+      hasEverPurchased: false,
+      setHasEverPurchased: (value: boolean) => set({ hasEverPurchased: value }),
+
       // Onboarding status
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (status: boolean) =>
@@ -186,7 +166,7 @@ export const useAppStore = create<AppState>()(
           stars: INITIAL_STARS,
           unlockedUniverses: [],
           isPremium: false,
-          lastDailyBonusDate: null,
+          hasEverPurchased: false,
           lastCountdownClaimDate: null,
           currentStory: null,
           storyProgressList: [],
@@ -201,19 +181,19 @@ export const useAppStore = create<AppState>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         stars: state.stars,
         unlockedUniverses: state.unlockedUniverses,
-        lastDailyBonusDate: state.lastDailyBonusDate,
         lastCountdownClaimDate: state.lastCountdownClaimDate,
         isPremium: state.isPremium,
+        hasEverPurchased: state.hasEverPurchased,
       }),
-      version: 3,
+      version: 4,
       migrate: (persistedState: any) => {
         return {
           ...persistedState,
           stars: persistedState?.stars ?? INITIAL_STARS,
           unlockedUniverses: persistedState?.unlockedUniverses ?? [],
-          lastDailyBonusDate: persistedState?.lastDailyBonusDate ?? null,
           lastCountdownClaimDate: persistedState?.lastCountdownClaimDate ?? null,
           isPremium: persistedState?.isPremium ?? false,
+          hasEverPurchased: persistedState?.hasEverPurchased ?? false,
         };
       },
     }

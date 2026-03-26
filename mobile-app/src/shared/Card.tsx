@@ -27,7 +27,7 @@ export const Card: React.FC<CardProps> = ({
   children,
 }) => {
   const CardContent = (
-    <View style={[styles.card, style]}>
+    <View accessibilityRole="summary" style={[styles.card, style]}>
       {imageUrl && (
         <Image
           source={{ uri: imageUrl }}

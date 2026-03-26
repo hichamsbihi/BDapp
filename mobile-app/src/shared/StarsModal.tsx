@@ -28,11 +28,13 @@ import { useCountdownStatus } from '@/hooks/useCountdownStatus';
 import { getCurrentUser } from '@/services/authService';
 import { COUNTDOWN_REWARD, COUNTDOWN_HOURS } from '@/constants/stars';
 import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MODAL_WIDTH = Math.min(SCREEN_WIDTH - spacing.xl * 2, 360);
-const HERO_SIZE = 120;
-const RING_SIZE = 100;
+const MODAL_MAX_WIDTH = spacing.xxxl * 7 + spacing.xl;
+const MODAL_WIDTH = Math.min(SCREEN_WIDTH - spacing.xl * 2, MODAL_MAX_WIDTH);
+const HERO_SIZE = spacing.xxxl + spacing.xxxl + spacing.xl;
+const RING_SIZE = spacing.xxxl * 2 + spacing.xs;
 const FLOAT_DURATION = 3000;
 
 interface StarsModalProps {
@@ -84,7 +86,7 @@ function FloatingStar({
       delay,
       withRepeat(
         withSequence(
-          withTiming(-8, { duration: FLOAT_DURATION, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-spacing.sm, { duration: FLOAT_DURATION, easing: Easing.inOut(Easing.ease) }),
           withTiming(0, { duration: FLOAT_DURATION, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
@@ -246,9 +248,19 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                   loop
                   style={[styles.bgSparkle, styles.bgSparkle1]}
                 />
-                <FloatingStar size={12} top={24} left={24} delay={0} />
-                <FloatingStar size={8} top={40} left={MODAL_WIDTH - 40} delay={400} />
-                <FloatingStar size={10} top={70} left={MODAL_WIDTH / 2 - 20} delay={200} />
+                <FloatingStar size={spacing.md} top={spacing.xl} left={spacing.xl} delay={0} />
+                <FloatingStar
+                  size={spacing.sm}
+                  top={spacing.xxxl - spacing.sm}
+                  left={MODAL_WIDTH - (spacing.xxxl - spacing.sm)}
+                  delay={400}
+                />
+                <FloatingStar
+                  size={spacing.md - spacing.xxs}
+                  top={spacing.xxxl + spacing.xl - spacing.xxs}
+                  left={MODAL_WIDTH / 2 - (spacing.lg + spacing.xs)}
+                  delay={200}
+                />
               </>
             )}
 
@@ -282,7 +294,8 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
               <View style={styles.claimSection}>
                 {canClaim ? (
                   <Animated.View style={claimButtonStyle}>
-                    <Pressable
+                    <AnimatedPressable
+                      accessibilityLabel="Réclamer les étoiles"
                       onPressIn={() => {
                         claimScale.value = withSpring(0.94, { damping: 12 });
                       }}
@@ -291,10 +304,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                       }}
                       onPress={handleClaimCountdown}
                       disabled={isClaiming}
-                      style={({ pressed }) => [
-                        styles.claimButton,
-                        (pressed || isClaiming) && styles.buttonDimmed,
-                      ]}
+                      style={[styles.claimButton, isClaiming && styles.buttonDimmed]}
                     >
                       <LinearGradient
                         colors={['#FFD54F', '#FFB300', '#FF8F00'] as const}
@@ -311,7 +321,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                           </>
                         )}
                       </LinearGradient>
-                    </Pressable>
+                    </AnimatedPressable>
                   </Animated.View>
                 ) : (
                   <View style={styles.timerRing}>
@@ -326,7 +336,8 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
 
               {/* Watch ad: icon + short label */}
               <Animated.View style={watchButtonStyle}>
-                <Pressable
+                <AnimatedPressable
+                  accessibilityLabel="Regarder une magie"
                   onPressIn={() => {
                     watchScale.value = withSpring(0.96);
                   }}
@@ -335,10 +346,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                   }}
                   onPress={handleWatchAd}
                   disabled={isWatching}
-                  style={({ pressed }) => [
-                    styles.watchRow,
-                    (pressed || isWatching) && styles.buttonDimmed,
-                  ]}
+                  style={[styles.watchRow, isWatching && styles.buttonDimmed]}
                 >
                   <LinearGradient
                     colors={[colors.primary, colors.primaryDark] as const}
@@ -355,13 +363,14 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                       </>
                     )}
                   </LinearGradient>
-                </Pressable>
+                </AnimatedPressable>
               </Animated.View>
 
               {/* Button to paywall: if logged in go to paywall, else login then paywall */}
               <View style={styles.packsSection}>
-                <Pressable
-                  style={({ pressed }) => [styles.paywallButton, pressed && styles.buttonDimmed]}
+                <AnimatedPressable
+                  accessibilityLabel="Voir les packs d'étoiles"
+                  style={[styles.paywallButton]}
                   onPress={handleGoToPaywall}
                 >
                   <LinearGradient
@@ -373,15 +382,16 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                     <Text style={styles.paywallButtonIcon}>✨</Text>
                     <Text style={styles.paywallButtonText}>Voir les packs d'étoiles</Text>
                   </LinearGradient>
-                </Pressable>
+                </AnimatedPressable>
               </View>
 
-              <Pressable
+              <AnimatedPressable
+                accessibilityLabel="Fermer"
                 onPress={onClose}
-                style={({ pressed }) => [styles.closeBtn, pressed && styles.buttonDimmed]}
+                style={[styles.closeBtn]}
               >
                 <Text style={styles.closeText}>Fermer</Text>
-              </Pressable>
+              </AnimatedPressable>
             </ScrollView>
           </Animated.View>
         </Pressable>
@@ -393,7 +403,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
@@ -403,10 +413,10 @@ const styles = StyleSheet.create({
     maxHeight: '88%',
   },
   content: {
-    borderRadius: 28,
+    borderRadius: radius.xxl,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255,213,79,0.4)',
+    borderWidth: spacing.xxs,
+    borderColor: colors.borderLight,
     ...shadows.lg,
   },
   gradientBg: {
@@ -418,10 +428,10 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   bgSparkle1: {
-    width: 80,
-    height: 80,
-    top: 8,
-    right: 8,
+    width: spacing.xxxl + spacing.xxl,
+    height: spacing.xxxl + spacing.xxl,
+    top: spacing.sm,
+    right: spacing.sm,
   },
   floatingStar: {
     position: 'absolute',
@@ -435,8 +445,8 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   burstLottie: {
-    width: 200,
-    height: 200,
+    width: spacing.xxxl * 3 + spacing.xxl + spacing.xl,
+    height: spacing.xxxl * 3 + spacing.xxl + spacing.xl,
   },
   scrollContent: {
     padding: spacing.xxl,
@@ -452,18 +462,18 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    width: HERO_SIZE + 24,
-    height: HERO_SIZE + 24,
-    borderRadius: (HERO_SIZE + 24) / 2,
-    backgroundColor: 'rgba(255,213,79,0.2)',
+    width: HERO_SIZE + spacing.xl,
+    height: HERO_SIZE + spacing.xl,
+    borderRadius: (HERO_SIZE + spacing.xl) / 2,
+    backgroundColor: colors.surfaceWarm,
   },
   heroNumber: {
-    fontSize: 52,
-    fontWeight: '800',
+    fontSize: spacing.xxxl + spacing.xs,
+    fontWeight: typography.weight.extrabold,
     color: colors.text.primary,
-    textShadowColor: 'rgba(255,193,7,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 12,
+    textShadowColor: colors.accent,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   heroLabel: {
     fontSize: typography.size.sm,
@@ -476,10 +486,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   claimButton: {
-    borderRadius: 20,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     ...shadows.md,
-    shadowColor: '#FFB300',
+    shadowColor: colors.semantic.warning,
     shadowOpacity: 0.35,
   },
   claimGradient: {
@@ -491,18 +501,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
   },
   claimIcon: {
-    fontSize: 28,
+    fontSize: typography.size.xxxl,
   },
   claimText: {
     fontSize: typography.size.lg,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.primary,
   },
   timerRing: {
-    width: RING_SIZE + 16,
-    height: RING_SIZE + 16,
-    borderRadius: (RING_SIZE + 16) / 2,
-    borderWidth: 4,
+    width: RING_SIZE + spacing.lg,
+    height: RING_SIZE + spacing.lg,
+    borderRadius: (RING_SIZE + spacing.lg) / 2,
+    borderWidth: spacing.xs,
     borderColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
@@ -510,9 +520,9 @@ const styles = StyleSheet.create({
   },
   timerRingFill: {
     position: 'absolute',
-    width: RING_SIZE + 8,
-    height: RING_SIZE + 8,
-    borderRadius: (RING_SIZE + 8) / 2,
+    width: RING_SIZE + spacing.sm,
+    height: RING_SIZE + spacing.sm,
+    borderRadius: (RING_SIZE + spacing.sm) / 2,
     backgroundColor: colors.accent,
   },
   timerCenter: {
@@ -520,14 +530,14 @@ const styles = StyleSheet.create({
   },
   timerValue: {
     fontSize: typography.size.lg,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: colors.text.secondary,
     fontVariant: ['tabular-nums'],
   },
   timerHint: {
     fontSize: typography.size.xs,
     color: colors.text.muted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   watchRow: {
     borderRadius: radius.lg,
@@ -544,11 +554,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   watchIcon: {
-    fontSize: 22,
+    fontSize: typography.size.xl + spacing.xxs,
   },
   watchLabel: {
     fontSize: typography.size.md,
-    fontWeight: '600',
+    fontWeight: typography.weight.semibold,
     color: colors.text.inverse,
   },
   packsSection: {
@@ -568,11 +578,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   paywallButtonIcon: {
-    fontSize: 20,
+    fontSize: typography.size.xl,
   },
   paywallButtonText: {
     fontSize: typography.size.md,
-    fontWeight: '600',
+    fontWeight: typography.weight.semibold,
     color: colors.text.primary,
   },
   closeBtn: {
@@ -582,7 +592,7 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: typography.size.sm,
     color: colors.text.muted,
-    fontWeight: '500',
+    fontWeight: typography.weight.medium,
   },
   buttonDimmed: {
     opacity: 0.85,

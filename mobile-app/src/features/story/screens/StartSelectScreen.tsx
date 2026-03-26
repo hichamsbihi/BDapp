@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -11,12 +10,14 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useStoryStarts } from '@/hooks/useStoryData';
 import { StoryStart } from '@/types';
+import { colors, spacing, radius, typography } from '@/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 56;
+const CARD_WIDTH = SCREEN_WIDTH - 2 * (spacing.xl + spacing.xs);
 
 /**
  * Chapter choice component
@@ -103,8 +104,8 @@ const Chapter: React.FC<ChapterProps> = ({
  * The text is sacred. Everything else disappears.
  */
 export const StartSelectScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const [selectedChapter, setSelectedChapter] = useState<StoryStart | null>(null);
+  const isNavigatingRef = useRef(false);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
@@ -164,8 +165,10 @@ export const StartSelectScreen: React.FC = () => {
     setSelectedChapter(chapter);
   };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (!selectedChapter) return;
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
 
     // Store complete opening data in global state
     updateCurrentStory({
@@ -175,7 +178,10 @@ export const StartSelectScreen: React.FC = () => {
     });
 
     router.push('/story/paragraph');
-  };
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1000);
+  }, [selectedChapter, updateCurrentStory]);
 
   return (
     <ScreenContainer style={styles.container}>
@@ -216,12 +222,9 @@ export const StartSelectScreen: React.FC = () => {
         style={[styles.footer, ctaStyle]}
         pointerEvents={selectedChapter ? 'auto' : 'none'}
       >
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-          onPress={handleContinue}
-        >
+        <AnimatedPressable style={[styles.button]} onPress={handleContinue}>
           <Text style={styles.buttonText}>Commencer ce chapitre</Text>
-        </Pressable>
+        </AnimatedPressable>
       </Animated.View>
     </ScreenContainer>
   );
@@ -229,29 +232,29 @@ export const StartSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,
   },
   content: {
-    paddingTop: 80,
-    paddingHorizontal: 28,
-    paddingBottom: 40,
+    paddingTop: spacing.xxxl + spacing.xxl,
+    paddingHorizontal: spacing.xl + spacing.xs,
+    paddingBottom: spacing.xl + spacing.lg,
   },
 
   // Intro — poetic, centered, breathing
   intro: {
-    marginBottom: 60,
+    marginBottom: spacing.xxxl + spacing.md,
     alignItems: 'center',
   },
   introText: {
-    fontSize: 24,
-    fontWeight: '500',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.medium,
     fontStyle: 'italic',
-    color: '#5D4E37',
+    color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 38,
+    lineHeight: typography.size.xxl * typography.lineHeight.normal + spacing.xs,
     letterSpacing: 0.3,
   },
 
@@ -259,17 +262,17 @@ const styles = StyleSheet.create({
   chapter: {
     width: CARD_WIDTH,
     alignSelf: 'center',
-    marginBottom: 40,
-    paddingVertical: 32,
-    paddingHorizontal: 26,
-    backgroundColor: '#FFFCF5',
-    borderRadius: 20,
+    marginBottom: spacing.xl + spacing.lg,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl + spacing.xs,
+    backgroundColor: colors.background,
+    borderRadius: radius.xl,
     borderWidth: 1.5,
-    borderColor: '#EBE3D8',
+    borderColor: colors.borderMedium,
   },
   chapterSelected: {
-    borderColor: '#FF8A65',
-    backgroundColor: '#FFFAF6',
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceMuted,
   },
   chapterDimmed: {
     opacity: 0.45, // Softer than before (was 0.38)
@@ -277,57 +280,54 @@ const styles = StyleSheet.create({
 
   // Title — chapter name
   title: {
-    fontSize: 21,
-    fontWeight: '700',
-    color: '#4A3F32',
-    marginBottom: 16,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.lg,
   },
   titleSelected: {
-    color: '#D4694B',
+    color: colors.primaryDark,
   },
 
   // Paragraph — THE HERO, the sacred text
   paragraph: {
-    fontSize: 19,
+    fontSize: typography.size.xl,
     fontStyle: 'italic',
-    color: '#5D4E37',
-    lineHeight: 32,
+    color: colors.text.secondary,
+    lineHeight: typography.size.xl + spacing.md,
   },
   paragraphSelected: {
-    color: '#3D3328',
+    color: colors.text.primary,
   },
 
   // Hint — poetic, disappears on selection
   hintContainer: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     alignItems: 'center',
   },
   hintText: {
-    fontSize: 14,
+    fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: '#B8A99A',
+    color: colors.text.muted,
     textAlign: 'center',
   },
 
   // Footer — discrete, supportive
   footer: {
-    paddingHorizontal: 28,
-    paddingTop: 16,
-    paddingBottom: 44,
-    backgroundColor: '#FFFCF5',
+    paddingHorizontal: spacing.xl + spacing.xs,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxxl - spacing.xs,
+    backgroundColor: colors.background,
   },
   button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg + spacing.xxs,
+    borderRadius: radius.lg,
     alignItems: 'center',
   },
-  buttonPressed: {
-    opacity: 0.85,
-  },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
 });

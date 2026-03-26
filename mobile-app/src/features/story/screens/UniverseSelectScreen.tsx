@@ -22,6 +22,9 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
+import { ErrorFallback } from '@/shared/ErrorFallback';
+import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import { useAppStore } from '@/store';
 import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { UniverseConfig } from '@/types';
@@ -31,7 +34,7 @@ import { getCurrentUser } from '@/services/authService';
 import { upsertStoryProgress, setLastUniverse } from '@/services/syncService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 48;
+const CARD_WIDTH = SCREEN_WIDTH - spacing.xl * 2;
 const ANIMATION_DURATION = 700;
 const EASING = Easing.out(Easing.cubic);
 
@@ -324,7 +327,7 @@ export const UniverseSelectScreen: React.FC = () => {
   const isNewUser = !hasCompletedOnboarding;
 
   const gender = heroProfile?.gender || 'boy';
-  const { data: rawUniverses, loading: universesLoading } = useUniverses(gender);
+  const { data: rawUniverses, error: universesError, refetch: refetchUniverses } = useUniverses(gender);
 
   const universes = useMemo(() => {
     if (isPremium) {
@@ -434,9 +437,17 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const selectedUniverse = universes.find((u) => u.id === selectedUniverseId);
 
+  if (universesError) {
+    return (
+      <ScreenContainer style={styles.container}>
+        <ErrorFallback onRetry={refetchUniverses} />
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer style={styles.container}>
-      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 24 }]}>
+      <View style={[styles.starsHeader, { top: insets.top + spacing.sm, right: insets.right + spacing.xl }]}>
         <StarsBadgeWithModal />
       </View>
       <ScrollView
@@ -501,19 +512,15 @@ export const UniverseSelectScreen: React.FC = () => {
 
       {/* Footer with CTA */}
       <Animated.View style={[styles.footer, buttonStyle]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !selectedUniverseId && styles.buttonDisabled,
-            pressed && selectedUniverseId && styles.buttonPressed,
-          ]}
+        <AnimatedPressable
+          style={[styles.button, !selectedUniverseId && styles.buttonDisabled]}
           onPress={handleContinue}
           disabled={!selectedUniverseId}
         >
           <Text style={[styles.buttonText, !selectedUniverseId && styles.buttonTextDisabled]}>
             {selectedUniverse ? `Entrer dans ce monde ✨` : 'Choisis une porte magique'}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </Animated.View>
 
       <LockedModal
@@ -532,7 +539,7 @@ export const UniverseSelectScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -543,9 +550,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 16,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
   },
 
   // Step indicator
@@ -553,134 +560,130 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
   stepText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   stepDots: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.sm,
   },
   stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.xs,
+    backgroundColor: colors.borderMedium,
   },
   stepDotActive: {
-    backgroundColor: '#FF8A65',
-    width: 20,
+    backgroundColor: colors.primary,
+    width: spacing.xl,
   },
 
   // Narrative intro
   introContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   introEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: typography.size.display,
+    marginBottom: spacing.sm,
   },
   introText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#8D7B68',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.medium,
+    color: colors.text.muted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
 
   // Header
   header: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
     alignItems: 'center',
   },
   greeting: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#B8A99A',
-    marginBottom: 4,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.medium,
+    color: colors.text.muted,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#5D4E37',
+    fontSize: typography.size.xxxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#8D7B68',
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
     textAlign: 'center',
   },
   resumeCard: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: colors.semantic.warningBg,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
     borderWidth: 2,
-    borderColor: '#FFCC80',
+    borderColor: colors.accent,
   },
   resumeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#E65100',
-    marginBottom: 4,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.primaryDark,
+    marginBottom: spacing.xs,
     textTransform: 'uppercase',
   },
   resumeText: {
-    fontSize: 15,
-    color: '#5D4E37',
-    marginBottom: 8,
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   resumeCta: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FF8A65',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
 
   // Cards
   cardsContainer: {
-    gap: 20,
+    gap: spacing.xl,
     alignItems: 'center',
   },
   cardWrapper: {
     width: CARD_WIDTH,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: '#F5EBE0',
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    borderColor: colors.surface,
+    ...shadows.lg,
     position: 'relative',
   },
   cardSelected: {
-    borderColor: '#FF8A65',
-    shadowColor: '#FF8A65',
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
     shadowOpacity: 0.3,
   },
   cardLocked: {
-    borderColor: '#E5DDD3',
+    borderColor: colors.borderMedium,
     shadowOpacity: 0.06,
   },
   cardGlow: {
     position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 28,
+    top: -spacing.xs,
+    left: -spacing.xs,
+    right: -spacing.xs,
+    bottom: -spacing.xs,
+    borderRadius: radius.xxl,
     zIndex: -1,
   },
   cardVisual: {
@@ -698,214 +701,205 @@ const styles = StyleSheet.create({
   },
   freeBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    top: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.semantic.success,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
   },
   freeBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
     letterSpacing: 0.5,
   },
   lockedOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(93, 78, 55, 0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   lockBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: spacing.xxxl + spacing.sm,
+    height: spacing.xxxl + spacing.sm,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.surfaceElevated,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   lockIcon: {
-    fontSize: 28,
+    fontSize: typography.size.xxxl,
   },
   lockedHint: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
   selectedGlow: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.2,
   },
   cardContent: {
-    padding: 18,
-    backgroundColor: '#FFFCF5',
+    padding: spacing.lg,
+    backgroundColor: colors.background,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#5D4E37',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
   },
   cardTitleLocked: {
-    color: '#A99A8A',
+    color: colors.text.muted,
   },
   cardDescription: {
-    fontSize: 15,
-    color: '#8D7B68',
-    lineHeight: 22,
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
+    lineHeight: typography.size.lg * typography.lineHeight.normal,
   },
   cardDescriptionLocked: {
-    color: '#B8A99A',
+    color: colors.text.muted,
     fontStyle: 'italic',
   },
   availableHint: {
-    fontSize: 13,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginTop: 6,
+    fontSize: typography.size.md,
+    color: colors.semantic.success,
+    fontWeight: typography.weight.semibold,
+    marginTop: spacing.sm,
   },
   selectedBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF8A65',
+    width: spacing.xxl,
+    height: spacing.xxl,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedBadgeText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
   },
 
   // Hint
   hintText: {
-    fontSize: 14,
-    color: '#B8A99A',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
     fontStyle: 'italic',
   },
 
   // Footer
   footer: {
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: '#FFFCF5',
+    padding: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    backgroundColor: colors.background,
   },
   button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 18,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 6 },
+    ...shadows.md,
+    shadowColor: colors.primary,
     shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: spacing.md,
   },
   buttonDisabled: {
-    backgroundColor: '#E5DDD3',
+    backgroundColor: colors.borderMedium,
     shadowOpacity: 0,
     elevation: 0,
   },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
   buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
     letterSpacing: 0.3,
   },
   buttonTextDisabled: {
-    color: '#B8AFA3',
+    color: colors.text.muted,
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(93, 78, 55, 0.6)',
+    backgroundColor: colors.overlayHeavy,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
   modalContent: {
-    backgroundColor: '#FFFCF5',
-    borderRadius: 28,
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    padding: spacing.xxl,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
   },
   modalEmoji: {
     fontSize: 64,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#5D4E37',
-    marginBottom: 8,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#8D7B68',
-    marginBottom: 12,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.medium,
+    color: colors.text.muted,
+    marginBottom: spacing.md,
   },
   modalMessage: {
-    fontSize: 15,
-    color: '#8D7B68',
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
+    lineHeight: spacing.xl,
+    marginBottom: spacing.xl,
   },
   modalButtonsColumn: {
     width: '100%',
-    gap: 12,
+    gap: spacing.md,
     alignItems: 'stretch',
   },
   modalButtonSecondary: {
     width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    backgroundColor: '#F5EBE0',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalButtonSecondaryText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#8D7B68',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
   },
   modalButtonPrimary: {
     width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    backgroundColor: '#FF8A65',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalButtonPrimaryText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
   },
 });

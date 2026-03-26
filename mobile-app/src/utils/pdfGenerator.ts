@@ -4,13 +4,9 @@ import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import { Story } from '@/types';
 
-function buildShareMessage(heroName?: string): string {
-  const author = heroName || 'Un jeune auteur';
-  return (
-    `${author} a créé une histoire magique avec MangaKids ! ` +
-    "Chaque aventure est unique, chaque page est illustrée. 📖✨"
-  );
-}
+const SHARE_MESSAGE =
+  "Découvre cette histoire magique créée avec MangaKids ! " +
+  "Chaque aventure est unique, chaque page est illustrée par la magie de l'IA. 📖✨";
 
 function sanitizeFilename(title: string): string {
   return (
@@ -77,51 +73,61 @@ html,body{
 .cover{
   width:595px;
   height:842px;
+  position:relative;
   display:flex;
   flex-direction:column;
-  justify-content:center;
+  justify-content:flex-end;
   align-items:center;
   text-align:center;
   page-break-after:always;
-  padding:60px;
+  padding:0;
+  overflow:hidden;
 }
 
 .cover-image{
-  max-width:400px;
-  max-height:400px;
-  width:auto;
-  height:auto;
-  object-fit:contain;
-  border-radius:16px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.15);
-  margin-bottom:32px;
+  position:absolute;
+  top:0;
+  left:0;
+  width:595px;
+  height:842px;
+  object-fit:cover;
+}
+
+.cover-overlay{
+  position:relative;
+  z-index:1;
+  width:100%;
+  background:linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%);
+  padding:40px 40px 48px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 .cover-title{
-  font-size:42px;
+  font-size:38px;
   font-weight:700;
-  color:#FF8A65;
-  margin-bottom:16px;
-  padding-bottom:16px;
-  border-bottom:3px solid #FF8A65;
+  color:#FFFFFF;
+  margin-bottom:12px;
+  text-shadow:0 2px 12px rgba(0,0,0,0.4);
 }
 
 .cover-author{
   font-size:16px;
-  color:#8E7F70;
+  color:#FFD6C0;
   margin-bottom:8px;
 }
 
 .cover-label{
-  font-size:15px;
-  color:#B8A99A;
+  font-size:14px;
+  color:rgba(255,255,255,0.7);
   font-style:italic;
 }
 
 .cover-footer{
-  margin-top:40px;
-  font-size:13px;
-  color:#B8A99A;
+  margin-top:16px;
+  font-size:12px;
+  color:rgba(255,255,255,0.5);
   letter-spacing:1px;
 }
 
@@ -196,7 +202,7 @@ html,body{
 <div class="cover">
   <img src="${story.pages[0]?.imageUrl || ''}" class="cover-image"/>
   <div class="cover-title">${escapeHtml(story.title)}</div>
-  <div class="cover-author">par ${escapeHtml(heroName || 'un jeune auteur')}</div>
+  <div class="cover-subtitle">Une histoire MangaKids</div>
   <div class="cover-label">
     ${totalPages} page${totalPages > 1 ? 's' : ''} illustrée${totalPages > 1 ? 's' : ''}
   </div>
@@ -232,18 +238,16 @@ export const exportAndSharePdf = async (story: Story, heroName?: string): Promis
 
   tempFile.copy(namedFile);
 
-  const shareMessage = buildShareMessage(heroName);
-
   if (Platform.OS === 'ios') {
     await Share.share({
-      message: shareMessage,
+      message: SHARE_MESSAGE,
       url: namedFile.uri,
       title: story.title,
     });
   } else {
     await Sharing.shareAsync(namedFile.uri, {
       mimeType: 'application/pdf',
-      dialogTitle: shareMessage,
+      dialogTitle: SHARE_MESSAGE,
     });
   }
 

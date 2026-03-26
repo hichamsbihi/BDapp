@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
@@ -14,6 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useParagraph } from '@/hooks/useStoryData';
 import {
@@ -21,9 +22,16 @@ import {
   getRandomPhrase,
   CREATION_PHRASES,
 } from '@/constants/magicWords';
+import { colors, radius, spacing, typography } from '@/theme/theme';
+import { ErrorFallback } from '@/shared/ErrorFallback';
 
 /** Max dots shown in progress indicator (story length is dynamic per universe). */
 const MAX_PROGRESS_DOTS = 10;
+
+const SPARKLE_SIZE = spacing.md;
+const SPARKLE_BORDER_RADIUS = spacing.xxs;
+/** Matches `styles.sparklesContainer` width/height for sparkle placement. */
+const SPARKLE_BOUNDS = spacing.xxxl * 4 + spacing.sm;
 
 /**
  * Magical Sparkle component for the creation overlay
@@ -53,12 +61,12 @@ const MagicSparkle: React.FC<{ delay: number; x: number; y: number }> = ({ delay
     position: 'absolute',
     left: x,
     top: y,
-    width: 12,
-    height: 12,
+    width: SPARKLE_SIZE,
+    height: SPARKLE_SIZE,
     opacity: opacity.value,
     transform: [{ scale: scale.value }, { rotate: '45deg' }],
-    backgroundColor: '#FFD700',
-    borderRadius: 2,
+    backgroundColor: colors.accent,
+    borderRadius: SPARKLE_BORDER_RADIUS,
   }));
 
   return <Animated.View style={sparkleStyle} />;
@@ -82,8 +90,8 @@ const CreationOverlay: React.FC<{ onComplete: () => void }> = ({ onComplete }) =
   const sparkles = useMemo(() => {
     return Array.from({ length: 8 }, (_, i) => ({
       delay: i * 300 + Math.random() * 200,
-      x: Math.random() * 200 - 100 + 100, // Centered around 100
-      y: Math.random() * 200 - 100 + 100,
+      x: Math.random() * SPARKLE_BOUNDS,
+      y: Math.random() * SPARKLE_BOUNDS,
     }));
   }, []);
 
@@ -191,10 +199,12 @@ export const ParagraphScreen: React.FC = () => {
   const ctaText = useMemo(() => getSceneRevealPhrase(), [currentPageNumber]);
 
   // Fetch paragraph + image from Supabase (with local fallback)
-  const { data: paragraphData, loading: paragraphLoading } = useParagraph(
-    currentStory?.universeId,
-    currentPageNumber
-  );
+  const { data: paragraphData, error: paragraphError, refetch: refetchParagraph } =
+    useParagraph(currentStory?.universeId, currentPageNumber);
+
+  const showFetchError =
+    !!paragraphError &&
+    (currentPageNumber !== 1 || !currentStory?.openingText);
 
   // Page 1 uses the selected openingText, subsequent pages use fetched data
   const paragraphText =
@@ -214,6 +224,7 @@ export const ParagraphScreen: React.FC = () => {
   // Exit transition - smooth "page turning" effect
   const exitTranslateY = useSharedValue(0);
   const exitScale = useSharedValue(1);
+  const isNavigatingRef = useRef(false);
 
   useEffect(() => {
     // Reset state and animations when page changes
@@ -261,7 +272,15 @@ export const ParagraphScreen: React.FC = () => {
 
   const buttonStyle = useAnimatedStyle(() => ({
     opacity: buttonProgress.value,
-    transform: [{ translateY: interpolate(buttonProgress.value, [0, 1], [12, 0]) }],
+    transform: [
+      {
+        translateY: interpolate(
+          buttonProgress.value,
+          [0, 1],
+          [spacing.md, 0]
+        ),
+      },
+    ],
   }));
 
   // Content dims during creation and slides up during exit
@@ -273,8 +292,10 @@ export const ParagraphScreen: React.FC = () => {
     ],
   }));
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (isExiting) return;
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
 
     // Les étoiles ne sont utilisées que pour débloquer des univers (pas pour les images)
     setIsExiting(true);
@@ -283,14 +304,21 @@ export const ParagraphScreen: React.FC = () => {
     // 1. Content gently fades and lifts (like turning a page)
     // 2. Then the creation overlay appears
     contentBlur.value = withTiming(0.4, { duration: 400, easing: Easing.out(Easing.cubic) });
-    exitTranslateY.value = withTiming(-20, { duration: 400, easing: Easing.out(Easing.cubic) });
+    exitTranslateY.value = withTiming(
+      -(spacing.lg + spacing.xs),
+      { duration: 400, easing: Easing.out(Easing.cubic) }
+    );
     exitScale.value = withTiming(0.98, { duration: 400, easing: Easing.out(Easing.cubic) });
-    
+
     // Show creation animation after the exit begins (creates continuity)
     setTimeout(() => {
       setIsCreating(true);
     }, 200);
-  };
+
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1000);
+  }, [isExiting]);
 
   const handleCreationComplete = useCallback(() => {
     router.push({
@@ -309,6 +337,17 @@ export const ParagraphScreen: React.FC = () => {
     }
     return dots;
   };
+
+  if (showFetchError) {
+    return (
+      <ScreenContainer style={styles.container}>
+        <ErrorFallback
+          message="Impossible de charger ce passage."
+          onRetry={refetchParagraph}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -332,12 +371,9 @@ export const ParagraphScreen: React.FC = () => {
           style={[styles.footer, buttonStyle]}
           pointerEvents={isButtonReady && !isCreating && !isExiting ? 'auto' : 'none'}
         >
-          <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={handleContinue}
-          >
+          <AnimatedPressable style={[styles.button]} onPress={handleContinue}>
             <Text style={styles.buttonText}>{ctaText}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </Animated.View>
       </Animated.View>
 
@@ -349,7 +385,7 @@ export const ParagraphScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   contentWrapper: {
     flex: 1,
@@ -357,18 +393,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
   },
 
   // Text container — centered, breathing
   textContainer: {
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl - spacing.sm,
   },
   paragraph: {
-    fontSize: 20,
+    fontSize: typography.size.xl,
     fontStyle: 'italic',
-    color: '#4A3F32',
-    lineHeight: 34,
+    color: colors.text.primary,
+    lineHeight: typography.size.xxl + typography.size.sm,
     textAlign: 'center',
   },
 
@@ -376,45 +412,42 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginTop: 48,
+    gap: spacing.sm + spacing.xxs,
+    marginTop: spacing.xxxl,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.xs,
+    backgroundColor: colors.borderLight,
   },
   dotFilled: {
-    backgroundColor: '#C4B5A5',
+    backgroundColor: colors.borderMedium,
   },
 
   // Footer
   footer: {
-    paddingHorizontal: 28,
-    paddingTop: 16,
-    paddingBottom: 44,
-    backgroundColor: '#FFFCF5',
+    paddingHorizontal: spacing.xl + spacing.xs,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxxl - spacing.xs,
+    backgroundColor: colors.background,
   },
   button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    paddingVertical: typography.size.md + spacing.xs,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
-  buttonPressed: {
-    opacity: 0.85,
-  },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg + spacing.xxs,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
 
   // Creation overlay
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 252, 245, 0.97)',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -423,27 +456,27 @@ const styles = StyleSheet.create({
   },
   sparklesContainer: {
     position: 'absolute',
-    width: 200,
-    height: 200,
+    width: SPARKLE_BOUNDS,
+    height: SPARKLE_BOUNDS,
     // Sparkles are positioned relative to this container
   },
   magicIconContainer: {
-    width: 100,
-    height: 100,
+    width: spacing.xxxl + spacing.xxl + spacing.lg + spacing.xs,
+    height: spacing.xxxl + spacing.xxl + spacing.lg + spacing.xs,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   magicIcon: {
-    fontSize: 60,
+    fontSize: typography.size.display + typography.size.xxxl,
   },
   creationText: {
-    fontSize: 18,
+    fontSize: typography.size.lg + spacing.xxs,
     fontStyle: 'italic',
-    color: '#5D4E37',
+    color: colors.text.secondary,
     letterSpacing: 0.3,
     textAlign: 'center',
-    paddingHorizontal: 32,
-    lineHeight: 26,
+    paddingHorizontal: spacing.xxl,
+    lineHeight: typography.size.xxl + spacing.xxs,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -21,6 +20,9 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
+import { ErrorFallback } from '@/shared/ErrorFallback';
+import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import { useAppStore } from '@/store';
 import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
@@ -329,7 +331,6 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
  * 4. CTA appears when a choice is selected
  */
 export const PageScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isTablet = Math.min(windowWidth, windowHeight) >= 600;
   const { paragraphText, imageUrl: paramImageUrl } = useLocalSearchParams<{
@@ -342,6 +343,7 @@ export const PageScreen: React.FC = () => {
   const [selectedChoice, setSelectedChoice] = useState<NarrativeChoice | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const isNavigatingRef = useRef(false);
 
   const handleImageInteraction = useCallback((active: boolean) => {
     setScrollEnabled(!active);
@@ -351,7 +353,7 @@ export const PageScreen: React.FC = () => {
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const addStory = useAppStore((state) => state.addStory);
   const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
-  const rewardStar = useAppStore((state) => state.rewardStar);
+
   const storyProgressList = useAppStore((state) => state.storyProgressList);
   const setStoryProgressList = useAppStore((state) => state.setStoryProgressList);
   const addUnlockedUniverse = useAppStore((state) => state.addUnlockedUniverse);
@@ -360,11 +362,12 @@ export const PageScreen: React.FC = () => {
   const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
 
   // Fetch choices for current step; when choices are empty (and loaded), this is the last page
-  const { data: choices, loading: choicesLoading } = useNarrativeChoices(
-    currentStory?.universeId,
-    currentPageNumber,
-    false
-  );
+  const {
+    data: choices,
+    loading: choicesLoading,
+    error: choicesError,
+    refetch: refetchChoices,
+  } = useNarrativeChoices(currentStory?.universeId, currentPageNumber, false);
   const isLastPage = !choicesLoading && Array.isArray(choices) && choices.length === 0;
 
   // Image comes from ParagraphScreen (fetched alongside the paragraph text)
@@ -413,62 +416,94 @@ export const PageScreen: React.FC = () => {
     setSelectedChoice(choice);
   };
 
-  const handleContinue = async () => {
+  const handleContinue = useCallback(async () => {
     if (!currentStory || isExiting) return;
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
     setIsExiting(true);
 
-    const newPage: StoryPage = {
-      id: generatePageId(),
-      paragraphText: paragraphText || '',
-      imageUrl,
-      pageNumber: currentPageNumber,
-      choiceId: selectedChoice?.id,
-    };
+    try {
+      const newPage: StoryPage = {
+        id: generatePageId(),
+        paragraphText: paragraphText || '',
+        imageUrl,
+        pageNumber: currentPageNumber,
+        choiceId: selectedChoice?.id,
+      };
 
-    const updatedPages = [...(currentStory.pages || []), newPage];
-    const universeId = currentStory.universeId;
+      const updatedPages = [...(currentStory.pages || []), newPage];
+      const universeId = currentStory.universeId;
 
-    const user = await getCurrentUser();
-    if (user && universeId) {
-      const nextPageNum = isLastPage ? currentPageNumber : currentPageNumber + 1;
-      await upsertStoryProgress(user.id, universeId, isLastPage ? currentPageNumber : nextPageNum);
-      if (selectedChoice?.id) {
-        await insertUserChoice(user.id, universeId, currentPageNumber, selectedChoice.id);
+      const user = await getCurrentUser();
+      if (user && universeId) {
+        const nextPageNum = isLastPage ? currentPageNumber : currentPageNumber + 1;
+        await upsertStoryProgress(user.id, universeId, isLastPage ? currentPageNumber : nextPageNum);
+        if (selectedChoice?.id) {
+          await insertUserChoice(user.id, universeId, currentPageNumber, selectedChoice.id);
+        }
       }
-    }
 
-    if (isLastPage) {
-      const completedStory = {
-        ...currentStory,
-        pages: updatedPages,
-        updatedAt: new Date(),
-        isComplete: true,
-      } as Story;
+      if (isLastPage) {
+        const completedStory = {
+          ...currentStory,
+          pages: updatedPages,
+          updatedAt: new Date(),
+          isComplete: true,
+        } as Story;
 
-      addStory(completedStory);
-      if (universeId) addUnlockedUniverse(universeId);
-      if (user) {
-        saveCreatedStory(user.id, completedStory).catch(() => {});
+        addStory(completedStory);
+        if (universeId) addUnlockedUniverse(universeId);
+        if (user) {
+          saveCreatedStory(user.id, completedStory).catch((e) => __DEV__ && console.warn('Story save failed', e));
+        }
+        setStoryProgressList((storyProgressList ?? []).filter((p) => p.universeId !== universeId));
+        clearCurrentStory();
+
+        router.replace({
+          pathname: '/story/completed',
+          params: { storyId: completedStory.id },
+        });
+      } else {
+        updateCurrentStory({
+          pages: updatedPages,
+          selectedChoiceId: selectedChoice?.id,
+        });
+
+        router.replace('/story/paragraph');
       }
-      setStoryProgressList((storyProgressList ?? []).filter((p) => p.universeId !== universeId));
-      rewardStar('story_complete');
-      clearCurrentStory();
-
-      router.replace({
-        pathname: '/story/completed',
-        params: { storyId: completedStory.id },
-      });
-    } else {
-      updateCurrentStory({
-        pages: updatedPages,
-        selectedChoiceId: selectedChoice?.id,
-      });
-
-      router.replace('/story/paragraph');
+    } finally {
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 1000);
     }
-  };
+  }, [
+    currentStory,
+    isExiting,
+    paragraphText,
+    imageUrl,
+    currentPageNumber,
+    selectedChoice,
+    isLastPage,
+    addStory,
+    addUnlockedUniverse,
+    storyProgressList,
+    setStoryProgressList,
+    clearCurrentStory,
+    updateCurrentStory,
+  ]);
 
   const showCTA = isLastPage ? phase === 'ready' : selectedChoice !== null;
+
+  if (choicesError) {
+    return (
+      <ScreenContainer style={styles.container}>
+        <ErrorFallback
+          message="Impossible de charger les choix. Vérifie ta connexion."
+          onRetry={refetchChoices}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -517,13 +552,13 @@ export const PageScreen: React.FC = () => {
           {/* CTA - inside scroll content so it doesn't hide choices */}
           {showCTA && (
             <Animated.View style={[styles.ctaContainer, ctaStyle]}>
-              <Pressable
-                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+              <AnimatedPressable
+                style={[styles.button]}
                 onPress={handleContinue}
                 disabled={isExiting}
               >
                 <Text style={styles.buttonText}>{ctaText}</Text>
-              </Pressable>
+              </AnimatedPressable>
             </Animated.View>
           )}
         </View>
@@ -534,14 +569,14 @@ export const PageScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 24,
+    paddingBottom: spacing.xl,
   },
 
   // Image container - the hero takes center stage
@@ -556,123 +591,115 @@ const styles = StyleSheet.create({
   },
   imageGlow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: colors.surfaceWarm,
   },
   heroImage: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   zoomHint: {
     position: 'absolute',
-    bottom: 12,
+    bottom: spacing.md,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
+    backgroundColor: colors.overlayHeavy,
+    paddingHorizontal: spacing.lg - spacing.xxs,
+    paddingVertical: spacing.sm - spacing.xxs,
+    borderRadius: radius.xl,
   },
   zoomHintText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
+    color: colors.text.inverse,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium,
   },
   shimmerOverlay: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 150,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    width: spacing.xxxl * 3 + spacing.lg,
+    backgroundColor: colors.shimmerSheen,
   },
 
   // Secondary content - everything orbits around the image
   secondaryContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg + spacing.xs,
   },
 
   // Choices section
   choicesSection: {
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   pivotText: {
-    fontSize: 16,
+    fontSize: typography.size.lg,
     fontStyle: 'italic',
-    color: '#8D7B68',
+    color: colors.text.muted,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   choicesContainer: {
-    gap: 12,
+    gap: spacing.md,
   },
   choiceCard: {
-    backgroundColor: '#FFFCF5',
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg + spacing.xxs,
+    paddingHorizontal: spacing.lg + spacing.xs,
     borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderColor: colors.border,
   },
   choiceCardSelected: {
-    borderColor: '#FF8A65',
+    borderColor: colors.primary,
     borderWidth: 2,
-    backgroundColor: '#FFFAF6',
+    backgroundColor: colors.surfaceMuted,
   },
   choiceCardDimmed: {
     opacity: 0.4,
   },
   choiceText: {
-    fontSize: 15,
-    color: '#5D4E37',
-    lineHeight: 22,
+    fontSize: typography.size.md,
+    color: colors.text.secondary,
+    lineHeight: typography.size.lg + spacing.sm,
     textAlign: 'center',
   },
   choiceTextSelected: {
-    color: '#4A3F32',
-    fontWeight: '500',
+    color: colors.text.primary,
+    fontWeight: typography.weight.medium,
   },
 
   // End section
   endSection: {
-    marginTop: 20,
+    marginTop: spacing.lg + spacing.xs,
     alignItems: 'center',
   },
   endTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#5D4E37',
-    marginBottom: 10,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+    marginBottom: spacing.md - spacing.xxs,
   },
   endText: {
-    fontSize: 15,
-    color: '#8D7B68',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: typography.size.lg + spacing.sm,
   },
 
   // CTA - inside scroll content
   ctaContainer: {
-    marginTop: 24,
-    paddingBottom: 16,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   button: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 18,
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg + spacing.xxs,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    ...shadows.md,
   },
   buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
 });

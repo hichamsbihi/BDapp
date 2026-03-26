@@ -21,6 +21,7 @@ interface ButtonProps {
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
 }
 
 const variantStyles: Record<ButtonVariant, ViewStyle> = {
@@ -62,11 +63,14 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
   textStyle,
+  accessibilityLabel,
 }) => {
   const isDisabled = disabled || loading;
 
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.button,
         variantStyles[variant],

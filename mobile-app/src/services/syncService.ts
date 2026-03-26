@@ -60,7 +60,10 @@ export async function upsertStoryProgress(
     },
     { onConflict: 'user_id,universe_id' }
   );
-  if (__DEV__ && error) console.log('upsertStoryProgress error:', error.message);
+  if (error) {
+    if (__DEV__) console.log('upsertStoryProgress error:', error.message);
+    throw error;
+  }
 }
 
 /** Record a narrative choice (for replay / resume). */
@@ -76,7 +79,10 @@ export async function insertUserChoice(
     page_number: pageNumber,
     choice_id: choiceId,
   });
-  if (__DEV__ && error) console.log('insertUserChoice error:', error.message);
+  if (error) {
+    if (__DEV__) console.log('insertUserChoice error:', error.message);
+    throw error;
+  }
 }
 
 /** Fetch all story progress for user (for "Continue in X" and resume). */
@@ -137,7 +143,10 @@ export async function saveCreatedStory(userId: string, story: Story): Promise<vo
     },
     { onConflict: 'user_id,story_client_id' }
   );
-  if (__DEV__ && error) console.log('saveCreatedStory error:', error.message);
+  if (error) {
+    if (__DEV__) console.log('saveCreatedStory error:', error.message);
+    throw error;
+  }
 }
 
 /** Fetch all created (completed) stories for the user from the DB. Maps to Story[]. */

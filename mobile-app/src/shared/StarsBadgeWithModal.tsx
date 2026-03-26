@@ -28,6 +28,8 @@ export const StarsBadgeWithModal: React.FC<StarsBadgeWithModalProps> = ({ style 
   return (
     <>
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Étoiles"
         onPress={() => setModalVisible(true)}
         onPressIn={() => { pressScale.value = withSpring(0.95, { damping: 15 }); }}
         onPressOut={() => { pressScale.value = withSpring(1, { damping: 12 }); }}

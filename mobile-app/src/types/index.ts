@@ -98,7 +98,7 @@ export interface Story {
 }
 
 // Stars reward types (non-monetary, narrative)
-export type RewardStarType = 'watch_ad' | 'story_complete' | 'daily_bonus' | 'countdown_bonus';
+export type RewardStarType = 'watch_ad' | 'countdown_bonus';
 
 // App state types
 export interface AppState {
@@ -124,7 +124,6 @@ export interface AppState {
   // Stars (narrative currency - non-monetary)
   stars: number;
   unlockedUniverses: string[];
-  lastDailyBonusDate: string | null;
   /** Last time user claimed the 12h countdown reward (ISO string) */
   lastCountdownClaimDate: string | null;
   addStars: (amount: number) => void;
@@ -142,6 +141,10 @@ export interface AppState {
   // Premium status
   isPremium: boolean;
   setIsPremium: (status: boolean) => void;
+
+  // Purchase tracking (for first-purchase promo)
+  hasEverPurchased: boolean;
+  setHasEverPurchased: (value: boolean) => void;
 
   // Onboarding status
   hasCompletedOnboarding: boolean;

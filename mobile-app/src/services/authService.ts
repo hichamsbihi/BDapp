@@ -289,9 +289,13 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
   const serverIds = new Set(serverStories.map((s) => s.id));
   const localStories = store.stories ?? [];
   const localOnly = localStories.filter((s) => !serverIds.has(s.id));
+  const { saveCreatedStory } = await import('./syncService');
   for (const story of localOnly) {
-    const { saveCreatedStory } = await import('./syncService');
-    await saveCreatedStory(user.id, story);
+    try {
+      await saveCreatedStory(user.id, story);
+    } catch (e) {
+      if (__DEV__) console.warn('hydrateStoreFromProfile: failed to sync story', story.id, e);
+    }
   }
   if (serverStories.length > 0 || localOnly.length > 0) {
     store.setStories([...serverStories, ...localOnly]);

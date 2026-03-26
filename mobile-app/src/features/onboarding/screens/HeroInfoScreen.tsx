@@ -20,7 +20,9 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
+import { colors, radius, shadows, spacing, typography } from '@/theme/theme';
 
 type Gender = 'boy' | 'girl';
 
@@ -246,7 +248,7 @@ export const HeroInfoScreen: React.FC = () => {
                 value={name}
                 onChangeText={setName}
                 placeholder="Ecris ton prénom ici"
-                placeholderTextColor="#C4B8A8"
+                placeholderTextColor={colors.text.muted}
                 autoCapitalize="words"
                 maxLength={20}
                 returnKeyType="next"
@@ -263,7 +265,7 @@ export const HeroInfoScreen: React.FC = () => {
                 value={age}
                 onChangeText={handleAgeChange}
                 placeholder="Ton âge"
-                placeholderTextColor="#C4B8A8"
+                placeholderTextColor={colors.text.muted}
                 keyboardType="number-pad"
                 maxLength={2}
                 returnKeyType="done"
@@ -326,19 +328,15 @@ export const HeroInfoScreen: React.FC = () => {
           <Animated.Text style={[styles.readyMessage, readyMessageStyle]}>
             Parfait ! Ton héros est prêt
           </Animated.Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              !isValid && styles.buttonDisabled,
-              pressed && isValid && styles.buttonPressed,
-            ]}
+          <AnimatedPressable
+            style={[styles.button, !isValid && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={!isValid}
           >
             <Text style={[styles.buttonText, !isValid && styles.buttonTextDisabled]}>
               {isEditMode ? 'Sauvegarder' : "C'est moi !"}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         </Animated.View>
       </View>
     </ScreenContainer>
@@ -347,19 +345,21 @@ export const HeroInfoScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5', // Same warm background as WelcomeScreen
+    backgroundColor: colors.background,
   },
   main: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 160, // Espace pour le bouton sticky
+    // Room for sticky footer: 48 + 48 + 32 + 32
+    paddingBottom:
+      spacing.xxxl + spacing.xxxl + spacing.xxl + spacing.xxl,
   },
   content: {
     flex: 1,
-    paddingTop: 32,
-    paddingHorizontal: 24,
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
 
   // Step indicator
@@ -367,111 +367,111 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
   stepText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#B8A99A',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   stepDots: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.xs + spacing.xxs,
   },
   stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5DDD3',
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.xs,
+    backgroundColor: colors.borderMedium,
   },
   stepDotActive: {
-    backgroundColor: '#FF8A65',
-    width: 20,
+    backgroundColor: colors.primary,
+    width: spacing.lg + spacing.xs,
   },
 
   // Header
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xxl,
   },
   headerIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+    fontSize: spacing.xxxl,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#5D4E37', // Warm brown (same as WelcomeScreen)
+    fontSize: typography.size.xxxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#8D7B68', // Muted warm brown
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
     textAlign: 'center',
   },
 
   // Input groups
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#5D4E37',
-    marginBottom: 10,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
   },
   input: {
-    backgroundColor: '#FFF8F0', // Soft warm white
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    fontSize: 17,
-    color: '#5D4E37',
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg + spacing.xxs,
+    paddingVertical: spacing.lg,
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
     borderWidth: 2,
-    borderColor: '#F5EBE0', // Subtle border
+    borderColor: colors.surface,
   },
   inputHint: {
-    fontSize: 13,
-    color: '#B8A99A',
-    marginTop: 6,
-    marginLeft: 4,
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+    marginTop: spacing.xs + spacing.xxs,
+    marginLeft: spacing.xs,
   },
 
   // Gender selection
   genderContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   genderButtonWrapper: {
     flex: 1,
   },
   genderButton: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 16,
-    paddingVertical: 20,
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg + spacing.xs,
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#F5EBE0',
+    borderColor: colors.surface,
   },
   genderButtonSelected: {
-    borderColor: '#FF8A65', // Coral (same as WelcomeScreen accent)
-    backgroundColor: '#FFF3E8',
+    borderColor: colors.primary,
+    backgroundColor: colors.semantic.warningBg,
   },
   genderIcon: {
-    fontSize: 40,
-    marginBottom: 8,
+    fontSize: typography.size.display + spacing.sm,
+    marginBottom: spacing.sm,
   },
   genderText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#8D7B68',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
   },
   genderTextSelected: {
-    color: '#FF8A65',
+    color: colors.primary,
   },
 
   // Footer & Button - sticky en bas, position fixe
@@ -480,45 +480,39 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: '#FFFCF5',
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl + spacing.sm,
+    backgroundColor: colors.background,
   },
   readyMessage: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF8A65', // Coral - same as accent color
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: spacing.md + spacing.xxs,
   },
   button: {
-    backgroundColor: '#FF8A65', // Coral (same as WelcomeScreen)
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg + spacing.xxs,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    shadowColor: '#FF8A65',
-    shadowOffset: { width: 0, height: 4 },
+    ...shadows.md,
+    shadowColor: colors.primary,
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#E5DDD3',
+    backgroundColor: colors.borderMedium,
     shadowOpacity: 0,
     elevation: 0,
   },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
-  },
   buttonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
     letterSpacing: 0.5,
   },
   buttonTextDisabled: {
-    color: '#B8AFA3',
+    color: colors.text.muted,
   },
 });

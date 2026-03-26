@@ -1,0 +1,106 @@
+---
+description: MangaKids project context — architecture, conventions, economy, Supabase schema, n8n workflows
+alwaysApply: true
+---
+
+# MangaKids — Project Memory
+
+## What Is This App
+
+MangaKids is an interactive manga/comic app for children (6-10 years). Kids pick an avatar, choose a universe, and an AI-generated branching story unfolds page by page with illustrations. Stories are exported as PDF. The app uses a stars economy for monetisation.
+
+## Monorepo Structure
+
+```
+mobile-app/     # React Native (Expo) — the main product
+n8n/            # n8n workflows + prompts for AI story generation
+  workflows/    # generate-manga-story.json, mangakids-design-system.json
+  prompts/      # Example prompts per character/universe
+backend/        # (placeholder — Supabase handles backend)
+```
+
+## Tech Stack
+
+| Layer | Tech |
+|-------|------|
+| Framework | Expo 54, React Native 0.81, React 19.1 |
+| Routing | expo-router (file-based) |
+| State | Zustand (persisted to AsyncStorage, version 4) |
+| Backend | Supabase (Auth + PostgreSQL + Storage) |
+| Animations | react-native-reanimated 4, lottie-react-native |
+| Styling | StyleSheet + theme tokens (`src/theme/theme.ts`) |
+| AI Generation | n8n + OpenAI (story JSON) + Google Gemini (images) |
+| PDF | expo-print + expo-sharing + expo-file-system |
+
+## Stars Economy (source: `src/constants/stars.ts`)
+
+- **Initial balance:** 6 stars (welcome gift)
+- **Costs:** universe unlock = 3, PDF export = 1
+- **Rewards:** watch ad = 1, 12h countdown = 1 (no reward on story complete, no daily bonus)
+- **Packs (IAP mock):** 10 stars = 2.99 EUR, 25 = 5.99, 60 = 9.99
+- **First purchase promo:** small pack gives 20 stars instead of 10
+- **Premium lifetime:** 14.99 EUR — unlocks all universes, hides stars badge, no stars needed
+- `hasEverPurchased` tracks promo eligibility in store
+
+## Supabase Schema (key tables)
+
+| Table | Purpose | PK type |
+|-------|---------|---------|
+| `profiles` | Extends auth.users — stars, avatar, unlocked universes, premium | UUID |
+| `avatars` | Character frames (normal/blink/wink/happy) + `character_prompt` + `gender` | TEXT |
+| `universes` | Story worlds — name, color, emoji, gender, display_order | TEXT |
+| `story_starts` | Opening paragraphs per universe | TEXT |
+| `story_paragraphs` | Page content (text + image_url) per universe + page_number | TEXT |
+| `narrative_choices` | Branching choices per page — includes `next_page_number` | TEXT |
+| `user_story_progress` | Current page per user + universe (upsert) | UUID |
+| `user_choices` | Recorded choices for replay/resume | UUID |
+| `user_created_stories` | Completed stories (client_id dedup) | UUID |
+| `stars_transactions` | Stars audit trail | UUID |
+
+FK note: `avatars.id` and `universes.id` are TEXT, not UUID.
+
+## Auth Flow
+
+1. New user -> onboarding (local only, no Supabase account)
+2. Supabase profile created on first star purchase or sign-in
+3. Email + password only (Google/Apple SSO hidden for now)
+4. Email verification disabled
+5. PostgreSQL trigger `handle_new_user` creates profile row on signup
+6. Client fallback: `profileService.ensureProfile()` on sign-in if trigger missed
+7. `resetStoreForSignOut` clears Zustand + navigates to welcome
+8. Dev mode: `_layout.tsx` clears AsyncStorage on every reload
+
+## Navigation Map
+
+```
+index.tsx (AuthGate)
+  -> /onboarding/welcome -> hero-info -> avatar-select -> /(tabs)/home
+  -> /(auth)/login (email sign-in/up) -> ?from=paywall
+  -> /(tabs)/home | library | profile
+  -> /story/universe-select -> start-select -> generating -> paragraph -> page -> completed
+  -> /paywall (modal)
+```
+
+## n8n Workflow: generate-manga-story.json
+
+Generates a complete branching manga story:
+1. Chat Trigger receives `chatInput`, `characterName` (string), `universeId`
+2. Fetches avatar `character_prompt` + `gender` from Supabase
+3. Builds character bible for visual consistency
+4. OpenAI generates story JSON (6 pages: p1, p2a, p2b, p3, p4, p5 — diverge then converge)
+5. Gemini generates one illustration per page using character bible
+6. Images uploaded to Supabase Storage (`BD-Pages` bucket)
+7. Upserts universe, story_starts, story_paragraphs, narrative_choices
+
+## Shared Components (`src/shared/`)
+
+AnimatedPressable, Button, Card, Badge, Avatar, Input, StarsBadge, StarsBadgeWithModal, StarsModal, NotEnoughStarsModal, ErrorFallback, Navbar, ScreenContainer, Loader, LottieAnimation
+
+## Key Patterns
+
+- **AnimatedPressable** wraps all interactive elements (never use `({ pressed }) => ...`)
+- **Separate layout + interactive animations:** `entering={}` on outer View, `useAnimatedStyle` on inner View
+- **Theme tokens only:** no hardcoded hex, font sizes, spacing, or radii
+- **Selector hooks:** prefer `useStars()`, `useHeroProfile()` from `store/selectors.ts`
+- **Sync:** `useStoreSync` hook debounces Zustand -> Supabase writes (800ms)
+- **French UI** strings, **English** code comments and console.log

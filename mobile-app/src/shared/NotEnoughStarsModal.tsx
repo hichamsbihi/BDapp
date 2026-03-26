@@ -7,6 +7,7 @@ import {
   Modal as RNModal,
   ActivityIndicator,
 } from 'react-native';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { colors, radius, spacing, typography } from '@/theme/theme';
 
 interface NotEnoughStarsModalProps {
@@ -63,10 +64,10 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
           </Text>
 
           <View style={styles.buttons}>
-            <Pressable
-              style={({ pressed }) => [
+            <AnimatedPressable
+              accessibilityLabel="Regarder une courte magie"
+              style={[
                 styles.buttonPrimary,
-                pressed && styles.buttonPressed,
                 isWatching && styles.buttonDisabled,
               ]}
               onPress={handleWatchMagic}
@@ -82,18 +83,16 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
                   </Text>
                 </View>
               )}
-            </Pressable>
+            </AnimatedPressable>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.buttonSecondary,
-                pressed && styles.buttonPressed,
-              ]}
+            <AnimatedPressable
+              accessibilityLabel="Plus tard"
+              style={[styles.buttonSecondary]}
               onPress={onClose}
               disabled={isWatching}
             >
               <Text style={styles.buttonSecondaryText}>⏳ Plus tard</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </Pressable>
       </Pressable>
@@ -104,21 +103,21 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(93, 78, 55, 0.6)',
+    backgroundColor: colors.overlayHeavy,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
   },
   content: {
     backgroundColor: colors.background,
-    borderRadius: 28,
+    borderRadius: radius.xxl,
     padding: spacing.xxl,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 320,
+    maxWidth: spacing.xxxl * 6 + spacing.xxl,
   },
   emoji: {
-    fontSize: 48,
+    fontSize: spacing.xxxl,
     marginBottom: spacing.md,
   },
   title: {
@@ -129,17 +128,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   message: {
-    fontSize: 17,
+    fontSize: typography.size.lg + spacing.xxs,
     fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   submessage: {
-    fontSize: 15,
+    fontSize: typography.size.md + spacing.xxs,
     color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: typography.size.lg + typography.size.sm,
     marginBottom: spacing.xl,
   },
   buttons: {
@@ -158,20 +157,17 @@ const styles = StyleSheet.create({
   buttonPrimaryContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm + spacing.xxs,
   },
   buttonSecondary: {
     alignItems: 'center',
-    paddingVertical: 14,
-  },
-  buttonPressed: {
-    opacity: 0.9,
+    paddingVertical: spacing.md + spacing.xxs,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonPrimaryIcon: {
-    fontSize: 20,
+    fontSize: typography.size.xl,
   },
   buttonPrimaryText: {
     fontSize: typography.size.lg,
@@ -179,7 +175,7 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
   buttonSecondaryText: {
-    fontSize: 15,
+    fontSize: typography.size.md + spacing.xxs,
     color: colors.text.muted,
   },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   Image,
   ActivityIndicator,
   Alert,
@@ -12,11 +11,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ScreenContainer, Modal, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { fetchUniverseById } from '@/services/storyService';
 import { exportAndSharePdf } from '@/utils/pdfGenerator';
 import { PDF_EXPORT_COST } from '@/constants/stars';
 import { Story, Universe } from '@/types';
+import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
+
+// 8-digit hex: subtle tints from text tokens (no dedicated overlay token in theme).
+const OVERLAY_TEXT_PRIMARY_SUBTLE = `${colors.text.primary}1A`;
+const OVERLAY_TEXT_SECONDARY_SPINE = `${colors.text.secondary}26`;
 
 /**
  * LibraryScreen
@@ -103,7 +108,7 @@ export const LibraryScreen: React.FC = () => {
       await exportAndSharePdf(selectedStory, heroProfile?.name);
       setModalVisible(false);
     } catch (error) {
-      console.log('PDF export failed:', error);
+      if (__DEV__) console.log('PDF export failed:', error);
       Alert.alert('Erreur', 'La creation du PDF a echoue. Reessaie plus tard.');
     } finally {
       setIsExporting(false);
@@ -128,15 +133,15 @@ export const LibraryScreen: React.FC = () => {
     const coverImage = story.pages[0]?.imageUrl;
 
     return (
-      <Pressable
-        style={({ pressed }) => [styles.featuredCard, pressed && styles.cardPressed]}
+      <AnimatedPressable
+        style={[styles.featuredCard]}
         onPress={() => handleStoryPress(story)}
       >
         <View style={styles.featuredCover}>
           {coverImage ? (
             <Image source={{ uri: coverImage }} style={styles.featuredImage} />
           ) : (
-            <View style={[styles.featuredPlaceholder, { backgroundColor: universe?.color || '#E5DDD3' }]} />
+            <View style={[styles.featuredPlaceholder, { backgroundColor: universe?.color || colors.surface }]} />
           )}
           <View style={styles.featuredOverlay} />
           <View style={styles.featuredBadge}>
@@ -149,7 +154,7 @@ export const LibraryScreen: React.FC = () => {
             {story.pages.length} page{story.pages.length > 1 ? 's' : ''}
           </Text>
         </View>
-      </Pressable>
+      </AnimatedPressable>
     );
   };
 
@@ -159,21 +164,21 @@ export const LibraryScreen: React.FC = () => {
     const coverImage = story.pages[0]?.imageUrl;
 
     return (
-      <Pressable
+      <AnimatedPressable
         key={story.id}
-        style={({ pressed }) => [styles.storyCard, pressed && styles.cardPressed]}
+        style={[styles.storyCard]}
         onPress={() => handleStoryPress(story)}
       >
         <View style={styles.storyCover}>
           {coverImage ? (
             <Image source={{ uri: coverImage }} style={styles.storyImage} />
           ) : (
-            <View style={[styles.storyPlaceholder, { backgroundColor: universe?.color || '#E5DDD3' }]} />
+            <View style={[styles.storyPlaceholder, { backgroundColor: universe?.color || colors.surface }]} />
           )}
           <View style={styles.bookSpine} />
         </View>
         <Text style={styles.storyTitle} numberOfLines={2}>{story.title}</Text>
-      </Pressable>
+      </AnimatedPressable>
     );
   };
 
@@ -184,19 +189,24 @@ export const LibraryScreen: React.FC = () => {
       <Text style={styles.emptyText}>
         Ta premiere histoire attend{'\n'}d'etre ecrite.
       </Text>
-      <Pressable
-        style={({ pressed }) => [styles.emptyButton, pressed && styles.buttonPressed]}
+      <AnimatedPressable
+        style={[styles.emptyButton]}
         onPress={handleCreateNew}
       >
         <Text style={styles.emptyButtonText}>Commencer</Text>
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 
   if (stories.length === 0) {
     return (
       <ScreenContainer style={styles.container}>
-        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <View
+          style={[
+            styles.starsHeader,
+            { top: insets.top + spacing.sm, right: insets.right + spacing.xl - spacing.xs },
+          ]}
+        >
           <StarsBadgeWithModal />
         </View>
         {renderEmptyState()}
@@ -206,7 +216,12 @@ export const LibraryScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
-      <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+      <View
+        style={[
+          styles.starsHeader,
+          { top: insets.top + spacing.sm, right: insets.right + spacing.xl - spacing.xs },
+        ]}
+      >
         <StarsBadgeWithModal />
       </View>
       <ScrollView
@@ -241,12 +256,12 @@ export const LibraryScreen: React.FC = () => {
 
         {/* Create new */}
         <View style={styles.createSection}>
-          <Pressable
-            style={({ pressed }) => [styles.createCard, pressed && styles.createCardPressed]}
+          <AnimatedPressable
+            style={[styles.createCard]}
             onPress={handleCreateNew}
           >
             <Text style={styles.createText}>Ecrire une nouvelle histoire</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </ScrollView>
 
@@ -257,24 +272,20 @@ export const LibraryScreen: React.FC = () => {
         title={selectedStory?.title}
       >
         <View style={styles.modalContent}>
-          <Pressable
-            style={({ pressed }) => [styles.modalAction, pressed && styles.modalActionPressed]}
+          <AnimatedPressable
+            style={[styles.modalAction]}
             onPress={handleReadStory}
           >
             <Text style={styles.modalActionText}>Relire cette histoire</Text>
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.modalActionSecondary,
-              pressed && styles.modalActionPressed,
-              isExporting && styles.modalActionDisabled,
-            ]}
+          <AnimatedPressable
+            style={[styles.modalActionSecondary, isExporting && styles.modalActionDisabled]}
             onPress={handleExportPDF}
             disabled={isExporting}
           >
             {isExporting ? (
-              <ActivityIndicator color="#5D4E37" size="small" />
+              <ActivityIndicator color={colors.text.secondary} size="small" />
             ) : (
               <>
                 <Text style={styles.modalActionSecondaryText}>
@@ -282,14 +293,14 @@ export const LibraryScreen: React.FC = () => {
                 </Text>
               </>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.modalActionDelete, pressed && styles.modalActionPressed]}
+          <AnimatedPressable
+            style={[styles.modalActionDelete]}
             onPress={handleDeleteStory}
           >
             <Text style={styles.modalActionDeleteText}>Supprimer</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </Modal>
 
@@ -305,7 +316,7 @@ export const LibraryScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   starsHeader: {
     position: 'absolute',
@@ -315,48 +326,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: spacing.xxl + spacing.sm,
   },
 
   // Header
   header: {
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    paddingBottom: 28,
+    paddingHorizontal: spacing.xl + spacing.xs,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl + spacing.xs,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4A3F32',
-    marginBottom: 4,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: '#9A8B7A',
+    color: colors.text.muted,
   },
 
   // Featured (latest story)
   featuredSection: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   featuredCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#FFFCF5',
-    // Elevation
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  cardPressed: {
-    opacity: 0.9,
+    backgroundColor: colors.background,
+    ...shadows.lg,
   },
   featuredCover: {
-    height: 180,
+    height: spacing.xxxl * 3 + spacing.xxl + spacing.xs,
     position: 'relative',
   },
   featuredImage: {
@@ -369,67 +372,62 @@ const styles = StyleSheet.create({
   },
   featuredOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(74, 63, 50, 0.1)',
+    backgroundColor: OVERLAY_TEXT_PRIMARY_SUBTLE,
   },
   featuredBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#FF8A65',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    top: spacing.md,
+    left: spacing.md,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm + spacing.xxs,
+    paddingVertical: spacing.xs + spacing.xxs,
+    borderRadius: radius.sm,
   },
   featuredBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
   featuredContent: {
-    padding: 16,
+    padding: spacing.lg,
   },
   featuredTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4A3F32',
-    marginBottom: 4,
+    fontSize: typography.size.lg + spacing.xxs,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   featuredMeta: {
-    fontSize: 13,
-    color: '#9A8B7A',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
   },
 
   // Older stories section
   olderSection: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: '#9A8B7A',
-    marginBottom: 16,
+    color: colors.text.muted,
+    marginBottom: spacing.lg,
   },
   storiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: spacing.lg,
   },
   storyCard: {
     width: '47%',
   },
   storyCover: {
     aspectRatio: 3 / 4,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     overflow: 'hidden',
-    backgroundColor: '#F5EBE0',
+    backgroundColor: colors.surface,
     position: 'relative',
-    // Book shadow
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    ...shadows.sm,
   },
   storyImage: {
     width: '100%',
@@ -444,35 +442,34 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 5,
-    backgroundColor: 'rgba(93, 78, 55, 0.15)',
+    width: spacing.xs + spacing.xxs,
+    backgroundColor: OVERLAY_TEXT_SECONDARY_SPINE,
   },
   storyTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#5D4E37',
-    marginTop: 10,
-    lineHeight: 18,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.medium,
+    color: colors.text.secondary,
+    marginTop: spacing.sm + spacing.xxs,
+    lineHeight: typography.size.lg + spacing.xxs,
   },
 
   // Create new section
   createSection: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   createCard: {
-    paddingVertical: 18,
-    borderRadius: 12,
+    paddingVertical: typography.size.lg + spacing.xxs,
+    borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: '#E8E0D5',
+    borderColor: colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
-  },
-  createCardPressed: {
-    backgroundColor: '#FAF6F0',
+    // Subtle fill replaces previous pressed background; scale animation handles press feedback.
+    backgroundColor: colors.surfaceWarm,
   },
   createText: {
-    fontSize: 15,
-    color: '#9A8B7A',
+    fontSize: typography.size.md + spacing.xxs,
+    color: colors.text.muted,
   },
 
   // Empty state
@@ -480,77 +477,71 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: spacing.xxl + spacing.sm,
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#4A3F32',
-    marginBottom: 12,
+    fontSize: typography.size.xl + spacing.xxs,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#8D7B68',
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 32,
+    lineHeight: typography.size.lg * typography.lineHeight.normal + spacing.xxs,
+    marginBottom: spacing.xxl,
   },
   emptyButton: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-  },
-  buttonPressed: {
-    opacity: 0.85,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.lg,
   },
   emptyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
 
   // Modal
   modalContent: {
-    gap: 12,
+    gap: spacing.md,
   },
   modalAction: {
-    backgroundColor: '#FF8A65',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   modalActionSecondary: {
-    backgroundColor: '#FFFCF5',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    paddingVertical: typography.size.md,
+    borderRadius: radius.md,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E8E0D5',
-  },
-  modalActionPressed: {
-    opacity: 0.8,
+    borderColor: colors.border,
   },
   modalActionDisabled: {
     opacity: 0.5,
   },
   modalActionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
   modalActionSecondaryText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#5D4E37',
+    fontSize: typography.size.md + spacing.xxs,
+    fontWeight: typography.weight.medium,
+    color: colors.text.secondary,
   },
   modalActionDelete: {
-    paddingVertical: 14,
+    paddingVertical: typography.size.md,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   modalActionDeleteText: {
-    fontSize: 14,
-    color: '#C4A898',
+    fontSize: typography.size.md,
+    color: colors.text.muted,
   },
 });

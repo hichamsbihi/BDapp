@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { StoryPage } from '@/types';
+import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 
 interface ComicPageProps {
   page: StoryPage;
@@ -22,7 +23,7 @@ interface ComicPageProps {
  */
 const ComicPageInner: React.FC<ComicPageProps> = ({ page, totalPages, onTap }) => {
   const { width: screenWidth } = useWindowDimensions();
-  const imageWidth = screenWidth - 32; // 16px margin each side
+  const imageWidth = screenWidth - spacing.xxl;
 
   // Dynamic height based on real image aspect ratio
   const [imageHeight, setImageHeight] = useState(imageWidth); // default square
@@ -85,7 +86,7 @@ export const ComicPage = React.memo(ComicPageInner);
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFCF5',
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,
@@ -93,52 +94,49 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingBottom: 100,
+    paddingBottom:
+      spacing.xxxl + spacing.xxl + spacing.lg + spacing.xs,
   },
 
   imageFrame: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: '#FFFCF5',
-    shadowColor: '#5D4E37',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: colors.background,
+    ...shadows.lg,
   },
   image: {
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
 
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
-    paddingHorizontal: 60,
+    marginVertical: spacing.xl - spacing.xs,
+    paddingHorizontal: spacing.xl + spacing.xl + spacing.md,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0D5C5',
+    backgroundColor: colors.border,
   },
   dividerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D4C4AE',
-    marginHorizontal: 12,
+    width: spacing.sm - spacing.xxs,
+    height: spacing.sm - spacing.xxs,
+    borderRadius: (spacing.sm - spacing.xxs) / 2,
+    backgroundColor: colors.borderMedium,
+    marginHorizontal: spacing.md,
   },
 
   textContainer: {
-    paddingHorizontal: 28,
+    paddingHorizontal: spacing.xl + spacing.xs,
   },
   paragraph: {
-    fontSize: 17,
-    lineHeight: 30,
-    color: '#3D3229',
+    fontSize: typography.size.lg + spacing.xxs,
+    lineHeight: typography.size.xl * typography.lineHeight.normal,
+    color: colors.text.primary,
     fontStyle: 'italic',
     textAlign: 'center',
     letterSpacing: 0.2,
@@ -146,9 +144,9 @@ const styles = StyleSheet.create({
 
   pageNumber: {
     textAlign: 'center',
-    fontSize: 12,
-    color: '#B8A99A',
-    marginTop: 24,
-    letterSpacing: 2,
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
+    marginTop: spacing.xl,
+    letterSpacing: spacing.xxs,
   },
 });

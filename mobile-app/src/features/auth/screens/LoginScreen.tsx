@@ -24,6 +24,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import {
   signInWithEmail,
@@ -377,12 +378,8 @@ function SignUpView({
         />
         <ErrorChip error={error} />
         {successMessage ? <SuccessMessageCard message={successMessage} /> : null}
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            pressed && styles.primaryBtnPressed,
-            loading && styles.btnDisabled,
-          ]}
+        <AnimatedPressable
+          style={[styles.primaryBtn, loading && styles.btnDisabled]}
           onPress={onSubmit}
           disabled={loading}
         >
@@ -398,7 +395,7 @@ function SignUpView({
               <Text style={styles.primaryBtnText}>Devenir créateur</Text>
             )}
           </LinearGradient>
-        </Pressable>
+        </AnimatedPressable>
         <Pressable style={styles.switchModeBtn} onPress={onSwitchToSignIn} disabled={loading}>
           <Text style={styles.switchModeText}>Déjà un compte ? Se connecter</Text>
         </Pressable>
@@ -458,12 +455,8 @@ function SignInView({
           editable={!loading}
         />
         <ErrorChip error={error} />
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            pressed && styles.primaryBtnPressed,
-            loading && styles.btnDisabled,
-          ]}
+        <AnimatedPressable
+          style={[styles.primaryBtn, loading && styles.btnDisabled]}
           onPress={onSubmit}
           disabled={loading}
         >
@@ -479,7 +472,7 @@ function SignInView({
               <Text style={styles.primaryBtnText}>Se connecter</Text>
             )}
           </LinearGradient>
-        </Pressable>
+        </AnimatedPressable>
         <Pressable style={styles.switchModeBtn} onPress={onSwitchToSignUp} disabled={loading}>
           <Text style={styles.switchModeText}>Pas encore de compte ? Créer un compte</Text>
         </Pressable>
@@ -913,10 +906,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.md,
     ...shadows.sm,
-  },
-  primaryBtnPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.97 }],
   },
   primaryBtnGradient: {
     paddingVertical: spacing.lg,

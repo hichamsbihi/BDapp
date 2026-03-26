@@ -12,10 +12,10 @@ interface BadgeProps {
 
 const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
   default: { bg: colors.surface, text: colors.text.secondary },
-  success: { bg: '#E8F5E9', text: colors.semantic.success },
-  warning: { bg: '#FFF3E0', text: colors.semantic.warning },
-  error: { bg: '#FFEBEE', text: colors.semantic.error },
-  info: { bg: '#E3F2FD', text: colors.semantic.info },
+  success: { bg: colors.semantic.successBg, text: colors.semantic.success },
+  warning: { bg: colors.semantic.warningBg, text: colors.semantic.warning },
+  error: { bg: colors.semantic.errorBg, text: colors.semantic.error },
+  info: { bg: colors.semantic.infoBg, text: colors.semantic.info },
 };
 
 export const Badge: React.FC<BadgeProps> = ({
@@ -26,7 +26,10 @@ export const Badge: React.FC<BadgeProps> = ({
   const palette = variantColors[variant];
 
   return (
-    <View style={[styles.badge, { backgroundColor: palette.bg }, style]}>
+    <View
+      accessibilityRole="text"
+      style={[styles.badge, { backgroundColor: palette.bg }, style]}
+    >
       <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
     </View>
   );
@@ -34,7 +37,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + spacing.xxs,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     alignSelf: 'flex-start',

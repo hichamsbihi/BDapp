@@ -21,7 +21,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
-import { useAppStore } from '@/store';
+import {
+  useHeroProfile,
+  useStories,
+  useCurrentStory,
+  useHasCompletedOnboarding,
+  useStars,
+} from '@/store/selectors';
 import { DepthCarousel } from '../components/DepthCarousel';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import type { Story } from '@/types';
@@ -38,12 +44,11 @@ const CONTINUE_CARD_HEIGHT = 140;
  */
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const heroProfile = useAppStore((state) => state.heroProfile);
-  const stories = useAppStore((state) => state.stories);
-  const currentStory = useAppStore((state) => state.currentStory);
-  const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  const rewardStar = useAppStore((state) => state.rewardStar);
-  const stars = useAppStore((state) => state.stars);
+  const heroProfile = useHeroProfile();
+  const stories = useStories();
+  const currentStory = useCurrentStory();
+  const hasCompletedOnboarding = useHasCompletedOnboarding();
+  const stars = useStars();
 
   const heroName = heroProfile?.name || 'toi';
   const avatarImageUrl = heroProfile?.avatarImageUrl;
@@ -70,10 +75,7 @@ export const HomeScreen: React.FC = () => {
   const completedStories = sortedStories.filter((s) => s.isComplete);
 
   useEffect(() => {
-    if (hasCompletedOnboarding) {
-      const t = setTimeout(() => rewardStar('daily_bonus'), 800);
-      return () => clearTimeout(t);
-    }
+    // Stars are earned via countdown (12h) and watching ads, not daily auto-bonus
   }, [hasCompletedOnboarding]);
 
   useEffect(() => {

@@ -38,9 +38,9 @@ app/               # Routes (expo-router)
   paywall.tsx      # Modal
 src/
   features/        # auth/, home/, onboarding/, story/, library/, paywall/ — each has screens + index.ts
-  shared/          # Button, Card, Badge, Avatar, Input, Modal, StarsBadge, StarsBadgeWithModal, StarsModal, NotEnoughStarsModal, Navbar, ScreenContainer, Loader, LottieAnimation
+  shared/          # AnimatedPressable, Button, Card, Badge, Avatar, Input, StarsBadge, StarsBadgeWithModal, StarsModal, NotEnoughStarsModal, ErrorFallback, Navbar, ScreenContainer, Loader, LottieAnimation
   services/        # authService, supabase, storyService, profileService, avatarService, syncService, assetService
-  store/           # Zustand store (useAppStore) + selector hooks
+  store/           # Zustand store (useAppStore) + selectors.ts (selector hooks)
   theme/           # theme.ts — single source of truth
   types/           # index.ts — all shared types
   constants/       # stars.ts (economy), magicWords.ts
@@ -54,44 +54,53 @@ src/
 - All font sizes via `typography.size.*` — no raw numbers
 - All spacing via `spacing.*` — no raw px values
 - Animations: Reanimated 4 (`useSharedValue`, `useAnimatedStyle`) — no Animated API
-- Press interactions: use `withSpring` on `useSharedValue` in `onPressIn`/`onPressOut` + wrap target in `<Animated.View>` — never use `pressed` callback style (e.g. `style={({ pressed }) => ...}`)
+- Press interactions: use `AnimatedPressable` from `@/shared/AnimatedPressable` — never use `pressed` callback style (e.g. `style={({ pressed }) => ...}`)
+- Layout vs interactive animations: `entering={}` on outer `Animated.View`, `useAnimatedStyle` on inner — never both on the same view
 - Navigation: `router.replace` / `router.push` from expo-router — no React Navigation
 - State: Zustand (`useAppStore`) — no useState for global data
+- Selector hooks: prefer `useStars()`, `useHeroProfile()` from `@/store/selectors` over `useAppStore(s => s.x)`
 - French UI strings throughout — keep all user-facing text in French
+- English code comments and console.log messages
 - File exports: named exports in features, default re-export in route files
+- Accessibility: `accessibilityRole` and `accessibilityLabel` on interactive + semantic components
 
 ## Zustand Store
-Persisted to AsyncStorage (`story-app-storage`, version 3) via `zustand/middleware/persist`.
+Persisted to AsyncStorage (`story-app-storage`, version 4) via `zustand/middleware/persist`.
 
 Key slices:
 - `heroProfile` — selected avatar + name/age/gender
 - `currentStory` — story being created (in-progress, not persisted)
 - `stories` — completed stories library (persisted, synced to DB)
-- Stars economy — `stars`, `unlockedUniverses`, `lastDailyBonusDate`, `lastCountdownClaimDate`
-- `isPremium`, `hasCompletedOnboarding`, `storyProgressList`
+- Stars economy — `stars`, `unlockedUniverses`, `lastCountdownClaimDate`
+- `isPremium`, `hasEverPurchased`, `hasCompletedOnboarding`, `storyProgressList`
 
 Prefer the exported selector hooks (`useStars`, `useHeroProfile`, etc.) over `useAppStore(state => state.x)` for performance.
 
 ## Stars Economy
 Defined in `src/constants/stars.ts`. Stars are a non-monetary in-app currency.
-- **Costs:** unlock universe = 3 ⭐, PDF export = 2 ⭐
-- **Rewards:** watch ad = 1 ⭐, story complete = 2 ⭐, daily bonus = 1 ⭐, 12h countdown = 1 ⭐
-- **Initial balance:** 3 ⭐
-- IAP packs and `isPremium` (unlimited) are defined but not yet wired to a billing SDK
+- **Costs:** unlock universe = 3, PDF export = 1
+- **Rewards:** watch ad = 1, 12h countdown = 1 (no daily bonus, no story-complete reward)
+- **Initial balance:** 6 (welcome gift)
+- **Packs:** 10 = 2.99 EUR, 25 = 5.99, 60 = 9.99
+- **First purchase promo:** small pack gives 20 stars (tracked by `hasEverPurchased`)
+- **Premium lifetime:** 14.99 EUR — unlocks all, hides stars badge
+- IAP packs are mocked behind `__DEV__`; not yet wired to a billing SDK
 
 Stars are synced to `profiles.stars_balance` in Supabase via `syncService.syncStars()`.
 
 ## PDF Export
-`generateStoryPdf(story: Story, heroName?: string): Promise<string>` in `src/utils/pdfGenerator.ts`.
+`exportAndSharePdf(story: Story, heroName?: string): Promise<string>` in `src/utils/pdfGenerator.ts`.
 - Share message is dynamic: uses `heroName` if provided, falls back to "Un jeune auteur"
-- Returns a local file URI; caller handles sharing via `expo-sharing`
+- Filename derived from story title via `sanitizeFilename()`
+- Returns a local file URI; uses `expo-sharing` on Android, `Share.share` on iOS
 
 ## Supabase Tables
 - `profiles` — extends auth.users; stores `stars_balance`, `selected_avatar_id`, `unlocked_universe_ids`, `is_premium`, hero fields (`username`, `age`, `gender`)
-- `avatars` — frame-based avatar characters (`normal`, `blink`, `wink`, `happy` image URLs)
-- `universes` — story universes (locked client-side via `unlockedUniverses` in store)
+- `avatars` — frame-based avatar characters (`normal`, `blink`, `wink`, `happy` image URLs), `character_prompt`, `gender`. PK is TEXT.
+- `universes` — story universes (locked client-side via `unlockedUniverses` in store). PK is TEXT.
 - `story_starts` — possible openings per universe
-- `narrative_choices` — branching choices per universe + page number
+- `story_paragraphs` — page content per universe + page_number (check: page_number 1-10)
+- `narrative_choices` — branching choices per page, includes `next_page_number` for branching
 - `user_story_progress` — current page per user+universe (upserted on each page advance)
 - `user_choices` — recorded choices for replay/resume
 - `user_created_stories` — completed stories (upserted by `story_client_id`)
@@ -103,14 +112,9 @@ Stars are synced to `profiles.stars_balance` in Supabase via `syncService.syncSt
 - Never bypass theme for gradients (add tokens to theme.ts instead)
 - Never create new files without checking if a shared component already exists
 - Never touch node_modules/, .expo/, or generated files
+- Never put `entering` layout animation and `useAnimatedStyle` transform on the same Animated.View
+- Never use `Pressable` with `({ pressed }) => ...` callback — use `AnimatedPressable`
 
 ## Theme Gaps (Known — Fix Before Adding)
 - Gradient palettes (Paywall, StarsModal) not yet tokenized
-- Badge background colors (#E8F5E9 etc.) not in theme
 - WelcomeScreen uses intentional creative overrides (`INK`, `GOLD`, `WARM_BROWN`) — these are manga-specific, not theme gaps
-
-## Available Skills
-Invoke via Skill tool or slash commands:
-- `rn-frontend-design`   — UI/design work, new components, animations, visual polish
-- `rn-canvas-animations` — Lottie, skeleton screens, Reanimated 4 transitions
-- `rn-brand-guidelines`  — design tokens, color/typography/spacing system updates

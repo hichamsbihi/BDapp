@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   Image,
   Dimensions,
 } from 'react-native';
@@ -22,7 +21,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
+import * as StoreReview from 'expo-store-review';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 
@@ -109,6 +110,14 @@ export const StoryCompletedScreen: React.FC = () => {
       1100,
       withTiming(1, { duration: 400, easing: EASING })
     );
+
+    StoreReview.isAvailableAsync()
+      .then((available) => {
+        if (available) {
+          setTimeout(() => StoreReview.requestReview()?.catch(() => {}), 2000);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const avatarStyle = useAnimatedStyle(() => ({
@@ -252,8 +261,8 @@ export const StoryCompletedScreen: React.FC = () => {
           </Animated.View>
 
           <Animated.View style={[styles.actionsSection, actionsStyle]}>
-            <Pressable
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+            <AnimatedPressable
+              style={[styles.primaryButton]}
               onPress={handleReadStory}
             >
               <LinearGradient
@@ -264,21 +273,21 @@ export const StoryCompletedScreen: React.FC = () => {
               >
                 <Text style={styles.primaryButtonText}>Découvrir mon histoire</Text>
               </LinearGradient>
-            </Pressable>
+            </AnimatedPressable>
 
-            <Pressable
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
+            <AnimatedPressable
+              style={[styles.secondaryButton]}
               onPress={handleGoToLibrary}
             >
               <Text style={styles.secondaryButtonText}>Ma bibliothèque</Text>
-            </Pressable>
+            </AnimatedPressable>
 
-            <Pressable
-              style={({ pressed }) => [styles.tertiaryButton, pressed && styles.tertiaryButtonPressed]}
+            <AnimatedPressable
+              style={[styles.tertiaryButton]}
               onPress={handleGoHome}
             >
               <Text style={styles.tertiaryButtonText}>Retour</Text>
-            </Pressable>
+            </AnimatedPressable>
           </Animated.View>
         </View>
       </ScreenContainer>
@@ -475,9 +484,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonPressed: {
-    opacity: 0.9,
-  },
   primaryButtonText: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
@@ -492,9 +498,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.sm,
   },
-  secondaryButtonPressed: {
-    backgroundColor: colors.surface,
-  },
   secondaryButtonText: {
     fontSize: typography.size.md + 1,
     fontWeight: typography.weight.medium,
@@ -503,9 +506,6 @@ const styles = StyleSheet.create({
   tertiaryButton: {
     paddingVertical: spacing.md,
     alignItems: 'center',
-  },
-  tertiaryButtonPressed: {
-    opacity: 0.6,
   },
   tertiaryButtonText: {
     fontSize: typography.size.md,

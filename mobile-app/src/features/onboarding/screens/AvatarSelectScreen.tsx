@@ -17,6 +17,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useAvatars } from '@/hooks/useAvatars';
 import { AvatarCharacter } from '@/types';
@@ -160,19 +161,15 @@ export const AvatarSelectScreen: React.FC = () => {
           {confirmMessage}
         </Animated.Text>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !selectedAvatar && styles.buttonDisabled,
-            pressed && !!selectedAvatar && styles.buttonPressed,
-          ]}
+        <AnimatedPressable
+          style={[styles.button, !selectedAvatar && styles.buttonDisabled]}
           onPress={handleComplete}
           disabled={!selectedAvatar}
         >
           <Text style={[styles.buttonText, !selectedAvatar && styles.buttonTextDisabled]}>
             L'aventure commence !
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </Animated.View>
     </ScreenContainer>
   );
@@ -289,10 +286,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     shadowOpacity: 0,
     elevation: 0,
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
   },
   buttonText: {
     fontSize: typography.size.xl,

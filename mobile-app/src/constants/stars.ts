@@ -1,52 +1,34 @@
 /**
  * STARS ECONOMY - Single source of truth
  *
- * Design decisions (billing / economy):
+ * 1. COSTS
+ *    - Debloquer un univers : 3 etoiles
+ *    - Telecharger le livre en PDF : 1 etoile
  *
- * 1. COSTS (depense d'etoiles)
- *    - Debloquer un univers : UNIVERSE_UNLOCK_COST (3 etoiles)
- *      -> L'utilisateur peut "Regarder une magie" (pub) depuis le modal
- *        "Pas assez d'etoiles" ou depuis le modal Stars (badge).
- *    - Telecharger le livre en PDF : PDF_EXPORT_COST (2 etoiles)
- *      -> Idem : proposition "Regarder une magie" si pas assez d'etoiles,
- *        ou depuis le modal Stars.
+ * 2. REWARDS
+ *    - Compteur 12h (modal Stars) : 1 etoile
+ *    - Regarder une video ("magie") : 1 etoile
+ *    - PAS de reward a la fin d'une histoire (progression = motivation)
  *
- * 2. REWARDS (gain d'etoiles)
- *    - Compteur 12h (depuis le modal Stars) : COUNTDOWN_REWARD (1 etoile)
- *      -> Un nouveau bonus toutes les 12h, claim depuis le modal.
- *    - Regarder une video (pub) : REWARD_WATCH_AD (1 etoile)
- *      -> Disponible depuis : modal Stars, modal "Pas assez d'etoiles"
- *        (debloquer univers / telecharger PDF), et directement dans le
- *        flux de deblocage univers et export PDF.
- *    - Finir une histoire : REWARD_STORY_COMPLETE (2 etoiles)
- *    - Bonus quotidien (1x par jour) : REWARD_DAILY_BONUS (1 etoile)
+ * 3. INITIAL
+ *    - 6 etoiles au demarrage (cadeau bienvenue)
  *
- * 3. PACKS (achat in-app, a definir plus tard)
- *    - Placeholder : STARS_PACK_SMALL, MEDIUM, LARGE (quantites et prix
- *      a definir avec le billing).
- *
- * 4. Où proposer "Regarder une pub"
- *    - Clic sur le badge Stars -> modal avec : compteur 12h, bouton
- *      "Regarder une magie", lien vers packs.
- *    - Quand l'utilisateur veut debloquer un univers et n'a pas assez
- *      d'etoiles -> NotEnoughStarsModal avec "Regarder une magie".
- *    - Quand l'utilisateur veut telecharger le PDF et n'a pas assez
- *      d'etoiles -> NotEnoughStarsModal avec "Regarder une magie".
+ * 4. PACKS (IAP)
+ *    - 10 etoiles = 2.99 EUR (premiere achat promo: 20 etoiles pour le prix de 10)
+ *    - 25 etoiles = 5.99 EUR
+ *    - 60 etoiles = 9.99 EUR
+ *    - Premium lifetime = 14.99 EUR (tout debloquer, plus besoin d'etoiles)
  */
 
 // --- COSTS ---
 /** Etoiles pour debloquer un univers */
 export const UNIVERSE_UNLOCK_COST = 3;
 /** Etoiles pour telecharger le livre en PDF */
-export const PDF_EXPORT_COST = 2;
+export const PDF_EXPORT_COST = 1;
 
 // --- REWARDS ---
 /** Etoiles donnees quand l'utilisateur regarde une pub ("magie") */
 export const REWARD_WATCH_AD = 1;
-/** Etoiles quand l'utilisateur termine une histoire */
-export const REWARD_STORY_COMPLETE = 2;
-/** Etoiles du bonus quotidien (1x par jour) */
-export const REWARD_DAILY_BONUS = 1;
 /** Etoiles reclamees via le compteur 12h (modal Stars) */
 export const COUNTDOWN_REWARD = 1;
 
@@ -55,33 +37,32 @@ export const COUNTDOWN_REWARD = 1;
 export const COUNTDOWN_HOURS = 12;
 
 // --- INITIAL ---
-export const INITIAL_STARS = 3;
+/** Cadeau de bienvenue au premier lancement */
+export const INITIAL_STARS = 6;
+
+// --- FIRST PURCHASE PROMO ---
+/** First-time buyers get double stars on the small pack */
+export const FIRST_PURCHASE_BONUS_STARS = 20;
 
 // --- PACKS (IAP) ---
 export const STARS_PACK_SMALL = {
   stars: 10,
-  priceEur: 3.99,
-  universes: 2,
-  books: 2,
+  priceEur: 2.99,
   productId: 'stars_pack_10',
 };
 export const STARS_PACK_MEDIUM = {
-  stars: 20,
+  stars: 25,
   priceEur: 5.99,
-  universes: 4,
-  books: 4,
-  productId: 'stars_pack_20',
+  productId: 'stars_pack_25',
 };
 export const STARS_PACK_LARGE = {
-  stars: 30,
-  priceEur: 7.99,
-  universes: 6,
-  books: 10,
-  productId: 'stars_pack_30',
+  stars: 60,
+  priceEur: 9.99,
+  productId: 'stars_pack_60',
 };
 
-/** Premium: unlimited universes, no stars (lifetime). */
+/** Premium: unlimited universes, no stars needed (lifetime). */
 export const PREMIUM_LIFETIME = {
-  priceEur: 19.99,
+  priceEur: 14.99,
   productId: 'premium_lifetime',
 };

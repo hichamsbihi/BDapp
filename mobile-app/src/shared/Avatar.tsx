@@ -10,6 +10,8 @@ interface AvatarProps {
   /** Fallback initials when no image is provided */
   initials?: string;
   style?: StyleProp<ViewStyle>;
+  /** Describes the avatar for screen readers (e.g. character name). */
+  accessibilityLabel?: string;
 }
 
 const sizeMap: Record<AvatarSize, number> = {
@@ -29,6 +31,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   size = 'md',
   initials,
   style,
+  accessibilityLabel,
 }) => {
   const dimension = sizeMap[size];
 
@@ -38,10 +41,16 @@ export const Avatar: React.FC<AvatarProps> = ({
     borderRadius: dimension / 2,
   };
 
+  const imageA11yLabel =
+    accessibilityLabel ??
+    (initials ? `Photo de profil, initiales ${initials}` : 'Photo de profil');
+
   if (image) {
     const imageStyles: StyleProp<ImageStyle> = [styles.image, baseStyle, style as ImageStyle];
     return (
       <Image
+        accessibilityRole="image"
+        accessibilityLabel={imageA11yLabel}
         source={{ uri: image }}
         style={imageStyles}
         resizeMode="cover"
@@ -50,7 +59,11 @@ export const Avatar: React.FC<AvatarProps> = ({
   }
 
   return (
-    <View style={[styles.fallback, baseStyle, style]}>
+    <View
+      accessibilityRole="image"
+      accessibilityLabel={imageA11yLabel}
+      style={[styles.fallback, baseStyle, style]}
+    >
       <Text style={[styles.initials, { fontSize: fontSizeMap[size] }]}>
         {initials ?? '?'}
       </Text>

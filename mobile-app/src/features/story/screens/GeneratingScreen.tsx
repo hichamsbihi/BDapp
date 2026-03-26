@@ -15,6 +15,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import {
   getCreationPhraseByProgress,
   CREATION_PHRASES,
@@ -149,14 +150,13 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
   const canvasScale = useSharedValue(0.9);
   const glowIntensity = useSharedValue(0);
 
-  // Color palette - warm, magical, child-friendly
-  const colors = [
-    '#FFB366', // Warm orange
-    '#FF8A65', // Coral
-    '#A78BFA', // Soft purple
-    '#6EE7B7', // Mint green
-    '#FCD34D', // Golden yellow
-    '#FDA4AF', // Soft pink
+  const magicPalette = [
+    '#FFB366',
+    '#FF8A65',
+    '#A78BFA',
+    '#6EE7B7',
+    '#FCD34D',
+    '#FDA4AF',
   ];
 
   useEffect(() => {
@@ -178,9 +178,11 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
       const strokeCount = 8;
       
       for (let i = 0; i < strokeCount; i++) {
-        const startX = Math.random() * (canvasSize - 40) + 20;
-        const startY = Math.random() * (canvasSize - 40) + 20;
-        const length = 60 + Math.random() * 80;
+        const inset = spacing.xl - spacing.xs;
+        const margin = spacing.xxl + spacing.sm;
+        const startX = Math.random() * (canvasSize - margin) + inset;
+        const startY = Math.random() * (canvasSize - margin) + inset;
+        const length = spacing.xxxl + spacing.md + Math.random() * (spacing.xxxl + spacing.xxl);
         const angle = Math.random() * Math.PI * 2;
         
         newStrokes.push({
@@ -189,8 +191,8 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
           startY,
           endX: startX + Math.cos(angle) * length,
           endY: startY + Math.sin(angle) * length,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          thickness: 8 + Math.random() * 12,
+          color: magicPalette[Math.floor(Math.random() * magicPalette.length)],
+          thickness: spacing.sm + Math.random() * spacing.md,
           duration: 600 + Math.random() * 400,
         });
       }
@@ -204,8 +206,8 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
           x: Math.random() * canvasSize,
           y: Math.random() * canvasSize,
           delay: 0,
-          size: 8 + Math.random() * 12,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          size: spacing.sm + Math.random() * spacing.md,
+          color: magicPalette[Math.floor(Math.random() * magicPalette.length)],
         };
         setSparkles(prev => [...prev.slice(-15), newSparkle]);
       }, 300);
@@ -243,7 +245,10 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
       <Animated.View
         style={[
           styles.canvasGlow,
-          { width: canvasSize + 40, height: canvasSize + 40 },
+          {
+            width: canvasSize + spacing.xxl + spacing.sm,
+            height: canvasSize + spacing.xxl + spacing.sm,
+          },
           glowStyle,
         ]}
       />
@@ -291,7 +296,10 @@ export const GeneratingScreen: React.FC = () => {
   const titleY = useSharedValue(20);
   const statusOpacity = useSharedValue(0);
 
-  const canvasSize = Math.min(windowWidth - 64, 280);
+  const canvasSize = Math.min(
+    windowWidth - spacing.xxl * 2,
+    spacing.xxxl * 5 + spacing.xxl + spacing.sm
+  );
 
   useEffect(() => {
     // Title entrance animation
@@ -352,63 +360,59 @@ export const GeneratingScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1A1625', // Deep, magical night sky color
+    backgroundColor: colors.generatingBackground,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
   },
-  
+
   // Canvas styles
   canvasContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxl + spacing.sm,
   },
   canvasGlow: {
     position: 'absolute',
-    borderRadius: 32,
-    backgroundColor: '#A78BFA',
+    borderRadius: radius.xxl,
+    backgroundColor: colors.generatingGlow,
   },
   canvas: {
-    borderRadius: 24,
-    backgroundColor: '#FFFCF5', // Warm paper color
+    borderRadius: radius.xl,
+    backgroundColor: colors.background,
     overflow: 'hidden',
-    // Subtle shadow for depth
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...shadows.lg,
   },
   canvasTexture: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(245, 235, 224, 0.5)', // Paper texture overlay
+    backgroundColor: colors.surface,
+    opacity: 0.5,
   },
-  
+
   // Sparkle inner
   sparkleInner: {
     flex: 1,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     transform: [{ rotate: '45deg' }],
   },
-  
+
   // Text styles
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 12,
+    fontSize: typography.size.xxxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
+    marginBottom: spacing.md,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   statusText: {
-    fontSize: 17,
+    fontSize: typography.size.lg,
     fontStyle: 'italic',
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: colors.generatingTextMuted,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: typography.size.xxl,
   },
 });

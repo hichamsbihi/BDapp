@@ -29,9 +29,13 @@ export const colors = {
 
   semantic: {
     success: '#66BB6A',
+    successBg: '#E8F5E9',
     warning: '#FFA726',
+    warningBg: '#FFF3E0',
     error: '#EF5350',
+    errorBg: '#FFEBEE',
     info: '#42A5F5',
+    infoBg: '#E3F2FD',
   },
 
   universe: {
@@ -41,6 +45,19 @@ export const colors = {
   },
 
   overlay: 'rgba(0, 0, 0, 0.45)',
+  overlayHeavy: 'rgba(0, 0, 0, 0.6)',
+  surfaceWarm: '#FFF8F0',
+  surfaceMuted: '#FFFAF6',
+  borderMedium: '#EBE3D8',
+
+  /** Full-screen backdrop for image generation (magic / night) */
+  generatingBackground: '#1A1625',
+  /** Soft glow behind the magic canvas */
+  generatingGlow: '#A78BFA',
+  /** Light band for page image reveal shimmer (keeps animated opacity as sole driver) */
+  shimmerSheen: 'rgba(255, 255, 255, 0.4)',
+  /** Secondary line on generating screen (white, readable on night backdrop) */
+  generatingTextMuted: 'rgba(255, 255, 255, 0.75)',
 } as const;
 
 export const spacing = {
@@ -60,6 +77,7 @@ export const radius = {
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
   full: 9999,
 } as const;
 
@@ -76,6 +94,7 @@ export const typography = {
     lg: 16,
     xl: 20,
     xxl: 24,
+    xxxl: 28,
     display: 32,
   },
   lineHeight: {
@@ -88,6 +107,7 @@ export const typography = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+    extrabold: '800' as const,
   },
 } as const;
 
