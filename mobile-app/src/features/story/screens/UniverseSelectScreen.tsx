@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -84,20 +85,7 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
 
   const handlePress = () => {
     if (universe.isLocked) {
-      // "Blocked magic" animation - shake + flash
-      shakeX.value = withSequence(
-        withTiming(-10, { duration: 40 }),
-        withTiming(10, { duration: 40 }),
-        withTiming(-8, { duration: 40 }),
-        withTiming(8, { duration: 40 }),
-        withTiming(-4, { duration: 40 }),
-        withTiming(0, { duration: 40 })
-      );
-      sparkle.value = withSequence(
-        withTiming(1.1, { duration: 100 }),
-        withTiming(0.9, { duration: 100 }),
-        withTiming(1, { duration: 100 })
-      );
+      // Delegate to parent — may auto-unlock or show modal
       onLockedPress(universe);
     } else {
       scale.value = withSequence(
@@ -245,18 +233,23 @@ const LockedModal: React.FC<LockedModalProps> = ({
     }
   };
 
-  const handleGainStars = () => {
-    setShowGainStars(true);
-  };
-
-  // Après la "magie", si assez d'étoiles : débloquer + fermer tout.
-  // UX fluide : l'enfant entre DIRECTEMENT sans frustration.
+  // After watching magic, auto-unlock if now affordable
   const handleWatchMagicForUnlock = async () => {
     await onWatchMagic();
     if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
       onUnlocked();
       setShowGainStars(false);
       onClose();
+    }
+  };
+
+  const handleBuyStars = async () => {
+    onClose();
+    const user = await getCurrentUser();
+    if (user) {
+      router.push('/paywall');
+    } else {
+      router.push('/(auth)/login?from=paywall');
     }
   };
 
@@ -270,23 +263,30 @@ const LockedModal: React.FC<LockedModalProps> = ({
             <Text style={styles.modalSubtitle}>Ce monde dort encore...</Text>
             <Text style={styles.modalMessage}>
               {canAfford
-                ? "Tu as assez d'étoiles pour le réveiller ! ✨"
-                : "Tu peux le réveiller avec un peu de magie ✨\nIl lui manque encore quelques étoiles..."}
+                ? "Tu as assez d'étoiles pour le réveiller !"
+                : `Il te faut ${UNIVERSE_UNLOCK_COST} étoiles pour réveiller ce monde...`}
             </Text>
 
             <View style={styles.modalButtonsColumn}>
-              {canAfford ? (
-                <Pressable style={styles.modalButtonPrimary} onPress={handleUseStars}>
-                  <Text style={styles.modalButtonPrimaryText}>Utiliser 3 étoiles ✨</Text>
-                </Pressable>
-              ) : (
-                <Pressable style={styles.modalButtonPrimary} onPress={handleGainStars}>
-                  <Text style={styles.modalButtonPrimaryText}>Gagner des étoiles ✨</Text>
-                </Pressable>
+              {canAfford && (
+                <AnimatedPressable style={styles.modalButtonPrimary} onPress={handleUseStars}>
+                  <Text style={styles.modalButtonPrimaryText}>
+                    Utiliser {UNIVERSE_UNLOCK_COST} étoiles
+                  </Text>
+                </AnimatedPressable>
               )}
-              <Pressable style={styles.modalButtonSecondary} onPress={onClose}>
-                <Text style={styles.modalButtonSecondaryText}>⏳ Plus tard</Text>
-              </Pressable>
+
+              <AnimatedPressable style={styles.modalButtonMagic} onPress={() => setShowGainStars(true)}>
+                <Text style={styles.modalButtonMagicText}>Regarder une courte magie</Text>
+              </AnimatedPressable>
+
+              <AnimatedPressable style={styles.modalButtonBuy} onPress={handleBuyStars}>
+                <Text style={styles.modalButtonBuyText}>Acheter des étoiles</Text>
+              </AnimatedPressable>
+
+              <AnimatedPressable style={styles.modalButtonSecondary} onPress={onClose}>
+                <Text style={styles.modalButtonSecondaryText}>Plus tard</Text>
+              </AnimatedPressable>
             </View>
           </Pressable>
         </Pressable>
@@ -391,6 +391,12 @@ export const UniverseSelectScreen: React.FC = () => {
   }));
 
   const handleLockedPress = (universe: UniverseConfig) => {
+    // Auto-unlock if user can afford — no modal friction
+    if (canAfford(UNIVERSE_UNLOCK_COST) && unlockUniverse(universe.id)) {
+      setSelectedUniverseId(universe.id);
+      return;
+    }
+    // Not enough stars — show options modal
     setSelectedLockedUniverse(universe);
     setLockedModalVisible(true);
   };
@@ -445,8 +451,33 @@ export const UniverseSelectScreen: React.FC = () => {
     );
   }
 
+  const avatarImageUrl = heroProfile?.avatarImageUrl;
+
   return (
     <ScreenContainer style={styles.container}>
+      {/* Avatar shortcut to profile — only for returning users */}
+      {!isNewUser && (
+        <AnimatedPressable
+          style={[styles.avatarButton, { top: insets.top + spacing.sm, left: insets.left + spacing.xl }]}
+          onPress={() => router.push('/(tabs)')}
+          accessibilityLabel="Mon profil"
+        >
+          {avatarImageUrl ? (
+            <Image
+              source={{ uri: avatarImageUrl }}
+              style={styles.avatarMini}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.avatarMiniPlaceholder}>
+              <Text style={styles.avatarMiniPlaceholderText}>
+                {heroProfile?.name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
+        </AnimatedPressable>
+      )}
+
       <View style={[styles.starsHeader, { top: insets.top + spacing.sm, right: insets.right + spacing.xl }]}>
         <StarsBadgeWithModal />
       </View>
@@ -537,14 +568,41 @@ export const UniverseSelectScreen: React.FC = () => {
   );
 };
 
+const AVATAR_SIZE = 38;
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
   },
+  avatarButton: {
+    position: 'absolute',
+    zIndex: 10,
+  },
+  avatarMini: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  avatarMiniPlaceholder: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarMiniPlaceholderText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
+  },
   starsHeader: {
     position: 'absolute',
     zIndex: 10,
-    // top/right appliqués dynamiquement via useSafeAreaInsets
   },
   scrollView: {
     flex: 1,
@@ -876,10 +934,7 @@ const styles = StyleSheet.create({
   },
   modalButtonSecondary: {
     width: '100%',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -901,5 +956,33 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
+  },
+  modalButtonMagic: {
+    width: '100%',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonMagicText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
+  },
+  modalButtonBuy: {
+    width: '100%',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonBuyText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
 });

@@ -289,7 +289,7 @@ export const LibraryScreen: React.FC = () => {
             ) : (
               <>
                 <Text style={styles.modalActionSecondaryText}>
-                  {isPremium ? 'Creer le livre PDF' : `Creer le livre PDF (${PDF_EXPORT_COST} etoiles)`}
+                  Créer mon livre PDF
                 </Text>
               </>
             )}

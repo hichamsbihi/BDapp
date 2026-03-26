@@ -7,6 +7,8 @@ import {
   Modal as RNModal,
   ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router';
+import { getCurrentUser } from '@/services/authService';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { colors, radius, spacing, typography } from '@/theme/theme';
 
@@ -20,8 +22,8 @@ interface NotEnoughStarsModalProps {
 
 /**
  * Modal "pas assez d'etoiles"
+ * Two options: watch a magic (ad) or buy stars (paywall).
  * Reassuring, magical tone - never blocking.
- * Never use "pub", "ad", "advertising" wording.
  */
 export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
   visible,
@@ -38,6 +40,16 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
       onClose();
     } finally {
       setIsWatching(false);
+    }
+  };
+
+  const handleBuyStars = async () => {
+    onClose();
+    const user = await getCurrentUser();
+    if (user) {
+      router.push('/paywall');
+    } else {
+      router.push('/(auth)/login?from=paywall');
     }
   };
 
@@ -59,8 +71,7 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
           <Text style={styles.title}>Presque là !</Text>
           <Text style={styles.message}>{message}</Text>
           <Text style={styles.submessage}>
-            Tu peux en gagner en regardant une courte magie, ou en finissant une
-            histoire !
+            Regarde une courte magie ou achète des étoiles pour continuer !
           </Text>
 
           <View style={styles.buttons}>
@@ -86,12 +97,23 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
             </AnimatedPressable>
 
             <AnimatedPressable
+              accessibilityLabel="Acheter des étoiles"
+              style={styles.buttonBuy}
+              onPress={handleBuyStars}
+              disabled={isWatching}
+            >
+              <View style={styles.buttonPrimaryContent}>
+                <Text style={styles.buttonBuyText}>Acheter des étoiles</Text>
+              </View>
+            </AnimatedPressable>
+
+            <AnimatedPressable
               accessibilityLabel="Plus tard"
-              style={[styles.buttonSecondary]}
+              style={styles.buttonSecondary}
               onPress={onClose}
               disabled={isWatching}
             >
-              <Text style={styles.buttonSecondaryText}>⏳ Plus tard</Text>
+              <Text style={styles.buttonSecondaryText}>Plus tard</Text>
             </AnimatedPressable>
           </View>
         </Pressable>
@@ -158,6 +180,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm + spacing.xxs,
+  },
+  buttonBuy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.lg,
+  },
+  buttonBuyText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
   buttonSecondary: {
     alignItems: 'center',
