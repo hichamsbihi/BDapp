@@ -13,6 +13,7 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedScrollHandler,
   interpolate,
+  withSpring,
   SharedValue,
   runOnJS,
 } from 'react-native-reanimated';
@@ -68,24 +69,33 @@ function CarouselCard({
     };
   });
 
+  const pressScale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   return (
     <Animated.View style={[styles.cardWrapper, animatedStyle]}>
       <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        style={styles.card}
         onPress={onPress}
+        onPressIn={() => { pressScale.value = withSpring(0.97, { damping: 15 }); }}
+        onPressOut={() => { pressScale.value = withSpring(1, { damping: 12 }); }}
       >
-        <Image
-          source={{ uri: coverUrl }}
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.85)'] as const}
-          style={styles.cardGradient}
-        />
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {story.title}
-        </Text>
+        <Animated.View style={[StyleSheet.absoluteFill, pressStyle]}>
+          <Image
+            source={{ uri: coverUrl }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)'] as const} // gradient: not tokenizable
+            style={styles.cardGradient}
+          />
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {story.title}
+          </Text>
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
@@ -148,6 +158,7 @@ export const DepthCarousel: React.FC<DepthCarouselProps> = ({
           resizeMode="cover"
           blurRadius={0}
         />
+        {/* gradient: not tokenizable */}
         <LinearGradient
           colors={['rgba(255,252,245,0.3)', 'rgba(255,252,245,0.92)'] as const}
           style={StyleSheet.absoluteFill}
@@ -173,7 +184,7 @@ export const DepthCarousel: React.FC<DepthCarouselProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    height: CARD_HEIGHT + 80,
+    height: CARD_HEIGHT + spacing.xxxl + spacing.xxl,
     marginHorizontal: -spacing.xl,
   },
   backgroundContainer: {
@@ -186,7 +197,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: PADDING_H - GAP / 2,
-    paddingTop: 24,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
   itemContainer: {
@@ -205,10 +216,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.surface,
     ...shadows.lg,
-    elevation: 8,
-  },
-  cardPressed: {
-    opacity: 0.95,
   },
   cardImage: {
     ...StyleSheet.absoluteFillObject,
@@ -226,7 +233,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
-    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowColor: colors.overlay,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },

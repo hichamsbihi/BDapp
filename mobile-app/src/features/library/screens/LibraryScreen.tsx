@@ -100,7 +100,7 @@ export const LibraryScreen: React.FC = () => {
         const spent = spendStars(PDF_EXPORT_COST);
         if (!spent) return;
       }
-      await exportAndSharePdf(selectedStory);
+      await exportAndSharePdf(selectedStory, heroProfile?.name);
       setModalVisible(false);
     } catch (error) {
       console.log('PDF export failed:', error);

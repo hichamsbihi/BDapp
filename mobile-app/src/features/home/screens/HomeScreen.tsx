@@ -29,7 +29,7 @@ import type { Story } from '@/types';
 const EASING = Easing.out(Easing.cubic);
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AVATAR_SIZE = 80;
-const CONTINUE_CARD_HEIGHT = 100;
+const CONTINUE_CARD_HEIGHT = 140;
 
 /**
  * HomeScreen
@@ -54,6 +54,12 @@ export const HomeScreen: React.FC = () => {
   const continueOpacity = useSharedValue(0);
   const carouselOpacity = useSharedValue(0);
   const ctaOpacity = useSharedValue(0);
+
+  // Press-scale shared values
+  const continueCardScale = useSharedValue(1);
+  const primaryButtonScale = useSharedValue(1);
+  const secondaryButtonScale = useSharedValue(1);
+  const editProfileScale = useSharedValue(1);
 
   const hasStoryInProgress = Boolean(
     currentStory && currentStory.pages && currentStory.pages.length > 0
@@ -95,6 +101,23 @@ export const HomeScreen: React.FC = () => {
     opacity: ctaOpacity.value,
   }));
 
+  // Press-scale animated styles
+  const continueCardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: continueCardScale.value }],
+  }));
+
+  const primaryButtonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: primaryButtonScale.value }],
+  }));
+
+  const secondaryButtonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: secondaryButtonScale.value }],
+  }));
+
+  const editProfileAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: editProfileScale.value }],
+  }));
+
   const handleEditProfile = () => {
     router.push('/profile');
   };
@@ -125,17 +148,17 @@ export const HomeScreen: React.FC = () => {
   return (
     <View style={styles.wrapper}>
       <LinearGradient
-        colors={['#FFFBF7', '#FFF9F0', '#FFFCF5'] as const}
+        colors={[colors.background, colors.surface, colors.background] as const}
         style={StyleSheet.absoluteFill}
       />
       <ScreenContainer style={styles.container}>
-        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + 20 }]}>
+        <View style={[styles.starsHeader, { top: insets.top + 8, right: insets.right + spacing.xl }]}>
           <StarsBadgeWithModal />
         </View>
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.md }]}
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={[styles.profileSection, profileStyle]}>
@@ -164,10 +187,13 @@ export const HomeScreen: React.FC = () => {
               </View>
             </View>
             <Pressable
-              style={({ pressed }) => [styles.editProfileButton, pressed && styles.editProfilePressed]}
               onPress={handleEditProfile}
+              onPressIn={() => { editProfileScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { editProfileScale.value = withSpring(1, { damping: 12 }); }}
             >
-              <Text style={styles.editProfileText}>Modifier le profil</Text>
+              <Animated.View style={[styles.editProfileButton, editProfileAnimStyle]}>
+                <Text style={styles.editProfileText}>Modifier le profil</Text>
+              </Animated.View>
             </Pressable>
           </Animated.View>
 
@@ -175,25 +201,28 @@ export const HomeScreen: React.FC = () => {
             <Animated.View style={[styles.continueSection, continueStyle]}>
               <Text style={styles.sectionTitle}>Continuer l'histoire</Text>
               <Pressable
-                style={({ pressed }) => [styles.continueCard, pressed && styles.continueCardPressed]}
                 onPress={handleContinueStory}
+                onPressIn={() => { continueCardScale.value = withSpring(0.97, { damping: 15 }); }}
+                onPressOut={() => { continueCardScale.value = withSpring(1, { damping: 12 }); }}
               >
-                {lastStoryImage ? (
-                  <Image
-                    source={{ uri: lastStoryImage }}
-                    style={styles.continueCardImage}
-                    resizeMode="cover"
+                <Animated.View style={[styles.continueCard, continueCardAnimStyle]}>
+                  {lastStoryImage ? (
+                    <Image
+                      source={{ uri: lastStoryImage }}
+                      style={styles.continueCardImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.continueCardPlaceholder} />
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)'] as const}
+                    style={styles.continueCardGradient}
                   />
-                ) : (
-                  <View style={styles.continueCardPlaceholder} />
-                )}
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.8)'] as const}
-                  style={styles.continueCardGradient}
-                />
-                <Text style={styles.continueCardTitle} numberOfLines={2}>
-                  {lastStoryTitle}
-                </Text>
+                  <Text style={styles.continueCardTitle} numberOfLines={2}>
+                    {lastStoryTitle}
+                  </Text>
+                </Animated.View>
               </Pressable>
             </Animated.View>
           )}
@@ -217,24 +246,30 @@ export const HomeScreen: React.FC = () => {
 
           <Animated.View style={[styles.ctaSection, ctaStyle]}>
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}
               onPress={handleCreateStory}
+              onPressIn={() => { primaryButtonScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { primaryButtonScale.value = withSpring(1, { damping: 12 }); }}
             >
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark] as const}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.primaryGradient}
-              >
-                <Text style={styles.primaryButtonText}>Créer une nouvelle aventure</Text>
-              </LinearGradient>
+              <Animated.View style={[styles.primaryButton, primaryButtonAnimStyle]}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.primaryGradient}
+                >
+                  <Text style={styles.primaryButtonText}>Créer une nouvelle aventure</Text>
+                </LinearGradient>
+              </Animated.View>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryPressed]}
               onPress={handleLibrary}
+              onPressIn={() => { secondaryButtonScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { secondaryButtonScale.value = withSpring(1, { damping: 12 }); }}
             >
-              <Text style={styles.secondaryButtonText}>Ma bibliothèque</Text>
+              <Animated.View style={[styles.secondaryButton, secondaryButtonAnimStyle]}>
+                <Text style={styles.secondaryButtonText}>Ma bibliothèque</Text>
+              </Animated.View>
             </Pressable>
           </Animated.View>
         </ScrollView>
@@ -261,7 +296,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 48,
+    paddingBottom: spacing.xxxl,
     paddingHorizontal: spacing.xl,
   },
 
@@ -308,7 +343,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.lg,
   },
   greeting: {
-    fontSize: typography.size.xxl + 2,
+    fontSize: typography.size.display,
     fontWeight: typography.weight.bold,
     color: colors.text.primary,
     marginBottom: spacing.xxs,
@@ -336,9 +371,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-  },
-  editProfilePressed: {
-    opacity: 0.7,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   editProfileText: {
     fontSize: typography.size.sm,
@@ -352,7 +386,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
-    color: colors.text.secondary,
+    color: colors.text.primary,
     marginBottom: spacing.md,
   },
   continueCard: {
@@ -360,9 +394,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.sm,
-  },
-  continueCardPressed: {
-    opacity: 0.95,
   },
   continueCardImage: {
     ...StyleSheet.absoluteFillObject,
@@ -383,7 +414,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: colors.overlay,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
@@ -392,17 +423,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   emptyCarousel: {
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
   emptyCarouselText: {
-    fontSize: typography.size.md,
-    color: colors.text.muted,
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
     textAlign: 'center',
+    lineHeight: typography.size.lg * typography.lineHeight.relaxed,
   },
 
   ctaSection: {
@@ -414,28 +446,22 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   primaryGradient: {
-    paddingVertical: 20,
+    paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryPressed: {
-    opacity: 0.9,
-  },
   primaryButtonText: {
-    fontSize: typography.size.lg + 1,
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
   },
   secondaryButton: {
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
-  secondaryPressed: {
-    opacity: 0.6,
-  },
   secondaryButtonText: {
-    fontSize: typography.size.md + 1,
+    fontSize: typography.size.lg,
     color: colors.text.muted,
     fontWeight: typography.weight.medium,
   },

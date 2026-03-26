@@ -11,6 +11,13 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +48,38 @@ export const ProfileScreen: React.FC = () => {
 
   const gender = heroProfile?.gender ?? 'boy';
   const { avatars, loading } = useAvatars(gender);
+
+  // Entrance animation
+  const contentOpacity = useSharedValue(0);
+  const contentY = useSharedValue(16);
+
+  // Press-scale: backRow
+  const backScale = useSharedValue(1);
+  const backPressAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: backScale.value }],
+  }));
+
+  // Press-scale: saveButton
+  const saveScale = useSharedValue(1);
+  const savePressAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: saveScale.value }],
+  }));
+
+  // Press-scale: signOutButton
+  const signOutScale = useSharedValue(1);
+  const signOutPressAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: signOutScale.value }],
+  }));
+
+  useEffect(() => {
+    contentOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    contentY.value = withSpring(0, { damping: 18, stiffness: 140 });
+  }, []);
+
+  const contentAnimStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentY.value }],
+  }));
 
   useEffect(() => {
     if (heroProfile?.name) setName(heroProfile.name);
@@ -99,94 +138,113 @@ export const ProfileScreen: React.FC = () => {
         keyboardVerticalOffset={insets.top}
       >
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Pressable style={styles.backRow} onPress={() => router.back()}>
-            <Text style={styles.backText}>Retour</Text>
-          </Pressable>
-
-          <Text style={styles.title}>Mon profil</Text>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Photo de profil</Text>
-            <View style={styles.currentAvatarRow}>
-              <View style={styles.currentAvatarRing}>
-                {displayAvatarUrl ? (
-                  <Image
-                    source={{ uri: displayAvatarUrl }}
-                    style={styles.currentAvatarImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.currentAvatarPlaceholder}>
-                    <Text style={styles.currentAvatarPlaceholderText}>?</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.currentAvatarHint}>
-                Choisis un avatar ci-dessous
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Choisir un avatar</Text>
-            {loading ? (
-              <Text style={styles.hint}>Chargement...</Text>
-            ) : (
-              <ProfileAvatarGrid
-                avatars={avatars}
-                selectedAvatarId={selectedAvatar?.id ?? heroProfile?.avatarId ?? null}
-                onSelect={setSelectedAvatar}
-              />
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Mon prénom</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Ton prénom"
-              placeholderTextColor={colors.text.muted}
-              autoCapitalize="words"
-              maxLength={20}
-            />
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [styles.saveButton, pressed && styles.saveButtonPressed]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <LinearGradient
-              colors={[colors.primary, colors.primaryDark] as const}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.saveButtonGradient}
+          <Animated.View style={contentAnimStyle}>
+            <Pressable
+              style={styles.backRow}
+              onPress={() => router.back()}
+              onPressIn={() => { backScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { backScale.value = withSpring(1, { damping: 12 }); }}
             >
-              {saving ? (
-                <ActivityIndicator color={colors.text.inverse} />
-              ) : (
-                <Text style={styles.saveButtonText}>Sauvegarder</Text>
-              )}
-            </LinearGradient>
-          </Pressable>
+              <Animated.View style={backPressAnimStyle}>
+                <Text style={styles.backText}>{'\u2190'} Retour</Text>
+              </Animated.View>
+            </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutButtonPressed]}
-            onPress={handleSignOut}
-            disabled={signingOut}
-          >
-            {signingOut ? (
-              <ActivityIndicator color={colors.text.secondary} />
-            ) : (
-              <Text style={styles.signOutText}>Se déconnecter</Text>
-            )}
-          </Pressable>
+            <Text style={styles.title}>Mon profil</Text>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>Photo de profil</Text>
+              <View style={styles.currentAvatarRow}>
+                <View style={styles.currentAvatarRing}>
+                  {displayAvatarUrl ? (
+                    <Image
+                      source={{ uri: displayAvatarUrl }}
+                      style={styles.currentAvatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.currentAvatarPlaceholder}>
+                      <Text style={styles.currentAvatarPlaceholderText}>?</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.currentAvatarHint}>
+                  Choisis un avatar ci-dessous
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>Choisir un avatar</Text>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Chargement...</Text>
+                </View>
+              ) : (
+                <ProfileAvatarGrid
+                  avatars={avatars}
+                  selectedAvatarId={selectedAvatar?.id ?? heroProfile?.avatarId ?? null}
+                  onSelect={setSelectedAvatar}
+                />
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>Mon prénom</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Ton prénom"
+                placeholderTextColor={colors.text.muted}
+                autoCapitalize="words"
+                maxLength={20}
+              />
+            </View>
+
+            <Pressable
+              style={styles.saveButton}
+              onPress={handleSave}
+              disabled={saving}
+              onPressIn={() => { saveScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { saveScale.value = withSpring(1, { damping: 12 }); }}
+            >
+              <Animated.View style={savePressAnimStyle}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.saveButtonGradient}
+                >
+                  {saving ? (
+                    <ActivityIndicator color={colors.text.inverse} />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Sauvegarder</Text>
+                  )}
+                </LinearGradient>
+              </Animated.View>
+            </Pressable>
+
+            <Pressable
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+              disabled={signingOut}
+              onPressIn={() => { signOutScale.value = withSpring(0.97, { damping: 15 }); }}
+              onPressOut={() => { signOutScale.value = withSpring(1, { damping: 12 }); }}
+            >
+              <Animated.View style={signOutPressAnimStyle}>
+                {signingOut ? (
+                  <ActivityIndicator color={colors.text.secondary} />
+                ) : (
+                  <Text style={styles.signOutText}>Se déconnecter</Text>
+                )}
+              </Animated.View>
+            </Pressable>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -206,6 +264,9 @@ const styles = StyleSheet.create({
   backRow: {
     alignSelf: 'flex-start',
     marginBottom: spacing.xl,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   backText: {
     fontSize: typography.size.md,
@@ -267,7 +328,16 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     flex: 1,
   },
-  hint: {
+  loadingContainer: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
     fontSize: typography.size.sm,
     color: colors.text.muted,
   },
@@ -288,9 +358,10 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   saveButtonGradient: {
-    paddingVertical: 18,
+    paddingVertical: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radius.lg,
   },
   saveButtonPressed: {
     opacity: 0.9,
@@ -305,14 +376,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: spacing.xxxl,
   },
   signOutButtonPressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   signOutText: {
     fontSize: typography.size.md,
-    color: colors.text.muted,
+    color: colors.semantic.error,
     fontWeight: typography.weight.medium,
   },
 });
