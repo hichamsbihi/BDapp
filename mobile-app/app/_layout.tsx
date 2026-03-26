@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '@/store';
@@ -42,26 +43,28 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="onboarding"
-        options={{
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen name="story" />
-      <Stack.Screen
-        name="paywall"
-        options={{
-          presentation: 'modal',
-          headerShown: true,
-          headerTitle: '',
-        }}
-      />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="onboarding"
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen name="story" />
+        <Stack.Screen
+          name="paywall"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            headerTitle: '',
+          }}
+        />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
 
