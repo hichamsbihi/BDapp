@@ -47,9 +47,9 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 14,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -57,10 +57,10 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   icon: {
-    fontSize: 18,
+    fontSize: typography.size.lg,
   },
   count: {
-    fontSize: 17,
+    fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.secondary,
   },
