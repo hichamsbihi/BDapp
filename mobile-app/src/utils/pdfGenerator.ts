@@ -4,9 +4,13 @@ import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import { Story } from '@/types';
 
-const SHARE_MESSAGE =
-  "Decouvre cette histoire magique creee avec MangaKids ! " +
-  "Chaque aventure est unique, chaque page est illustree par la magie de l'IA.";
+function buildShareMessage(heroName?: string): string {
+  const author = heroName || 'Un jeune auteur';
+  return (
+    `${author} a créé une histoire magique avec MangaKids ! ` +
+    "Chaque aventure est unique, chaque page est illustrée. 📖✨"
+  );
+}
 
 function sanitizeFilename(title: string): string {
   return (
@@ -17,12 +21,12 @@ function sanitizeFilename(title: string): string {
   );
 }
 
-export const generateStoryPdf = async (story: Story): Promise<string> => {
+export const generateStoryPdf = async (story: Story, heroName?: string): Promise<string> => {
   const totalPages = story.pages.length;
 
   const pagesHtml = story.pages
-.map((page,index)=>`
-<div class="page ${index>0?'page-break':''}">
+.map((page)=>`
+<div class="page">
 
   <div class="image-container">
     <img src="${page.imageUrl}" class="page-image"/>
@@ -60,7 +64,9 @@ export const generateStoryPdf = async (story: Story): Promise<string> => {
 
 html,body{
   width:595px;
-  height:842px;
+  margin:0;
+  padding:0;
+  overflow:hidden;
   font-family: Georgia, serif;
   background:#FFFCF5;
   color:#3D3229;
@@ -80,15 +86,43 @@ html,body{
   padding:60px;
 }
 
-.cover-title{
-  font-size:36px;
-  font-weight:700;
-  margin-bottom:20px;
+.cover-image{
+  max-width:400px;
+  max-height:400px;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  border-radius:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.15);
+  margin-bottom:32px;
 }
 
-.cover-subtitle{
-  font-size:18px;
+.cover-title{
+  font-size:42px;
+  font-weight:700;
+  color:#FF8A65;
+  margin-bottom:16px;
+  padding-bottom:16px;
+  border-bottom:3px solid #FF8A65;
+}
+
+.cover-author{
+  font-size:16px;
   color:#8E7F70;
+  margin-bottom:8px;
+}
+
+.cover-label{
+  font-size:15px;
+  color:#B8A99A;
+  font-style:italic;
+}
+
+.cover-footer{
+  margin-top:40px;
+  font-size:13px;
+  color:#B8A99A;
+  letter-spacing:1px;
 }
 
 /* PAGE LAYOUT */
@@ -96,54 +130,62 @@ html,body{
 .page{
   width:595px;
   height:842px;
-
-  display:grid;
-  grid-template-rows: 1fr auto 40px;
-
+  display:flex;
+  flex-direction:column;
   align-items:center;
-  justify-items:center;
-
-  padding:30px;
-}
-
-.page-break{
+  justify-content:flex-start;
+  padding:40px 40px 30px;
   page-break-before:always;
 }
 
 /* IMAGE */
 
 .image-container{
+  flex:1;
   width:100%;
-  height:100%;
-
   display:flex;
   align-items:center;
   justify-content:center;
 }
 
 .page-image{
-  max-width:100%;
-  max-height:100%;
+  max-width:515px;
+  max-height:520px;
+  width:auto;
+  height:auto;
   object-fit:contain;
-  border-radius:10px;
+  border-radius:12px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.10);
 }
 
 /* TEXT */
 
 .paragraph{
+  flex-shrink:0;
   max-width:480px;
-  font-size:16px;
-  line-height:1.7;
+  font-size:15px;
+  line-height:1.8;
   text-align:center;
-  margin-top:10px;
+  color:#4A3F32;
+  padding:20px 20px;
+  margin-top:16px;
+  background:#F5EBE0;
+  border-radius:10px;
 }
 
 /* FOOTER */
 
 .page-footer{
-  font-size:11px;
-  color:#B8A99A;
-  letter-spacing:1px;
+  flex-shrink:0;
+  font-size:10px;
+  color:#9A8B7A;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-top:12px;
+  padding-top:8px;
+  border-top:1px solid #E8E0D5;
+  width:120px;
+  text-align:center;
 }
 
 </style>
@@ -152,11 +194,13 @@ html,body{
 <body>
 
 <div class="cover">
+  <img src="${story.pages[0]?.imageUrl || ''}" class="cover-image"/>
   <div class="cover-title">${escapeHtml(story.title)}</div>
-  <div class="cover-decoration"></div>
-  <div class="cover-subtitle">
-    ${totalPages} page${totalPages > 1 ? 's' : ''}
+  <div class="cover-author">par ${escapeHtml(heroName || 'un jeune auteur')}</div>
+  <div class="cover-label">
+    ${totalPages} page${totalPages > 1 ? 's' : ''} illustrée${totalPages > 1 ? 's' : ''}
   </div>
+  <div class="cover-footer">Créé avec MangaKids ✨</div>
 </div>
 
 ${pagesHtml}
@@ -174,8 +218,8 @@ ${pagesHtml}
   return uri;
 };
 
-export const exportAndSharePdf = async (story: Story): Promise<string> => {
-  const tempUri = await generateStoryPdf(story);
+export const exportAndSharePdf = async (story: Story, heroName?: string): Promise<string> => {
+  const tempUri = await generateStoryPdf(story, heroName);
 
   const fileName = `${sanitizeFilename(story.title)}.pdf`;
 
@@ -188,16 +232,18 @@ export const exportAndSharePdf = async (story: Story): Promise<string> => {
 
   tempFile.copy(namedFile);
 
+  const shareMessage = buildShareMessage(heroName);
+
   if (Platform.OS === 'ios') {
     await Share.share({
-      message: SHARE_MESSAGE,
+      message: shareMessage,
       url: namedFile.uri,
       title: story.title,
     });
   } else {
     await Sharing.shareAsync(namedFile.uri, {
       mimeType: 'application/pdf',
-      dialogTitle: SHARE_MESSAGE,
+      dialogTitle: shareMessage,
     });
   }
 
