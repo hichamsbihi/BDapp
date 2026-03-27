@@ -7,28 +7,31 @@ import {
   Modal as RNModal,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getCurrentUser } from '@/services/authService';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
-import { colors, radius, spacing, typography } from '@/theme/theme';
+import { colors, radius, spacing, shadows, typography } from '@/theme/theme';
 
 interface NotEnoughStarsModalProps {
   visible: boolean;
   onClose: () => void;
   needed: number;
-  /** Rituel magique (jamais "pub" ou "ad") - ex: rewardStar('watch_ad') */
+  /** Current star balance — shows progress dots when provided */
+  current?: number;
   onWatchMagic: () => Promise<unknown>;
 }
 
 /**
- * Modal "pas assez d'etoiles"
- * Two options: watch a magic (ad) or buy stars (paywall).
- * Reassuring, magical tone - never blocking.
+ * Modal "pas assez d'étoiles" — redesigned with gradient header and stars progress.
+ * Two CTAs: gain a star (magic/ad) or buy more (paywall).
+ * Tone: warm, encouraging, never blocking.
  */
 export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
   visible,
   onClose,
   needed,
+  current,
   onWatchMagic,
 }) => {
   const [isWatching, setIsWatching] = useState(false);
@@ -53,68 +56,98 @@ export const NotEnoughStarsModal: React.FC<NotEnoughStarsModalProps> = ({
     }
   };
 
-  const message =
-    needed === 1
-      ? "Il te manque une petite étoile ✨"
-      : `Il te manque ${needed} étoiles ✨`;
+  const missing = current !== undefined ? needed - current : needed;
+  const hasProgress = current !== undefined && needed <= 10;
 
   return (
-    <RNModal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.emoji}>✨</Text>
-          <Text style={styles.title}>Presque là !</Text>
-          <Text style={styles.message}>{message}</Text>
-          <Text style={styles.submessage}>
-            Regarde une courte magie ou achète des étoiles pour continuer !
-          </Text>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          {/* Gradient header */}
+          <LinearGradient
+            colors={['#FFD54F', '#FFEB9C', colors.background] as const}
+            style={styles.header}
+          >
+            <Text style={styles.headerEmoji}>⭐</Text>
+            <Text style={styles.headerTitle}>Presque là !</Text>
+          </LinearGradient>
 
-          <View style={styles.buttons}>
-            <AnimatedPressable
-              accessibilityLabel="Regarder une courte magie"
-              style={[
-                styles.buttonPrimary,
-                isWatching && styles.buttonDisabled,
-              ]}
-              onPress={handleWatchMagic}
-              disabled={isWatching}
-            >
-              {isWatching ? (
-                <ActivityIndicator color={colors.text.inverse} size="small" />
-              ) : (
-                <View style={styles.buttonPrimaryContent}>
-                  <Text style={styles.buttonPrimaryIcon}>✨</Text>
-                  <Text style={styles.buttonPrimaryText}>
-                    Regarder une courte magie
-                  </Text>
+          <View style={styles.content}>
+            {/* Stars progress dots */}
+            {hasProgress && (
+              <>
+                <View style={styles.starsRow}>
+                  {Array.from({ length: needed }).map((_, i) => (
+                    <View
+                      key={i}
+                      style={[styles.starDot, i < (current ?? 0) && styles.starDotFilled]}
+                    >
+                      <Text style={styles.starDotText}>
+                        {i < (current ?? 0) ? '⭐' : '☆'}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              )}
-            </AnimatedPressable>
+                <Text style={styles.progressLabel}>{current}/{needed} étoiles</Text>
+              </>
+            )}
 
-            <AnimatedPressable
-              accessibilityLabel="Acheter des étoiles"
-              style={styles.buttonBuy}
-              onPress={handleBuyStars}
-              disabled={isWatching}
-            >
-              <View style={styles.buttonPrimaryContent}>
-                <Text style={styles.buttonBuyText}>Acheter des étoiles</Text>
-              </View>
-            </AnimatedPressable>
+            <Text style={styles.message}>
+              {missing === 1
+                ? 'Il te manque encore 1 petite étoile !'
+                : `Il te manque encore ${missing} étoiles !`}
+            </Text>
+            <Text style={styles.subMessage}>
+              Regarde une petite magie ou obtiens plus d'étoiles pour continuer !
+            </Text>
 
-            <AnimatedPressable
-              accessibilityLabel="Plus tard"
-              style={styles.buttonSecondary}
-              onPress={onClose}
-              disabled={isWatching}
-            >
-              <Text style={styles.buttonSecondaryText}>Plus tard</Text>
-            </AnimatedPressable>
+            <View style={styles.buttons}>
+              <AnimatedPressable
+                style={[styles.buttonWrapper, isWatching && styles.buttonDisabled]}
+                onPress={handleWatchMagic}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonInner}
+                >
+                  {isWatching ? (
+                    <ActivityIndicator color={colors.text.inverse} size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonIcon}>✨</Text>
+                      <Text style={styles.buttonTextWhite}>Gagner une étoile magique</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={[styles.buttonWrapper, isWatching && styles.buttonDisabled]}
+                onPress={handleBuyStars}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={['#FFD54F', '#F5C430'] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonInner}
+                >
+                  <Text style={styles.buttonIcon}>⭐</Text>
+                  <Text style={styles.buttonTextDark}>Obtenir plus d'étoiles</Text>
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={styles.buttonLater}
+                onPress={onClose}
+                disabled={isWatching}
+              >
+                <Text style={styles.buttonLaterText}>Plus tard</Text>
+              </AnimatedPressable>
+            </View>
           </View>
         </Pressable>
       </Pressable>
@@ -130,88 +163,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
-  content: {
+  card: {
     backgroundColor: colors.background,
     borderRadius: radius.xxl,
-    padding: spacing.xxl,
-    alignItems: 'center',
+    overflow: 'hidden',
     width: '100%',
-    maxWidth: spacing.xxxl * 6 + spacing.xxl,
+    maxWidth: 340,
+    ...shadows.lg,
   },
-  emoji: {
-    fontSize: spacing.xxxl,
-    marginBottom: spacing.md,
+  header: {
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
-  title: {
+  headerEmoji: {
+    fontSize: 52,
+    marginBottom: spacing.sm,
+  },
+  headerTitle: {
     fontSize: typography.size.xxl,
     fontWeight: typography.weight.bold,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
+    color: colors.text.primary,
+  },
+  content: {
+    padding: spacing.xxl,
+    alignItems: 'center',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  starDot: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    backgroundColor: colors.borderLight,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starDotFilled: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  starDotText: {
+    fontSize: typography.size.xl,
+  },
+  progressLabel: {
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
+    marginBottom: spacing.lg,
   },
   message: {
-    fontSize: typography.size.lg + spacing.xxs,
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
-  submessage: {
-    fontSize: typography.size.md + spacing.xxs,
+  subMessage: {
+    fontSize: typography.size.md,
     color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: typography.size.lg + typography.size.sm,
+    lineHeight: typography.size.md * 1.6,
     marginBottom: spacing.xl,
   },
   buttons: {
     width: '100%',
     gap: spacing.md,
   },
-  buttonPrimary: {
+  buttonWrapper: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  buttonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
+    gap: spacing.sm,
   },
-  buttonPrimaryContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + spacing.xxs,
-  },
-  buttonBuy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-  },
-  buttonBuyText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  buttonSecondary: {
-    alignItems: 'center',
-    paddingVertical: spacing.md + spacing.xxs,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonPrimaryIcon: {
+  buttonIcon: {
     fontSize: typography.size.xl,
   },
-  buttonPrimaryText: {
+  buttonTextWhite: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
   },
-  buttonSecondaryText: {
-    fontSize: typography.size.md + spacing.xxs,
+  buttonTextDark: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  buttonLater: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  buttonLaterText: {
+    fontSize: typography.size.md,
     color: colors.text.muted,
+    fontWeight: typography.weight.medium,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });

@@ -8,7 +8,9 @@ import {
   Pressable,
   Dimensions,
   Modal as RNModal,
+  ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
@@ -22,7 +24,7 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { ErrorFallback } from '@/shared/ErrorFallback';
 import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
@@ -195,10 +197,18 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
   );
 };
 
-/**
- * Locked universe modal - ton magique et rassurant pour l'enfant
- * Message émotionnel : "Ce monde dort encore", pas de wording technique
- */
+/** Random messages shown in the confirmation modal when the user can afford to unlock */
+const UNLOCK_CONFIRM_MESSAGES = [
+  "Ce monde n'attendait que toi pour s'éveiller !",
+  "Une aventure extraordinaire est sur le point de commencer...",
+  "Les secrets de ce monde vont se révéler rien que pour toi !",
+  "Tu es sur le point de vivre quelque chose d'inoubliable !",
+  "Ce monde a été créé spécialement pour des héros comme toi !",
+  "La magie se prépare... es-tu prêt pour l'aventure ?",
+  "Quelque chose de merveilleux t'attend derrière cette porte !",
+  "Ce monde rêve d'un héros comme toi depuis si longtemps !",
+] as const;
+
 interface LockedModalProps {
   visible: boolean;
   universe: UniverseConfig | null;
@@ -210,6 +220,11 @@ interface LockedModalProps {
   onWatchMagic: () => Promise<unknown>;
 }
 
+/**
+ * Unified unlock modal — two visual states:
+ *   canAfford=true  → beautiful confirmation with random enticing message
+ *   canAfford=false → stars progress + inline options to earn/buy more
+ */
 const LockedModal: React.FC<LockedModalProps> = ({
   visible,
   universe,
@@ -220,7 +235,15 @@ const LockedModal: React.FC<LockedModalProps> = ({
   onUnlock,
   onWatchMagic,
 }) => {
-  const [showGainStars, setShowGainStars] = React.useState(false);
+  const stars = useAppStore((state) => state.stars);
+  const [isWatching, setIsWatching] = useState(false);
+
+  // Pick a new random message every time the modal opens
+  const randomMessage = useMemo(() => {
+    if (!visible) return '';
+    const idx = Math.floor(Math.random() * UNLOCK_CONFIRM_MESSAGES.length);
+    return UNLOCK_CONFIRM_MESSAGES[idx];
+  }, [visible]);
 
   if (!universe) return null;
 
@@ -228,18 +251,19 @@ const LockedModal: React.FC<LockedModalProps> = ({
     if (onUnlock(universe.id)) {
       onUnlocked();
       onClose();
-    } else {
-      setShowGainStars(true);
     }
   };
 
-  // After watching magic, auto-unlock if now affordable
-  const handleWatchMagicForUnlock = async () => {
-    await onWatchMagic();
-    if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
-      onUnlocked();
-      setShowGainStars(false);
-      onClose();
+  const handleWatchMagic = async () => {
+    setIsWatching(true);
+    try {
+      await onWatchMagic();
+      if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
+        onUnlocked();
+        onClose();
+      }
+    } finally {
+      setIsWatching(false);
     }
   };
 
@@ -253,52 +277,131 @@ const LockedModal: React.FC<LockedModalProps> = ({
     }
   };
 
-  return (
-    <>
+  // --- Branch 1: user has enough stars — confirmation modal ---
+  if (canAfford) {
+    return (
       <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
         <Pressable style={styles.modalOverlay} onPress={onClose}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalEmoji}>{universe.emoji}</Text>
-            <Text style={styles.modalTitle}>{universe.name}</Text>
-            <Text style={styles.modalSubtitle}>Ce monde dort encore...</Text>
-            <Text style={styles.modalMessage}>
-              {canAfford
-                ? "Tu as assez d'étoiles pour le réveiller !"
-                : `Il te faut ${UNIVERSE_UNLOCK_COST} étoiles pour réveiller ce monde...`}
-            </Text>
+          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
+            {/* Universe-colored gradient header */}
+            <LinearGradient
+              colors={[universe.color, colors.background] as const}
+              style={styles.confirmHeader}
+            >
+              <Text style={styles.confirmEmoji}>{universe.emoji}</Text>
+            </LinearGradient>
 
-            <View style={styles.modalButtonsColumn}>
-              {canAfford && (
-                <AnimatedPressable style={styles.modalButtonPrimary} onPress={handleUseStars}>
-                  <Text style={styles.modalButtonPrimaryText}>
-                    Utiliser {UNIVERSE_UNLOCK_COST} étoiles
-                  </Text>
-                </AnimatedPressable>
-              )}
+            <View style={styles.confirmContent}>
+              <Text style={styles.confirmTitle}>{universe.name}</Text>
+              <Text style={styles.confirmMessage}>{randomMessage}</Text>
 
-              <AnimatedPressable style={styles.modalButtonMagic} onPress={() => setShowGainStars(true)}>
-                <Text style={styles.modalButtonMagicText}>Regarder une courte magie</Text>
+              <View style={styles.costBadge}>
+                <Text style={styles.costBadgeText}>⭐ {UNIVERSE_UNLOCK_COST} étoiles</Text>
+              </View>
+
+              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseStars}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.confirmButtonGradient}
+                >
+                  <Text style={styles.confirmButtonPrimaryText}>Réveiller ce monde</Text>
+                </LinearGradient>
               </AnimatedPressable>
 
-              <AnimatedPressable style={styles.modalButtonBuy} onPress={handleBuyStars}>
-                <Text style={styles.modalButtonBuyText}>Acheter des étoiles</Text>
-              </AnimatedPressable>
-
-              <AnimatedPressable style={styles.modalButtonSecondary} onPress={onClose}>
-                <Text style={styles.modalButtonSecondaryText}>Plus tard</Text>
+              <AnimatedPressable style={styles.confirmButtonSecondary} onPress={onClose}>
+                <Text style={styles.confirmButtonSecondaryText}>Plus tard</Text>
               </AnimatedPressable>
             </View>
           </Pressable>
         </Pressable>
       </RNModal>
+    );
+  }
 
-      <NotEnoughStarsModal
-        visible={showGainStars}
-        onClose={() => setShowGainStars(false)}
-        needed={UNIVERSE_UNLOCK_COST}
-        onWatchMagic={handleWatchMagicForUnlock}
-      />
-    </>
+  // --- Branch 2: not enough stars — progress + options modal ---
+  const missing = UNIVERSE_UNLOCK_COST - stars;
+  return (
+    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.noStarsCard} onPress={(e) => e.stopPropagation()}>
+          <LinearGradient
+            colors={['#FFD54F', '#FFEB9C', colors.background] as const}
+            style={styles.noStarsHeader}
+          >
+            <Text style={styles.noStarsHeaderEmoji}>⭐</Text>
+            <Text style={styles.noStarsHeaderTitle}>Presque là !</Text>
+          </LinearGradient>
+
+          <View style={styles.noStarsContent}>
+            {/* Stars progress dots */}
+            <View style={styles.starsProgressRow}>
+              {Array.from({ length: UNIVERSE_UNLOCK_COST }).map((_, i) => (
+                <View key={i} style={[styles.starDot, i < stars && styles.starDotFilled]}>
+                  <Text style={styles.starDotText}>{i < stars ? '⭐' : '☆'}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.starsProgressLabel}>{stars}/{UNIVERSE_UNLOCK_COST} étoiles</Text>
+
+            <Text style={styles.noStarsMessage}>
+              {missing === 1
+                ? `Il te manque encore 1 étoile pour réveiller « ${universe.name} » !`
+                : `Il te manque encore ${missing} étoiles pour réveiller « ${universe.name} » !`}
+            </Text>
+
+            <View style={styles.noStarsButtons}>
+              <AnimatedPressable
+                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
+                onPress={handleWatchMagic}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.noStarsButtonGradient}
+                >
+                  {isWatching ? (
+                    <ActivityIndicator color={colors.text.inverse} size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.noStarsButtonIcon}>✨</Text>
+                      <Text style={styles.noStarsButtonTextWhite}>Gagner une étoile magique</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
+                onPress={handleBuyStars}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={['#FFD54F', '#F5C430'] as const}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.noStarsButtonGradient}
+                >
+                  <Text style={styles.noStarsButtonIcon}>⭐</Text>
+                  <Text style={styles.noStarsButtonTextDark}>Obtenir plus d'étoiles</Text>
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={styles.noStarsButtonLater}
+                onPress={onClose}
+                disabled={isWatching}
+              >
+                <Text style={styles.noStarsButtonLaterText}>Plus tard</Text>
+              </AnimatedPressable>
+            </View>
+          </View>
+        </Pressable>
+      </Pressable>
+    </RNModal>
   );
 };
 
@@ -326,8 +429,9 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const isNewUser = !hasCompletedOnboarding;
 
+  const avatarCharacterName = heroProfile?.avatarCharacterName;
   const gender = heroProfile?.gender || 'boy';
-  const { data: rawUniverses, error: universesError, refetch: refetchUniverses } = useUniverses(gender);
+  const { data: rawUniverses, error: universesError, refetch: refetchUniverses } = useUniverses(avatarCharacterName, gender);
 
   const universes = useMemo(() => {
     if (isPremium) {
@@ -391,12 +495,7 @@ export const UniverseSelectScreen: React.FC = () => {
   }));
 
   const handleLockedPress = (universe: UniverseConfig) => {
-    // Auto-unlock if user can afford — no modal friction
-    if (canAfford(UNIVERSE_UNLOCK_COST) && unlockUniverse(universe.id)) {
-      setSelectedUniverseId(universe.id);
-      return;
-    }
-    // Not enough stars — show options modal
+    // Always show the modal — canAfford determines which branch is rendered
     setSelectedLockedUniverse(universe);
     setLockedModalVisible(true);
   };
@@ -887,7 +986,7 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
   },
 
-  // Modal
+  // Shared modal overlay
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayHeavy,
@@ -895,94 +994,192 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
-  modalContent: {
+
+  // --- Confirm unlock modal (canAfford=true) ---
+  confirmCard: {
     backgroundColor: colors.background,
     borderRadius: radius.xxl,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 340,
+    ...shadows.lg,
+  },
+  confirmHeader: {
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmEmoji: {
+    fontSize: 76,
+  },
+  confirmContent: {
     padding: spacing.xxl,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 320,
   },
-  modalEmoji: {
-    fontSize: 64,
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
+  confirmTitle: {
     fontSize: typography.size.xxl,
     fontWeight: typography.weight.bold,
     color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.medium,
-    color: colors.text.muted,
     marginBottom: spacing.md,
+    textAlign: 'center',
   },
-  modalMessage: {
+  confirmMessage: {
     fontSize: typography.size.lg,
     color: colors.text.muted,
     textAlign: 'center',
-    lineHeight: spacing.xl,
+    lineHeight: typography.size.lg * 1.55,
+    fontStyle: 'italic',
     marginBottom: spacing.xl,
   },
-  modalButtonsColumn: {
-    width: '100%',
-    gap: spacing.md,
-    alignItems: 'stretch',
+  costBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.accent,
   },
-  modalButtonSecondary: {
+  costBadgeText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+  },
+  confirmButtonPrimary: {
     width: '100%',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+  },
+  confirmButtonGradient: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonPrimaryText: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
+    letterSpacing: 0.3,
+  },
+  confirmButtonSecondary: {
     paddingVertical: spacing.md,
     alignItems: 'center',
-    justifyContent: 'center',
+    width: '100%',
   },
-  modalButtonSecondaryText: {
+  confirmButtonSecondaryText: {
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+    fontWeight: typography.weight.medium,
+  },
+
+  // --- Not enough stars modal (canAfford=false) ---
+  noStarsCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 340,
+    ...shadows.lg,
+  },
+  noStarsHeader: {
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  noStarsHeaderEmoji: {
+    fontSize: 52,
+    marginBottom: spacing.sm,
+  },
+  noStarsHeaderTitle: {
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  noStarsContent: {
+    padding: spacing.xxl,
+    alignItems: 'center',
+  },
+  starsProgressRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  starDot: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    backgroundColor: colors.borderLight,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starDotFilled: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  starDotText: {
+    fontSize: typography.size.xl,
+  },
+  starsProgressLabel: {
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
+    marginBottom: spacing.lg,
+  },
+  noStarsMessage: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
-    color: colors.text.muted,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.lg * 1.5,
+    marginBottom: spacing.xl,
   },
-  modalButtonPrimary: {
+  noStarsButtons: {
     width: '100%',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    gap: spacing.md,
+  },
+  noStarsButtonWrapper: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  noStarsButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
-  modalButtonPrimaryText: {
+  noStarsButtonIcon: {
+    fontSize: typography.size.xl,
+  },
+  noStarsButtonTextWhite: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.inverse,
   },
-  modalButtonMagic: {
-    width: '100%',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalButtonMagicText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text.inverse,
-  },
-  modalButtonBuy: {
-    width: '100%',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalButtonBuyText: {
+  noStarsButtonTextDark: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.text.primary,
+  },
+  noStarsButtonLater: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  noStarsButtonLaterText: {
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+    fontWeight: typography.weight.medium,
+  },
+  buttonOpDisabled: {
+    opacity: 0.7,
   },
 });
