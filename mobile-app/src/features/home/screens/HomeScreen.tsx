@@ -34,7 +34,7 @@ import type { Story } from '@/types';
 
 const EASING = Easing.out(Easing.cubic);
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const AVATAR_SIZE = 80;
+const AVATAR_SIZE = 100;
 const CONTINUE_CARD_HEIGHT = 140;
 
 /**
@@ -166,17 +166,19 @@ export const HomeScreen: React.FC = () => {
           <Animated.View style={[styles.profileSection, profileStyle]}>
             <View style={styles.avatarRow}>
               <View style={styles.avatarRing}>
-                {avatarImageUrl ? (
-                  <Image
-                    source={{ uri: avatarImageUrl }}
-                    style={styles.avatarImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarPlaceholderText}>?</Text>
-                  </View>
-                )}
+                <View style={styles.avatarInner}>
+                  {avatarImageUrl ? (
+                    <Image
+                      source={{ uri: avatarImageUrl }}
+                      style={styles.avatarImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarPlaceholderText}>?</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={styles.greetingBlock}>
                 <Text style={styles.greeting}>Bonjour {heroName}</Text>
@@ -314,7 +316,8 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE + 8,
     height: AVATAR_SIZE + 8,
     borderRadius: (AVATAR_SIZE + 8) / 2,
-    padding: 4,
+    // No padding — the size difference (8px total) provides a 2px visual gap on each side
+    // after the 2px border, leaving AVATAR_SIZE exactly for the inner view.
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
@@ -322,10 +325,18 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     ...shadows.md,
   },
-  avatarImage: {
+  avatarInner: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  avatarImage: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    // Scale up to fill the circle — character PNGs have transparent padding around them
+    transform: [{ scale: 1.3 }],
   },
   avatarPlaceholder: {
     width: AVATAR_SIZE,

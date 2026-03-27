@@ -6,9 +6,10 @@ import type { AvatarCharacter } from '@/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLS = 3;
-const GAP = spacing.md;
-const RING_PADDING = 4;
+const GAP = spacing.sm;
+const RING_PADDING = 2;
 const CONTENT_WIDTH = SCREEN_WIDTH - spacing.xl * 2;
+// Smaller GAP + RING_PADDING gives a bigger image area per cell
 const SIZE = (CONTENT_WIDTH - GAP * (COLS - 1)) / COLS - RING_PADDING * 2;
 
 interface ProfileAvatarGridProps {
@@ -43,7 +44,7 @@ function GridCell({ avatar, isSelected, onSelect }: { avatar: AvatarCharacter; i
                 <Image
                   source={{ uri: imageUrl }}
                   style={styles.image}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               ) : (
                 <View style={styles.placeholder}>
@@ -102,11 +103,12 @@ const styles = StyleSheet.create({
     width: SIZE + RING_PADDING * 2,
     height: SIZE + RING_PADDING * 2,
     borderRadius: (SIZE + RING_PADDING * 2) / 2,
-    padding: RING_PADDING,
+    // No padding — the size difference between ring and inner provides the visual gap.
+    // padding + borderWidth was over-constraining the content area below SIZE.
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.borderLight,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'transparent',
     ...shadows.sm,
   },
@@ -127,6 +129,8 @@ const styles = StyleSheet.create({
   image: {
     width: SIZE,
     height: SIZE,
+    // Scale up to fill the circle — character PNGs have transparent padding around them
+    transform: [{ scale: 1.25 }],
   },
   placeholder: {
     width: SIZE,

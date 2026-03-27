@@ -30,7 +30,7 @@ import { updateProfile } from '@/services/profileService';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import type { AvatarCharacter } from '@/types';
 
-const AVATAR_SIZE = 72;
+const AVATAR_SIZE = 88;
 
 /**
  * Profile screen: edit name, choose avatar (simple grid, no animations).
@@ -160,17 +160,19 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.label}>Photo de profil</Text>
               <View style={styles.currentAvatarRow}>
                 <View style={styles.currentAvatarRing}>
-                  {displayAvatarUrl ? (
-                    <Image
-                      source={{ uri: displayAvatarUrl }}
-                      style={styles.currentAvatarImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.currentAvatarPlaceholder}>
-                      <Text style={styles.currentAvatarPlaceholderText}>?</Text>
-                    </View>
-                  )}
+                  <View style={styles.currentAvatarInner}>
+                    {displayAvatarUrl ? (
+                      <Image
+                        source={{ uri: displayAvatarUrl }}
+                        style={styles.currentAvatarImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.currentAvatarPlaceholder}>
+                        <Text style={styles.currentAvatarPlaceholderText}>?</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <Text style={styles.currentAvatarHint}>
                   Choisis un avatar ci-dessous
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE + 8,
     height: AVATAR_SIZE + 8,
     borderRadius: (AVATAR_SIZE + 8) / 2,
-    padding: 4,
+    // No padding — same pattern as avatarRing in HomeScreen.
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.borderLight,
@@ -305,10 +307,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.sm,
   },
-  currentAvatarImage: {
+  currentAvatarInner: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  currentAvatarImage: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    // Scale up to fill the circle — character PNGs have transparent padding around them
+    transform: [{ scale: 1.3 }],
   },
   currentAvatarPlaceholder: {
     width: AVATAR_SIZE,
