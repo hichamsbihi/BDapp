@@ -14,17 +14,17 @@ export const unstable_settings = {
   initialRouteName: 'index',
 };
 
-/** In __DEV__, clear all persisted data before rendering the app so each reload starts fresh. */
+/** Dev only: clears auth session and all persisted state so each reload starts fresh. */
 async function devClearPersistedData(): Promise<void> {
   await AsyncStorage.clear();
   useAppStore.getState().resetStoreForSignOut();
   await signOut();
-  if (__DEV__) console.log('DEV: AsyncStorage and session cleared');
 }
 
 /**
- * Root layout - manages top-level navigation.
- * In __DEV__: wait for storage/session clear before rendering so rehydration sees empty state.
+ * Root layout.
+ * In __DEV__: clears all persisted state on every reload for clean testing.
+ * In production: no clear — persisted state (stars, unlocked universes) survives restarts.
  */
 export default function RootLayout() {
   const [devReady, setDevReady] = useState(!__DEV__);
@@ -36,7 +36,7 @@ export default function RootLayout() {
 
   if (__DEV__ && !devReady) {
     return (
-      <View style={devLoadingStyles.container}>
+      <View style={styles.devLoader}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -68,8 +68,8 @@ export default function RootLayout() {
   );
 }
 
-const devLoadingStyles = StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({
+  devLoader: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

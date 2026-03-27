@@ -29,7 +29,8 @@ export default function AuthGateScreen() {
         }
         router.replace('/(tabs)');
       } else {
-        useAppStore.getState().setUnlockedUniverses([]);
+        // No active session: go to onboarding but preserve locally unlocked universes.
+        // The user may have spent stars to unlock them — clearing here would lose a local purchase.
         router.replace('/onboarding');
       }
     })();

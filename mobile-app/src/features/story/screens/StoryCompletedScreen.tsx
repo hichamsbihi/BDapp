@@ -169,7 +169,8 @@ export const StoryCompletedScreen: React.FC = () => {
   };
 
   const handleGoHome = () => {
-    router.replace('/');
+    // Navigate directly to tabs, bypassing the auth gate (which would clear unlocked universes).
+    router.replace('/(tabs)');
   };
 
   const congratulationsMessage = avatarCharacterName
