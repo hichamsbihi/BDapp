@@ -159,6 +159,20 @@
     },
     {
       "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6400,
+        2736
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
         "jsCode": "const item = $input.first().json;\nconst u = item.universe;\nif (!u || !u.id) {\n  console.log('No universe data found, skipping upsert');\n  return [];\n}\nconst gender = item.avatarGender || u.gender || 'girl';\n\n// Link this universe to the matched avatar characters\nlet avatarCharacterNames = [];\ntry {\n  const bibleData = $('Build character bible').first().json;\n  avatarCharacterNames = bibleData.matchedCharacters || [];\n} catch(e) {}\n\nreturn [{\n  json: {\n    id: u.id,\n    name: u.name || 'Unnamed Universe',\n    description: u.description || '',\n    image_url: u.image_url || '',\n    color: u.color || '#6B7DB3',\n    emoji: u.emoji || '\\u{1F4D6}',\n    gender: gender,\n    display_order: u.display_order || 1,\n    avatar_character_names: avatarCharacterNames\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
@@ -276,8 +290,8 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.1,
       "position": [
-        6400,
-        2736
+        6608,
+        2896
       ],
       "id": "d43cebca-bd3e-4783-8f0c-72e378cd47d8",
       "name": "Generate single image",
@@ -526,7 +540,7 @@
             "index": 0
           },
           {
-            "node": "Generate single image",
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           },
@@ -534,6 +548,24 @@
             "node": "Merge JSON + image",
             "type": "main",
             "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Generate single image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge JSON + image",
+            "type": "main",
+            "index": 1
           }
         ]
       ]
@@ -575,9 +607,9 @@
       "main": [
         [
           {
-            "node": "Merge JSON + image",
+            "node": "Loop Over Items",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
