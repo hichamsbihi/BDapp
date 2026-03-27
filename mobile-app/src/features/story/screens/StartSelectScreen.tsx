@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -111,7 +111,7 @@ export const StartSelectScreen: React.FC = () => {
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const stars = useAppStore((state) => state.stars);
 
-  const { data: chapters, loading: chaptersLoading } = useStoryStarts(currentStory?.universeId);
+  const { data: chapters, loading: chaptersLoading, error: chaptersError, refetch } = useStoryStarts(currentStory?.universeId);
 
   // Animation values
   const introProgress = useSharedValue(0);
@@ -170,11 +170,16 @@ export const StartSelectScreen: React.FC = () => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
 
-    // Store complete opening data in global state
+    // chapters is already sorted by path_id ASC (from fetchStoryStarts).
+    // index 0 = path-A = DB page_number 1, index 1 = path-B = page_number 2, etc.
+    const startIndex = chapters.findIndex((c) => c.id === selectedChapter.id);
+    const startPageNumber = startIndex >= 0 ? startIndex + 1 : 1;
+
     updateCurrentStory({
       title: selectedChapter.title,
       startId: selectedChapter.id,
       openingText: selectedChapter.text,
+      currentDbPageNumber: startPageNumber,
     });
 
     router.push('/story/paragraph');
@@ -182,6 +187,50 @@ export const StartSelectScreen: React.FC = () => {
       isNavigatingRef.current = false;
     }, 1000);
   }, [selectedChapter, updateCurrentStory]);
+
+  // Loading state — shown while Supabase fetch is in progress
+  if (chaptersLoading) {
+    return (
+      <ScreenContainer style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Préparation de ton livre...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // Error state — fetch failed
+  if (chaptersError) {
+    console.log('StartSelectScreen: fetch error', chaptersError);
+    return (
+      <ScreenContainer style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Impossible de charger les débuts d'histoire.</Text>
+          <Pressable style={styles.retryButton} onPress={refetch}>
+            <Text style={styles.retryButtonText}>Réessayer</Text>
+          </Pressable>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // Empty state — no story starts in DB for this universe
+  if (chapters.length === 0) {
+    console.log('StartSelectScreen: no story starts for universeId', currentStory?.universeId);
+    return (
+      <ScreenContainer style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>
+            Aucun début d'histoire disponible pour cet univers.
+          </Text>
+          <Pressable style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryButtonText}>Retour</Text>
+          </Pressable>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -310,6 +359,38 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: colors.text.muted,
     textAlign: 'center',
+  },
+
+  // Loading / error / empty states
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+  loadingText: {
+    fontSize: typography.size.lg,
+    color: colors.text.muted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.lg * 1.5,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.lg,
+  },
+  retryButtonText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
   },
 
   // Footer — discrete, supportive

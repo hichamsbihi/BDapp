@@ -190,27 +190,26 @@ export const ParagraphScreen: React.FC = () => {
   const [isButtonReady, setIsButtonReady] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const currentStory = useAppStore((state) => state.currentStory);
-  const stars = useAppStore((state) => state.stars);
-  const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
-  // Dots count = current step (dynamic per story); cap for very long stories
-  const dotsCount = Math.min(currentPageNumber, MAX_PROGRESS_DOTS);
+
+  // Use the tracked DB page_number (non-sequential branching: 1→3→5 or 2→4→5, not 1→2→3)
+  const currentPageNumber = currentStory?.currentDbPageNumber ?? (currentStory?.pages?.length || 0) + 1;
+
+  // Dots count = number of pages visited so far (not DB page_number)
+  const dotsCount = Math.min((currentStory?.pages?.length || 0) + 1, MAX_PROGRESS_DOTS);
 
   // Dynamic CTA text - varies to keep experience fresh
   const ctaText = useMemo(() => getSceneRevealPhrase(), [currentPageNumber]);
 
-  // Fetch paragraph + image from Supabase (with local fallback)
+  // Fetch paragraph + image from Supabase using the actual DB page_number
   const { data: paragraphData, error: paragraphError, refetch: refetchParagraph } =
     useParagraph(currentStory?.universeId, currentPageNumber);
 
-  const showFetchError =
-    !!paragraphError &&
-    (currentPageNumber !== 1 || !currentStory?.openingText);
+  // Show error only if there's no fallback text available
+  const showFetchError = !!paragraphError && !currentStory?.openingText;
 
-  // Page 1 uses the selected openingText, subsequent pages use fetched data
-  const paragraphText =
-    currentPageNumber === 1 && currentStory?.openingText
-      ? currentStory.openingText
-      : paragraphData.text;
+  // Always use the fetched paragraph text from story_paragraphs.
+  // Fall back to openingText (story start hook phrase) only if fetch failed/empty.
+  const paragraphText = paragraphData.text || currentStory?.openingText || '';
 
   // imageUrl fetched alongside the paragraph (single DB call)
   const paragraphImageUrl = paragraphData.imageUrl;

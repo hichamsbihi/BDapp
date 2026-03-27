@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StoryStart, NarrativeChoice, UniverseConfig } from '@/types';
 import {
-  fetchUniversesByGender,
+  fetchUniversesByAvatar,
   fetchStoryStarts,
   fetchParagraphForPage,
   fetchParagraphById,
@@ -15,10 +15,13 @@ interface AsyncState<T> {
 }
 
 /**
- * Fetch universes by gender from Supabase.
- * Returns data immediately from fallback if Supabase fails.
+ * Fetch universes for the current avatar from Supabase.
+ * Uses avatar character name as primary filter, falls back to gender.
  */
-export const useUniverses = (gender: 'boy' | 'girl') => {
+export const useUniverses = (
+  avatarCharacterName: string | undefined,
+  gender: 'boy' | 'girl'
+) => {
   const [state, setState] = useState<AsyncState<UniverseConfig[]>>({
     data: [],
     loading: true,
@@ -28,13 +31,13 @@ export const useUniverses = (gender: 'boy' | 'girl') => {
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchUniversesByGender(gender);
+      const data = await fetchUniversesByAvatar(avatarCharacterName, gender);
       setState({ data, loading: false, error: null });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setState((prev) => ({ ...prev, loading: false, error: message }));
     }
-  }, [gender]);
+  }, [avatarCharacterName, gender]);
 
   useEffect(() => {
     load();

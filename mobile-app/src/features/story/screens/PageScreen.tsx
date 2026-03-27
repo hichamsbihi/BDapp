@@ -357,9 +357,9 @@ export const PageScreen: React.FC = () => {
   const storyProgressList = useAppStore((state) => state.storyProgressList);
   const setStoryProgressList = useAppStore((state) => state.setStoryProgressList);
   const addUnlockedUniverse = useAppStore((state) => state.addUnlockedUniverse);
-  const stars = useAppStore((state) => state.stars);
 
-  const currentPageNumber = (currentStory?.pages?.length || 0) + 1;
+  // Use the tracked DB page_number, same as ParagraphScreen
+  const currentPageNumber = currentStory?.currentDbPageNumber ?? (currentStory?.pages?.length || 0) + 1;
 
   // Fetch choices for current step; when choices are empty (and loaded), this is the last page
   const {
@@ -434,10 +434,16 @@ export const PageScreen: React.FC = () => {
       const updatedPages = [...(currentStory.pages || []), newPage];
       const universeId = currentStory.universeId;
 
+      // Determine the next DB page_number from the choice's next_page_number field
+      const nextDbPageNumber = selectedChoice?.nextPageNumber ?? currentPageNumber + 1;
+
       const user = await getCurrentUser();
       if (user && universeId) {
-        const nextPageNum = isLastPage ? currentPageNumber : currentPageNumber + 1;
-        await upsertStoryProgress(user.id, universeId, isLastPage ? currentPageNumber : nextPageNum);
+        await upsertStoryProgress(
+          user.id,
+          universeId,
+          isLastPage ? currentPageNumber : nextDbPageNumber
+        );
         if (selectedChoice?.id) {
           await insertUserChoice(user.id, universeId, currentPageNumber, selectedChoice.id);
         }
@@ -467,6 +473,7 @@ export const PageScreen: React.FC = () => {
         updateCurrentStory({
           pages: updatedPages,
           selectedChoiceId: selectedChoice?.id,
+          currentDbPageNumber: nextDbPageNumber,
         });
 
         router.replace('/story/paragraph');

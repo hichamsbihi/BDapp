@@ -58,6 +58,14 @@ export interface StoryStart {
   universeId: string;
   title: string;
   text: string;
+  /** Links to the first page_id when user picks this start (branching intro) */
+  firstPageId?: string | null;
+  /**
+   * Narrative path label from n8n (e.g. "start-A", "start-B").
+   * Used for ordering: sort ascending → index 0 = path A = DB page_number 1.
+   * Stable across multiple story generations for the same universe.
+   */
+  pathId?: string;
 }
 
 export interface StoryPage {
@@ -77,6 +85,8 @@ export interface NarrativeChoice {
   text: string;
   /** Id of the paragraph shown after this choice (branching: different text + image) */
   nextParagraphId?: string | null;
+  /** DB page_number to navigate to after this choice (primary navigation driver) */
+  nextPageNumber?: number | null;
 }
 
 export interface Story {
@@ -91,6 +101,12 @@ export interface Story {
   // Opening story data (selected start)
   startId?: string;
   openingText?: string;
+  /**
+   * Actual page_number in story_paragraphs for the current screen.
+   * Replaces `pages.length + 1` which breaks on non-sequential branching paths
+   * (e.g. page 1 → choice → page 3, not page 2).
+   */
+  currentDbPageNumber?: number;
   // Current narrative choices available
   nextChoices?: NarrativeChoice[];
   // Selected choice for the next page
