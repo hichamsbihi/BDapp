@@ -48,7 +48,7 @@ backend/        # (placeholder — Supabase handles backend)
 |-------|---------|---------|
 | `profiles` | Extends auth.users — stars, avatar, unlocked universes, premium | UUID |
 | `avatars` | Character frames (normal/blink/wink/happy) + `character_prompt` + `gender` | TEXT |
-| `universes` | Story worlds — name, color, emoji, gender, display_order | TEXT |
+| `universes` | Story worlds — name, color, emoji, gender, display_order, `avatar_character_names TEXT[]` (links to avatar characters) | TEXT |
 | `story_starts` | Opening paragraphs per universe | TEXT |
 | `story_paragraphs` | Page content (text + image_url) per universe + page_number | TEXT |
 | `narrative_choices` | Branching choices per page — includes `next_page_number` | TEXT |
@@ -58,6 +58,8 @@ backend/        # (placeholder — Supabase handles backend)
 | `stars_transactions` | Stars audit trail | UUID |
 
 FK note: `avatars.id` and `universes.id` are TEXT, not UUID.
+
+Avatar-Universe relationship: each universe has an `avatar_character_names` TEXT[] column listing which avatar `character_name` values can access it. Universes are fetched via `fetchUniversesByAvatar(avatarCharacterName, gender)` with gender as fallback.
 
 ## Auth Flow
 
@@ -85,12 +87,14 @@ index.tsx (AuthGate)
 
 Generates a complete branching manga story:
 1. Chat Trigger receives `chatInput`, `characterName` (string), `universeId`
-2. Fetches avatar `character_prompt` + `gender` from Supabase
-3. Builds character bible for visual consistency
-4. OpenAI generates story JSON (6 pages: p1, p2a, p2b, p3, p4, p5 — diverge then converge)
-5. Gemini generates one illustration per page using character bible
-6. Images uploaded to Supabase Storage (`BD-Pages` bucket)
-7. Upserts universe, story_starts, story_paragraphs, narrative_choices
+2. Fetches avatar `character_prompt` + `character_trait` + `gender` from Supabase
+3. Builds character bible (visual) + character traits (personality) for consistency
+4. OpenAI generates story JSON (7 pages: p1a, p1b, p2a, p2b, p3, p4, p5 — 2 paths of 5 pages converging at p3)
+5. 2 story_starts = short hook phrases with `first_page_id` (p1a or p1b); pages 1-2 diverge, pages 3-5 converge
+6. `character_trait` influences story decisions, reactions, and narrative arc
+7. Gemini generates one illustration per page with STRICT character consistency (reinforced prompt)
+8. Images uploaded to Supabase Storage (`BD-Pages` bucket)
+9. Upserts universe (with `avatar_character_names`), story_starts (with `first_page_id`), story_paragraphs, narrative_choices
 
 ## Shared Components (`src/shared/`)
 

@@ -122,7 +122,7 @@ features/story/
 Le fichier `src/services/storyService.ts` est le seul endroit qui parle a Supabase.
 
 ```typescript
-fetchUniversesByGender(gender)      // GET /universes?gender=eq.x
+fetchUniversesByAvatar(avatarCharacterName, gender)  // GET /universes?avatar_character_names=cs.{name}
 fetchStoryStarts(universeId)        // GET /story_starts?universe_id=eq.x
 fetchParagraphForPage(universeId, pageNumber)  // GET /story_paragraphs
 fetchChoicesForPage(universeId, pageNumber)    // GET /narrative_choices

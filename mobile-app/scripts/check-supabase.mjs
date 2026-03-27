@@ -70,6 +70,18 @@ async function main() {
     ok('Table universes. Lignes: ' + (universesCount ?? 0));
   }
 
+  // Check avatar_character_names column on universes
+  const { data: sampleUniverse, error: colError } = await supabase
+    .from('universes')
+    .select('id, avatar_character_names')
+    .limit(1);
+  if (colError) {
+    fail('Colonne universes.avatar_character_names manquante', 'Lancer 002_avatar_universes.sql');
+  } else {
+    const hasValues = sampleUniverse?.some((u) => u.avatar_character_names?.length > 0);
+    ok('Colonne avatar_character_names presente.' + (hasValues ? '' : ' Attention: aucun univers ne reference d\'avatar.'));
+  }
+
   section('3. Tables story (story_paragraphs, narrative_choices, story_starts)');
   const tables = ['story_paragraphs', 'narrative_choices', 'story_starts'];
   for (const table of tables) {
