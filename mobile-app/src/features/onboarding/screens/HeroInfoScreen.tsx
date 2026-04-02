@@ -191,9 +191,7 @@ export const HeroInfoScreen: React.FC = () => {
 
   const handleAgeChange = (text: string) => {
     const numericValue = text.replace(/[^0-9]/g, '');
-    if (numericValue === '' || parseInt(numericValue, 10) <= 12) {
-      setAge(numericValue);
-    }
+    setAge(numericValue);
   };
 
   const handleGenderSelect = (selected: Gender) => {
@@ -271,7 +269,6 @@ export const HeroInfoScreen: React.FC = () => {
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
               />
-              <Text style={styles.inputHint}>Entre 6 et 12 ans</Text>
             </Animated.View>
 
             {/* Gender selection */}

@@ -104,6 +104,17 @@ export const AvatarSelectScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      {/* Simple top back action to let the user change avatar */}
+      <View style={styles.topBar}>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          hitSlop={12}
+        >
+          <Text style={styles.backButtonText}>Retour</Text>
+        </AnimatedPressable>
+      </View>
+
       <View style={styles.content}>
         <Animated.View style={[styles.header, headerStyle]}>
           {isNewUser && (
@@ -179,9 +190,27 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
   },
+  topBar: {
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xs,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.surface,
+  },
+  backButtonText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+  },
   content: {
     flex: 1,
-    paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
   },
   header: {

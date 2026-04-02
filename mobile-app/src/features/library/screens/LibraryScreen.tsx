@@ -201,6 +201,15 @@ export const LibraryScreen: React.FC = () => {
   if (stories.length === 0) {
     return (
       <ScreenContainer style={styles.container}>
+        <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
+          <AnimatedPressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+            hitSlop={12}
+          >
+            <Text style={styles.backButtonText}>Retour</Text>
+          </AnimatedPressable>
+        </View>
         <View
           style={[
             styles.starsHeader,
@@ -216,6 +225,15 @@ export const LibraryScreen: React.FC = () => {
 
   return (
     <ScreenContainer style={styles.container}>
+      <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          hitSlop={12}
+        >
+          <Text style={styles.backButtonText}>Retour</Text>
+        </AnimatedPressable>
+      </View>
       <View
         style={[
           styles.starsHeader,
@@ -317,6 +335,24 @@ export const LibraryScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
+  },
+  topBar: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xs,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.surface,
+  },
+  backButtonText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
   },
   starsHeader: {
     position: 'absolute',
