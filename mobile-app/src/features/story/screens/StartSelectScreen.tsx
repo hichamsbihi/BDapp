@@ -109,9 +109,39 @@ export const StartSelectScreen: React.FC = () => {
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
-  const stars = useAppStore((state) => state.stars);
 
   const { data: chapters, loading: chaptersLoading, error: chaptersError, refetch } = useStoryStarts(currentStory?.universeId);
+
+  const pageIdToPageNumber = (pageId: string): number | null => {
+    // n8n uses stable page_ids for branching: p1a, p1b, p2a, p2b, p3, p4, p5
+    // We map them to the DB `page_number` used by `story_paragraphs` and `narrative_choices`.
+    // This avoids relying on array order which can be unstable with legacy rows / missing path_id.
+    const normalized = pageId.trim().toLowerCase();
+    const mapping: Record<string, number> = {
+      p1a: 1,
+      p1b: 2,
+      p2a: 3,
+      p2b: 4,
+      p3: 5,
+      p4: 6,
+      p5: 7,
+    };
+    return mapping[normalized] ?? null;
+  };
+
+  const startToStartPageNumber = (chapter: StoryStart): number => {
+    const fromFirstPageId = chapter.firstPageId ? pageIdToPageNumber(chapter.firstPageId) : null;
+    if (fromFirstPageId != null) return fromFirstPageId;
+
+    const pathId = (chapter.pathId || '').trim().toLowerCase();
+    if (pathId === 'start-a') return 1;
+    if (pathId === 'start-b') return 2;
+
+    // Fallback: assume first start = p1a(1), second = p1b(2)
+    // (kept for legacy DB rows without `path_id` / `first_page_id`).
+    const idx = chapters.findIndex((c) => c.id === chapter.id);
+    return idx >= 0 ? idx + 1 : 1;
+  };
 
   // Animation values
   const introProgress = useSharedValue(0);
@@ -170,10 +200,7 @@ export const StartSelectScreen: React.FC = () => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
 
-    // chapters is already sorted by path_id ASC (from fetchStoryStarts).
-    // index 0 = path-A = DB page_number 1, index 1 = path-B = page_number 2, etc.
-    const startIndex = chapters.findIndex((c) => c.id === selectedChapter.id);
-    const startPageNumber = startIndex >= 0 ? startIndex + 1 : 1;
+    const startPageNumber = startToStartPageNumber(selectedChapter);
 
     updateCurrentStory({
       title: selectedChapter.title,
@@ -186,7 +213,7 @@ export const StartSelectScreen: React.FC = () => {
     setTimeout(() => {
       isNavigatingRef.current = false;
     }, 1000);
-  }, [selectedChapter, updateCurrentStory]);
+  }, [selectedChapter, startToStartPageNumber, updateCurrentStory]);
 
   // Loading state — shown while Supabase fetch is in progress
   if (chaptersLoading) {

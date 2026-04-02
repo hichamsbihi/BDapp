@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/shared';
+import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useAvatars } from '@/hooks/useAvatars';
 import { ProfileAvatarGrid } from '../components/ProfileAvatarGrid';
@@ -52,12 +53,6 @@ export const ProfileScreen: React.FC = () => {
   // Entrance animation
   const contentOpacity = useSharedValue(0);
   const contentY = useSharedValue(16);
-
-  // Press-scale: backRow
-  const backScale = useSharedValue(1);
-  const backPressAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: backScale.value }],
-  }));
 
   // Press-scale: saveButton
   const saveScale = useSharedValue(1);
@@ -143,16 +138,15 @@ export const ProfileScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View style={contentAnimStyle}>
-            <Pressable
-              style={styles.backRow}
-              onPress={() => router.back()}
-              onPressIn={() => { backScale.value = withSpring(0.97, { damping: 15 }); }}
-              onPressOut={() => { backScale.value = withSpring(1, { damping: 12 }); }}
-            >
-              <Animated.View style={backPressAnimStyle}>
-                <Text style={styles.backText}>{'\u2190'} Retour</Text>
-              </Animated.View>
-            </Pressable>
+            <View style={styles.topBar}>
+              <AnimatedPressable
+                style={styles.backButton}
+                onPress={() => router.back()}
+                hitSlop={12}
+              >
+                <Text style={styles.backButtonText}>Retour</Text>
+              </AnimatedPressable>
+            </View>
 
             <Text style={styles.title}>Mon profil</Text>
 
@@ -263,17 +257,22 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
   },
-  backRow: {
-    alignSelf: 'flex-start',
-    marginBottom: spacing.xl,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
+  topBar: {
+    paddingBottom: spacing.xs,
   },
-  backText: {
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.surface,
+  },
+  backButtonText: {
     fontSize: typography.size.md,
-    color: colors.text.link,
-    fontWeight: typography.weight.medium,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
   },
   title: {
     fontSize: typography.size.display,
