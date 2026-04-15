@@ -39,6 +39,20 @@ import {
 /** No fixed total: story length is dynamic (driven by universe/story data). Last page = no choices. */
 
 /**
+ * Branching fallback: maps current page_number to the next page_number in the default path.
+ * Used when narrative_choices.next_page_number is missing from DB.
+ * Story structure: p1a(1)→p2a(3), p1b(2)→p2b(4), then converge at p3(5)→p4(6)→p5(7).
+ */
+const BRANCHING_NEXT_PAGE: Record<number, number> = {
+  1: 3,
+  2: 4,
+  3: 5,
+  4: 5,
+  5: 6,
+  6: 7,
+};
+
+/**
  * Image Reveal Component
  *
  * Shimmer reveal, then pinch-to-zoom + pan via react-native-gesture-handler.
@@ -434,8 +448,17 @@ export const PageScreen: React.FC = () => {
       const updatedPages = [...(currentStory.pages || []), newPage];
       const universeId = currentStory.universeId;
 
-      // Determine the next DB page_number from the choice's next_page_number field
-      const nextDbPageNumber = selectedChoice?.nextPageNumber ?? currentPageNumber + 1;
+      // Determine the next DB page_number from the choice's next_page_number field.
+      // Branching fallback avoids the naive +1 which breaks diverging paths
+      // (e.g. page 1→2 would land on p1b instead of p2a).
+      const nextDbPageNumber = selectedChoice?.nextPageNumber
+        ?? BRANCHING_NEXT_PAGE[currentPageNumber]
+        ?? currentPageNumber + 1;
+
+      if (!selectedChoice?.nextPageNumber) {
+        console.log('PageScreen: nextPageNumber missing on choice, using branching fallback',
+          currentPageNumber, '->', nextDbPageNumber);
+      }
 
       const user = await getCurrentUser();
       if (user && universeId) {
