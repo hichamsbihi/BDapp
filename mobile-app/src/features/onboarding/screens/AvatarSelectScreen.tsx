@@ -111,7 +111,7 @@ export const AvatarSelectScreen: React.FC = () => {
           onPress={() => router.back()}
           hitSlop={12}
         >
-          <Text style={styles.backButtonText}>Retour</Text>
+          <Text style={styles.backButtonText}>←</Text>
         </AnimatedPressable>
       </View>
 
@@ -191,9 +191,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   topBar: {
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   backButtonText: {
-    fontSize: typography.size.md,
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
   },

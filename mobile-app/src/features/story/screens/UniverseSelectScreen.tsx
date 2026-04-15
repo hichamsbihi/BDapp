@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -136,17 +135,25 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
           />
         )}
 
-        {/* Universe visual */}
+        {/* Universe visual — cover image or emoji fallback */}
         <View
           style={[
             styles.cardVisual,
-            { backgroundColor: universe.color },
+            !universe.imageUrl && { backgroundColor: universe.color },
             universe.isLocked && styles.cardVisualLocked,
           ]}
         >
-          <Animated.Text style={[styles.cardEmoji, sparkleStyle]}>
-            {universe.emoji}
-          </Animated.Text>
+          {universe.imageUrl ? (
+            <Image
+              source={{ uri: universe.imageUrl }}
+              style={styles.cardCoverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Animated.Text style={[styles.cardEmoji, sparkleStyle]}>
+              {universe.emoji}
+            </Animated.Text>
+          )}
 
           {/* FREE badge for unlocked */}
           {!universe.isLocked && (
@@ -409,7 +416,6 @@ const LockedModal: React.FC<LockedModalProps> = ({
  * Universe selection screen - "Magic Doors" experience
  */
 export const UniverseSelectScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [selectedLockedUniverse, setSelectedLockedUniverse] = useState<UniverseConfig | null>(null);
@@ -542,6 +548,18 @@ export const UniverseSelectScreen: React.FC = () => {
 
   const selectedUniverse = universes.find((u) => u.id === selectedUniverseId);
 
+  // router.replace() is used to navigate here from onboarding, so the stack may be empty.
+  // canGoBack() guards against the "unhandled action" warning.
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else if (isNewUser) {
+      router.replace('/onboarding/avatar-select');
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   if (universesError) {
     return (
       <ScreenContainer style={styles.container}>
@@ -550,34 +568,17 @@ export const UniverseSelectScreen: React.FC = () => {
     );
   }
 
-  const avatarImageUrl = heroProfile?.avatarImageUrl;
-
   return (
     <ScreenContainer style={styles.container}>
-      {/* Avatar shortcut to profile — only for returning users */}
-      {!isNewUser && (
+      <View style={styles.topBar}>
         <AnimatedPressable
-          style={[styles.avatarButton, { top: insets.top + spacing.sm, left: insets.left + spacing.xl }]}
-          onPress={() => router.push('/(tabs)')}
-          accessibilityLabel="Mon profil"
+          style={styles.backButton}
+          onPress={handleBack}
+          accessibilityLabel="Retour"
+          hitSlop={12}
         >
-          {avatarImageUrl ? (
-            <Image
-              source={{ uri: avatarImageUrl }}
-              style={styles.avatarMini}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.avatarMiniPlaceholder}>
-              <Text style={styles.avatarMiniPlaceholderText}>
-                {heroProfile?.name?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
-            </View>
-          )}
+          <Text style={styles.backButtonText}>←</Text>
         </AnimatedPressable>
-      )}
-
-      <View style={[styles.starsHeader, { top: insets.top + spacing.sm, right: insets.right + spacing.xl }]}>
         <StarsBadgeWithModal />
       </View>
       <ScrollView
@@ -667,47 +668,37 @@ export const UniverseSelectScreen: React.FC = () => {
   );
 };
 
-const AVATAR_SIZE = 38;
-
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
   },
-  avatarButton: {
-    position: 'absolute',
-    zIndex: 10,
-  },
-  avatarMini: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  avatarMiniPlaceholder: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: colors.surfaceWarm,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
-  avatarMiniPlaceholderText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold,
-    color: colors.primary,
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.surface,
   },
-  starsHeader: {
-    position: 'absolute',
-    zIndex: 10,
+  backButtonText: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xs,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },
@@ -845,10 +836,17 @@ const styles = StyleSheet.create({
   },
   cardVisual: {
     width: '100%',
-    height: 150,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
+  cardCoverImage: {
+    width: '100%',
+    height: '100%',
   },
   cardVisualLocked: {
     opacity: 0.5,
