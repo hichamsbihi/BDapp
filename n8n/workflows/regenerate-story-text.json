@@ -1,0 +1,359 @@
+{
+  "name": "Regenerate Story Text (no images)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [820, 560],
+      "id": "txt-trigger-001",
+      "name": "When chat message received",
+      "webhookId": "regen-text-webhook-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatInput = ($input.first().json.chatInput || '').trim();\nif (chatInput.length > 5000) throw new Error('Input too long (max 5000 chars)');\n\n// Extract universeId from input (format: \"universeId:univ-xxx theme text\")\nconst match = chatInput.match(/^(univ-[a-z0-9-]+)\\s*(.*)/i);\nif (!match) throw new Error('Input must start with an existing universeId. Format: univ-xxx your theme here');\n\nconst universeId = match[1].trim();\nconst themeInput = match[2].trim();\nconst inputType = themeInput.length > 500 ? 'full_story' : 'theme';\n\nreturn [{ json: { chatInput: themeInput, inputType, universeId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 560],
+      "id": "txt-parse-input-001",
+      "name": "Parse Input (universeId + theme)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/universes?id=eq.{{ $json.universeId }}&select=id,name,avatar_character_names,gender",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1240, 560],
+      "id": "txt-fetch-univ-001",
+      "name": "Fetch universe row",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const universeRows = $input.first().json;\nconst universe = Array.isArray(universeRows) ? universeRows[0] : universeRows;\nif (!universe || !universe.id) throw new Error('Universe not found in DB');\n\nlet parseData = {};\ntry { parseData = $('Parse Input (universeId + theme)').first().json; } catch(e) {}\n\nconst avatarNames = universe.avatar_character_names || [];\nconst gender = universe.gender || 'girl';\nconst base = 'https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/avatars';\nlet url = base + '?select=character_name,character_prompt,character_trait,gender';\nif (avatarNames.length > 0) {\n  url += '&character_name=in.(' + avatarNames.map(n => '\"' + n + '\"').join(',') + ')';\n}\n\nreturn [{ json: {\n  chatInput: parseData.chatInput || '',\n  inputType: parseData.inputType || 'theme',\n  universeId: universe.id,\n  universeName: universe.name || '',\n  avatarGender: gender,\n  avatarFetchUrl: url\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 560],
+      "id": "txt-prep-avatar-001",
+      "name": "Prepare avatar fetch"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.avatarFetchUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1680, 560],
+      "id": "txt-fetch-avatars-001",
+      "name": "Fetch avatars",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rows = [];\nitems.forEach(i => {\n  const j = i.json;\n  if (Array.isArray(j)) rows.push(...j);\n  else if (j && typeof j === 'object' && (j.character_name != null || j.body != null)) {\n    if (Array.isArray(j.body)) rows.push(...j.body);\n    else rows.push(j);\n  }\n});\n\nlet prevData = {};\ntry { prevData = $('Prepare avatar fetch').first().json; } catch(e) {}\n\nconst matched = {};\nlet firstGender = prevData.avatarGender || 'girl';\nrows.forEach(r => {\n  if (r.character_name) {\n    matched[r.character_name] = {\n      name: r.character_name,\n      prompt: r.character_prompt || '',\n      trait: r.character_trait || '',\n      gender: r.gender || 'girl'\n    };\n    firstGender = r.gender || firstGender;\n  }\n});\n\nconst characterBible = Object.entries(matched)\n  .map(([name, av]) => name + ': ' + av.prompt)\n  .join('\\n');\n\nconst characterTraits = Object.entries(matched)\n  .map(([name, av]) => av.trait ? name + ': ' + av.trait : '')\n  .filter(Boolean)\n  .join('\\n');\n\nconst fallback = 'Hana: fillette de 8 ans, cheveux noirs courts au carre, petit ruban rouge cote gauche, grands yeux vert emeraude, tunique bleue aventuriere bordures dorees, bottes cuir marron, pendentif etoile lumineux.';\n\nreturn [{ json: {\n  chatInput: prevData.chatInput || '',\n  inputType: prevData.inputType || 'theme',\n  universeId: prevData.universeId,\n  avatarGender: firstGender,\n  characterBible: characterBible || fallback,\n  characterTraits,\n  matchedCharacters: Object.keys(matched)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1900, 560],
+      "id": "txt-build-bible-001",
+      "name": "Build character bible"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst storyInput = (data.chatInput || '').trim();\nconst characterBible = data.characterBible || '';\nconst characterTraits = data.characterTraits || '';\nconst universeId = data.universeId;\nconst inputType = data.inputType || 'theme';\n\nconst taskBlock = inputType === 'full_story'\n  ? '- Texte complet fourni. Decoupe en 2 histoires de 5 pages qui convergent.'\n  : '- Theme fourni. Invente 2 histoires de 5 pages qui convergent vers la meme fin.';\n\nconst traitBlock = characterTraits\n  ? '\\nTRAITS DE PERSONNALITE (influencent les reactions, decisions et arc narratif) :\\n' + characterTraits + '\\n'\n  : '';\n\nconst fullPrompt = `Tu es un auteur narratif manga pour enfants (6-10 ans). Tu crees une histoire interactive avec 2 CHEMINS qui CONVERGENT.\n\n=== CONCEPT ===\nL'enfant choisit entre 2 accroches (story_starts). Selon son choix, il voit 5 pages. Les 2 chemins divergent au debut (pages 1-2) puis convergent (pages 3-4-5).\n\n=== BIBLE VISUELLE ===\n${characterBible}\n=== FIN BIBLE VISUELLE ===\n${traitBlock}\nENTREE UTILISATEUR :\n${storyInput || '(aucun theme - invente une aventure a branches)'}\n\nIDENTIFIANT UNIVERS : ${universeId}\n\n=== STORY STARTS (2 accroches) ===\n- 2 story_starts : 1 titre (max 6 mots) + 1 phrase d'accroche.\n- start-A a first_page_id = \"p1a\", start-B a first_page_id = \"p1b\".\n\n=== STRUCTURE : 7 PAGES (5 par parcours, 2 chemins) ===\nPAGES DIVERGENTES :\n- p1a : Ouverture chemin A (4-5 phrases). 2 choix -> p2a.\n- p1b : Ouverture chemin B (4-5 phrases). 2 choix -> p2b.\n- p2a : Developpement A (2-3 phrases). 2 choix -> p3.\n- p2b : Developpement B (2-3 phrases). 2 choix -> p3.\n\nPAGES CONVERGENTES :\n- p3 : CONVERGENCE (2-3 phrases). 2 choix -> p4.\n- p4 : CLIMAX (2-3 phrases). 2 choix -> p5.\n- p5 : FIN (2-3 phrases). choices = [].\n\nTACHE :\n${taskBlock}\n- Chaque page a paragraph_text et scene_summary.\n- Chaque choix a id, text (max 10 mots), next_page_id.\n- Langue : francais, phrases simples, max 15 mots par phrase.\n\nFORMAT : JSON strict, pas de markdown.\n\nSCHEMA :\n{\n  \"story_starts\": [\n    { \"id\": \"start-A\", \"title\": \"max 6 mots\", \"text\": \"accroche A\", \"first_page_id\": \"p1a\" },\n    { \"id\": \"start-B\", \"title\": \"max 6 mots\", \"text\": \"accroche B\", \"first_page_id\": \"p1b\" }\n  ],\n  \"pages\": [\n    { \"page_id\": \"p1a\", \"paragraph_text\": \"...\", \"scene_summary\": \"...\", \"choices\": [{ \"id\": \"c-p1a-1\", \"text\": \"...\", \"next_page_id\": \"p2a\" }, { \"id\": \"c-p1a-2\", \"text\": \"...\", \"next_page_id\": \"p2a\" }] },\n    { \"page_id\": \"p1b\", \"paragraph_text\": \"...\", \"scene_summary\": \"...\", \"choices\": [{ \"id\": \"c-p1b-1\", \"text\": \"...\", \"next_page_id\": \"p2b\" }, ...] },\n    { \"page_id\": \"p2a\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p2b\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p3\", ..., \"choices\": [{ ..., \"next_page_id\": \"p4\" }] },\n    { \"page_id\": \"p4\", ..., \"choices\": [{ ..., \"next_page_id\": \"p5\" }] },\n    { \"page_id\": \"p5\", ..., \"choices\": [] }\n  ]\n}\n\nREGLES :\n- Exactement 7 pages : p1a, p1b, p2a, p2b, p3, p4, p5.\n- Parcours enfant = 5 pages (p1a->p2a->p3->p4->p5 OU p1b->p2b->p3->p4->p5).`;\n\nreturn [{ json: { fullPrompt, universeId, avatarGender: data.avatarGender, matchedCharacters: data.matchedCharacters } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2120, 560],
+      "id": "txt-build-prompt-001",
+      "name": "Build story prompt"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.2",
+          "mode": "list",
+          "cachedResultName": "GPT-5.2"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "={{ $json.fullPrompt }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 6144,
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [2340, 560],
+      "id": "txt-openai-001",
+      "name": "Generate story JSON",
+      "credentials": {
+        "openAiApi": {
+          "id": "VBbboUkh3t3o6xhB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json?.output?.[0]?.content?.[0]?.text;\nif (!raw) throw new Error('No LLM output received.');\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();\n}\n\nlet parsed;\ntry { parsed = JSON.parse(cleaned); }\ncatch (e) { throw new Error('Invalid JSON: ' + e.message + ' | ' + cleaned.substring(0, 300)); }\n\nlet pages = parsed.pages || [];\nif (pages.length === 0) throw new Error('No pages in LLM output.');\n\nlet promptData = {};\ntry { promptData = $('Build story prompt').first().json; } catch(e) {}\nconst universeId = promptData.universeId;\nconst avatarGender = promptData.avatarGender || 'girl';\nconst now = new Date().toISOString();\n\n// Normalize LLM field names\npages = pages.map(p => ({\n  ...p,\n  page_id: p.page_id || p.pageId || null,\n  paragraph_text: p.paragraph_text || p.paragraphText || '',\n  scene_summary: p.scene_summary || p.sceneSummary || '',\n  choices: (p.choices || []).map(c => ({ ...c, next_page_id: c.next_page_id || c.nextPageId || null })),\n}));\n\nconst hasBranching = pages[0] && pages[0].page_id != null;\nconst pageIdToNumber = {};\nif (hasBranching) {\n  pages.forEach((p, i) => { if (p.page_id) pageIdToNumber[p.page_id] = i + 1; });\n}\n\nreturn pages.map((page, index) => {\n  const pageNumber = hasBranching ? (index + 1) : (page.page_number || page.pageNumber || index + 1);\n  let choices = page.choices || [];\n  if (hasBranching && choices.length) {\n    choices = choices.map(c => ({ ...c, next_page_number: c.next_page_id ? pageIdToNumber[c.next_page_id] : null }));\n  }\n  return {\n    json: {\n      universeId,\n      pageNumber,\n      pageId: page.page_id || ('p' + pageNumber),\n      paragraphText: page.paragraph_text,\n      sceneSummary: page.scene_summary,\n      choices,\n      storyStarts: parsed.story_starts || [],\n      avatarGender,\n      createdAt: now\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2560, 560],
+      "id": "txt-parse-001",
+      "name": "Parse story JSON"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parseItem = $('Parse story JSON').first().json;\nconst starts = parseItem.storyStarts || [];\nconst universeId = parseItem.universeId;\nif (!starts.length || !universeId) return [];\n\nconst ts = Date.now().toString(36);\nconst univSuffix = universeId.replace('univ-', '').substring(0, 8);\n\nreturn starts.map(s => {\n  const pathLabel = (s.id || 'start-x').toLowerCase();\n  const pathSuffix = pathLabel.replace('start-', '');\n  const rand = Math.random().toString(36).substring(2, 6);\n  return {\n    json: {\n      id: `ss-${univSuffix}-${ts}-${rand}-${pathSuffix}`,\n      path_id: s.id || pathLabel,\n      first_page_id: s.first_page_id || s.firstPageId || null,\n      universe_id: universeId,\n      title: s.title || 'Sans titre',\n      text: s.text || '',\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2780, 380],
+      "id": "txt-prep-starts-001",
+      "name": "Prepare story_starts"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/story_starts?on_conflict=id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Prefer", "value": "resolution=merge-duplicates" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3000, 380],
+      "id": "txt-upsert-starts-001",
+      "name": "Upsert story_starts",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.filter(item => item.json.universeId && item.json.pageNumber).map(item => ({\n  json: {\n    universe_id: item.json.universeId,\n    page_number: item.json.pageNumber,\n    text: item.json.paragraphText || '',\n    scene_summary: item.json.sceneSummary || '',\n    created_at: item.json.createdAt\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2780, 560],
+      "id": "txt-prep-para-001",
+      "name": "Prepare paragraph rows (text only)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/story_paragraphs?on_conflict=universe_id,page_number",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Prefer", "value": "resolution=merge-duplicates" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3000, 560],
+      "id": "txt-upsert-para-001",
+      "name": "Upsert paragraphs",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get universeId from parsed pages\nconst firstPage = $input.first().json;\nconst universeId = firstPage.universeId;\nif (!universeId) throw new Error('No universeId to delete old choices');\nreturn [{ json: { universeId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2780, 740],
+      "id": "txt-prep-delete-001",
+      "name": "Prepare DELETE old choices"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/narrative_choices?universe_id=eq.{{ $json.universeId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3000, 740],
+      "id": "txt-delete-choices-001",
+      "name": "DELETE old choices",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Parse story JSON').all();\nconst results = [];\nconst ts = Date.now().toString(36);\nfor (const item of items) {\n  if (!item.json.universeId || !item.json.pageNumber) continue;\n  const univSuffix = item.json.universeId.replace('univ-', '').substring(0, 8);\n  const choices = item.json.choices || [];\n  choices.forEach((choice, index) => {\n    const rand = Math.random().toString(36).substring(2, 6);\n    const row = {\n      id: `nc-${univSuffix}-${ts}-${rand}-p${item.json.pageNumber}-${String.fromCharCode(97 + index)}`,\n      universe_id: item.json.universeId,\n      page_number: item.json.pageNumber,\n      choice_order: index + 1,\n      text: choice.text || '',\n      created_at: item.json.createdAt\n    };\n    if (choice.next_page_number != null) row.next_page_number = choice.next_page_number;\n    results.push({ json: row });\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3220, 740],
+      "id": "txt-prep-choices-001",
+      "name": "Prepare new choices"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wddatxgqhdiosuhcztex.supabase.co/rest/v1/narrative_choices",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Prefer", "value": "return=minimal" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3440, 740],
+      "id": "txt-insert-choices-001",
+      "name": "INSERT new choices",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [[{ "node": "Parse Input (universeId + theme)", "type": "main", "index": 0 }]]
+    },
+    "Parse Input (universeId + theme)": {
+      "main": [[{ "node": "Fetch universe row", "type": "main", "index": 0 }]]
+    },
+    "Fetch universe row": {
+      "main": [[{ "node": "Prepare avatar fetch", "type": "main", "index": 0 }]]
+    },
+    "Prepare avatar fetch": {
+      "main": [[{ "node": "Fetch avatars", "type": "main", "index": 0 }]]
+    },
+    "Fetch avatars": {
+      "main": [[{ "node": "Build character bible", "type": "main", "index": 0 }]]
+    },
+    "Build character bible": {
+      "main": [[{ "node": "Build story prompt", "type": "main", "index": 0 }]]
+    },
+    "Build story prompt": {
+      "main": [[{ "node": "Generate story JSON", "type": "main", "index": 0 }]]
+    },
+    "Generate story JSON": {
+      "main": [[{ "node": "Parse story JSON", "type": "main", "index": 0 }]]
+    },
+    "Parse story JSON": {
+      "main": [[
+        { "node": "Prepare story_starts", "type": "main", "index": 0 },
+        { "node": "Prepare paragraph rows (text only)", "type": "main", "index": 0 },
+        { "node": "Prepare DELETE old choices", "type": "main", "index": 0 }
+      ]]
+    },
+    "Prepare story_starts": {
+      "main": [[{ "node": "Upsert story_starts", "type": "main", "index": 0 }]]
+    },
+    "Prepare paragraph rows (text only)": {
+      "main": [[{ "node": "Upsert paragraphs", "type": "main", "index": 0 }]]
+    },
+    "Prepare DELETE old choices": {
+      "main": [[{ "node": "DELETE old choices", "type": "main", "index": 0 }]]
+    },
+    "DELETE old choices": {
+      "main": [[{ "node": "Prepare new choices", "type": "main", "index": 0 }]]
+    },
+    "Prepare new choices": {
+      "main": [[{ "node": "INSERT new choices", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "regen-text-v1-001",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "027eb02d4a7b0317fa0bdafe90c76187906eee4230a62cbad1a63f53a21b3d79"
+  },
+  "id": "regenerate-story-text-001",
+  "tags": []
+}
