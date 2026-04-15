@@ -8,10 +8,10 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.4,
       "position": [
-        5392,
-        2224
+        14144,
+        4352
       ],
-      "id": "3af15f67-06b6-473e-a59d-6740b1cd7ea9",
+      "id": "f819aab2-38ef-4301-b1ab-5a96c5b81e3e",
       "name": "When chat message received",
       "webhookId": "e5c929f5-46c5-41ed-af0d-52bbdd34b6eb"
     },
@@ -22,10 +22,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5568,
-        2224
+        14320,
+        4352
       ],
-      "id": "1fdc181c-da45-41bd-ae96-aa3a3a0c0083",
+      "id": "2a9f8765-5d45-4ef8-90bf-b93c3b93a701",
       "name": "Analyze Input"
     },
     {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5760,
-        2048
+        14512,
+        4176
       ],
-      "id": "924fd924-0357-49d9-8d6c-68c635dc17f1",
+      "id": "0441dccf-9dd4-4964-baf6-e12453d65342",
       "name": "Prepare fetch ALL avatars"
     },
     {
@@ -51,10 +51,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        5952,
-        2096
+        14704,
+        4224
       ],
-      "id": "40219068-028d-44d7-945e-217b1d7e1e97",
+      "id": "91fc6b1f-9a7f-4166-b207-98e5b8695d92",
       "name": "Fetch avatars (character_prompt)",
       "retryOnFail": true,
       "maxTries": 3,
@@ -73,10 +73,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6208,
-        2048
+        14960,
+        4176
       ],
-      "id": "9df8bdec-ab97-456c-8c3a-66753ae37254",
+      "id": "029898aa-53af-4fff-bab0-b618d6120ed4",
       "name": "Build character bible"
     },
     {
@@ -88,23 +88,23 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        6208,
-        1840
+        14960,
+        3968
       ],
-      "id": "3d3adf44-1e34-4f25-9809-61a253d17a8f",
+      "id": "15fb904a-d0b9-4590-ad7f-ffef659bec33",
       "name": "Merge chatInput + character bible"
     },
     {
       "parameters": {
-        "jsCode": "const merge = $('Merge chatInput + character bible').first().json;\nconst storyInput = (merge.chatInput || '').trim();\nconst characterBible = merge.characterBible || '';\nconst characterPrompts = merge.characterPrompts || [];\nconst characterTraits = merge.characterTraits || '';\nconst universeId = merge.universeId || 'univ-fallback';\nconst detectedSetting = merge.detectedSetting || { setting: 'aventure' };\nconst inputType = merge.inputType || 'theme';\n\nconst taskBlock = inputType === 'full_story'\n  ? '- Texte complet fourni. Decoupe en 2 histoires de 5 pages qui convergent.'\n  : '- Theme fourni. Invente 2 histoires de 5 pages qui convergent vers la meme fin.';\n\nconst traitBlock = characterTraits\n  ? '\\nTRAITS DE PERSONNALITE (influencent les reactions, decisions et arc narratif) :\\n' + characterTraits + '\\n'\n  : '';\n\nconst fullPrompt = `Tu es un auteur narratif manga pour enfants (6-10 ans). Tu crees une histoire interactive avec 2 CHEMINS qui CONVERGENT.\n\n=== CONCEPT ===\nL'enfant choisit entre 2 accroches (story_starts). Selon son choix, il voit 5 pages avec des images adaptees a son chemin. Les 2 chemins divergent au debut (pages 1-2) puis convergent vers la meme histoire (pages 3-4-5). Le personnage principal doit etre STRICTEMENT identique sur chaque illustration.\n\n=== BIBLE VISUELLE (RESPECT ABSOLU DANS CHAQUE IMAGE) ===\n${characterBible}\n=== FIN BIBLE VISUELLE ===\n${traitBlock}\nENTREE UTILISATEUR :\n${storyInput || '(aucun theme - invente une aventure a branches)'}\n\nIDENTIFIANT UNIVERS : ${universeId}\n\n=== STORY STARTS (2 accroches) ===\n- Exactement 2 story_starts : 1 titre (max 6 mots) + 1 phrase d'accroche (teaser court).\n- start-A a first_page_id = \"p1a\", start-B a first_page_id = \"p1b\".\n- Les 2 accroches proposent 2 ambiances/angles DIFFERENTS pour la meme aventure.\n\n=== STRUCTURE : 7 PAGES (5 par parcours, 2 chemins) ===\n\nPAGES DIVERGENTES (images differentes selon le chemin) :\n- p1a : Ouverture chemin A. Paragraphe riche et immersif (4-5 phrases). Image unique adaptee au choix A. 2 choix -> p2a.\n- p1b : Ouverture chemin B. Paragraphe riche et immersif (4-5 phrases). Image unique adaptee au choix B. 2 choix -> p2b.\n- p2a : Developpement chemin A. Progression de l'histoire cote A (2-3 phrases). Image unique. 2 choix -> p3.\n- p2b : Developpement chemin B. Progression de l'histoire cote B (2-3 phrases). Image unique. 2 choix -> p3.\n\nPAGES CONVERGENTES (meme image, meme texte pour les 2 chemins) :\n- p3 : CONVERGENCE. Les 2 chemins se rejoignent ici de maniere naturelle. Point tournant (2-3 phrases). 2 choix -> p4.\n- p4 : CLIMAX. Moment fort de l'aventure (2-3 phrases). 2 choix -> p5.\n- p5 : FIN. Resolution positive et satisfaisante (2-3 phrases). choices = [].\n\n=== TRANSITIONS INTELLIGENTES ===\n- La convergence a p3 doit etre NATURELLE : les 2 chemins menent logiquement au meme point.\n- p2a et p2b doivent preparer la convergence (indices communs, destination commune).\n- Les choix a chaque page sont narratifs (interaction) mais menent a la page suivante du chemin.\n\n=== INFLUENCE DES TRAITS ===\n- Les traits du personnage se manifestent dans ses reactions et les choix proposes.\n\nTACHE :\n${taskBlock}\n- p1a et p1b : 4-5 phrases riches. Decor, sensations, emotions.\n- p2a, p2b, p3, p4, p5 : 2-3 phrases percutantes.\n- Chaque page a paragraph_text, scene_summary et panels.\n- Chaque choix a id, text (max 10 mots), next_page_id.\n- Langue : francais, phrases simples, max 15 mots par phrase.\n\n=== CONTRAINTES IMAGES (CRITIQUE) ===\n- scene_summary = description visuelle PURE. ZERO texte/bulle/dialogue dans l'image.\n- CHAQUE scene_summary re-decrit le personnage (cheveux, vetements, accessoires, couleurs).\n- p1a/p1b et p2a/p2b DOIVENT avoir des scenes visuellement DIFFERENTES (decors, actions distinctes).\n- p3, p4, p5 : memes images pour les 2 chemins.\n\nFORMAT : JSON strict, pas de markdown.\n\nSCHEMA :\n{\n  \"universe\": { \"id\": \"${universeId}\", \"name\": \"str\", \"description\": \"1 phrase\", \"image_url\": \"\", \"color\": \"#hex\", \"emoji\": \"emoji\", \"gender\": \"girl|boy\", \"display_order\": 1 },\n  \"story_starts\": [\n    { \"id\": \"start-A\", \"title\": \"max 6 mots\", \"text\": \"accroche A\", \"first_page_id\": \"p1a\" },\n    { \"id\": \"start-B\", \"title\": \"max 6 mots\", \"text\": \"accroche B\", \"first_page_id\": \"p1b\" }\n  ],\n  \"pages\": [\n    { \"page_id\": \"p1a\", \"universe_id\": \"${universeId}\", \"paragraph_text\": \"ouverture A\", \"scene_summary\": \"...\", \"panels\": [...], \"choices\": [{ \"id\": \"c-p1a-1\", \"text\": \"...\", \"next_page_id\": \"p2a\" }, { \"id\": \"c-p1a-2\", \"text\": \"...\", \"next_page_id\": \"p2a\" }] },\n    { \"page_id\": \"p1b\", ..., \"choices\": [{ ..., \"next_page_id\": \"p2b\" }, { ..., \"next_page_id\": \"p2b\" }] },\n    { \"page_id\": \"p2a\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }, { ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p2b\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }, { ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p3\", ..., \"choices\": [{ ..., \"next_page_id\": \"p4\" }, { ..., \"next_page_id\": \"p4\" }] },\n    { \"page_id\": \"p4\", ..., \"choices\": [{ ..., \"next_page_id\": \"p5\" }, { ..., \"next_page_id\": \"p5\" }] },\n    { \"page_id\": \"p5\", ..., \"choices\": [] }\n  ]\n}\n\nREGLES :\n- Exactement 7 pages : p1a, p1b, p2a, p2b, p3, p4, p5.\n- 2 story_starts avec first_page_id.\n- universe_id = \"${universeId}\" sur chaque page.\n- Parcours enfant = 5 pages max (p1a->p2a->p3->p4->p5 OU p1b->p2b->p3->p4->p5).`;\n\nreturn [{ json: { fullPrompt, characterBible, characterPrompts, characterTraits, universeId, detectedSetting, inputType } }];"
+        "jsCode": "const merge = $('Merge chatInput + character bible').first().json;\nconst storyInput = (merge.chatInput || '').trim();\nconst characterBible = merge.characterBible || '';\nconst characterPrompts = merge.characterPrompts || [];\nconst characterTraits = merge.characterTraits || '';\nconst universeId = merge.universeId || 'univ-fallback';\nconst detectedSetting = merge.detectedSetting || { setting: 'aventure' };\nconst inputType = merge.inputType || 'theme';\n\nconst taskBlock = inputType === 'full_story'\n  ? '- Texte complet fourni. Decoupe en 2 histoires de 5 pages qui convergent.'\n  : '- Theme fourni. Invente 2 histoires de 5 pages qui convergent vers la meme fin.';\n\nconst traitBlock = characterTraits\n  ? '\\nTRAITS DE PERSONNALITE (influencent les reactions, decisions et arc narratif) :\\n' + characterTraits + '\\n'\n  : '';\n\nconst fullPrompt = `Tu es un auteur narratif manga pour enfants (6-10 ans). Tu crees une histoire interactive avec 2 CHEMINS qui CONVERGENT.\n\n=== CONCEPT ===\nL'enfant choisit entre 2 accroches (story_starts). Selon son choix, il voit 5 pages avec des images adaptees a son chemin. Les 2 chemins divergent au debut (pages 1-2) puis convergent vers la meme histoire (pages 3-4-5). Le personnage principal doit etre STRICTEMENT identique sur chaque illustration.\n\nOBJECTIF : créer une histoire immersive, captivante et pleine de suspense adaptée aux enfants (5–10 ans), avec un fort sentiment d'aventure et de fierté.\n\n=== BIBLE VISUELLE (RESPECT ABSOLU DANS CHAQUE IMAGE) ===\n${characterBible}\n=== FIN BIBLE VISUELLE ===\n\n${traitBlock}\n\nENTREE UTILISATEUR :\n${storyInput || '(aucun theme - invente une aventure a branches)'}\n\nIDENTIFIANT UNIVERS : ${universeId}\n\n---\n\n=== STORY STARTS (2 accroches) ===\n- Exactement 2 story_starts : 1 titre (max 6 mots) + 1 phrase d'accroche (teaser court).\n- start-A a first_page_id = \"p1a\", start-B a first_page_id = \"p1b\".\n- Les 2 accroches doivent proposer 2 débuts intrigants et DIFFERENTS.\n- Chaque accroche doit créer une QUESTION ou un mystère qui donne envie de continuer.\n\n---\n\n=== STRUCTURE : 7 PAGES (5 par parcours, 2 chemins) ===\n\nPAGES DIVERGENTES :\n\n- p1a / p1b :\n  - 4-5 phrases riches, immersives.\n  - Introduire un mystère, un problème ou une situation inattendue.\n  - Donner envie de savoir \"ce qui va se passer ensuite\".\n  - Atmosphère forte (peur douce, curiosité, surprise, tension légère).\n\n- p2a / p2b :\n  - 2-3 phrases.\n  - Faire monter la tension ou la difficulté.\n  - Introduire un obstacle, un doute ou un danger léger.\n  - Préparer la convergence (indice commun).\n\n---\n\nPAGES CONVERGENTES :\n\n- p3 (CONVERGENCE) :\n  - Les 2 chemins se rejoignent naturellement.\n  - Révéler une partie du mystère.\n  - Introduire un enjeu plus important.\n  - Donner une sensation de \"ok maintenant ça devient sérieux\".\n\n- p4 (CLIMAX) :\n  - Moment de tension maximale.\n  - Le personnage doit prendre une décision importante.\n  - Utiliser ses qualités (traits).\n  - Donner un vrai moment de suspense.\n\n- p5 (FIN) :\n  - Résolution positive.\n  - Moment de fierté ou de réussite.\n  - Émotion finale forte (joie, soulagement, admiration).\n\n---\n\n=== RYTHME & SUSPENSE (CRITIQUE) ===\n- Chaque page doit donner envie de voir la suivante.\n- Finir certaines phrases avec une tension ou une surprise.\n-Rends l'histoire tres captivante pour un enfant.\nAjoute des moments de surprise, des mysteres progressifs et des questions qui donnent envie de tourner la page.\nChaque page doit se terminer avec une tension douce, une decouverte, un doute ou un choix important.\nLe danger doit rester poetique et rassurant, jamais violent ni effrayant.\nLe lecteur doit ressentir l'emerveillement, la curiosite et la fierte de comprendre\n\n---\n\n=== TRANSITIONS INTELLIGENTES ===\n- La convergence a p3 doit être naturelle et logique.\n- p2a et p2b doivent contenir un élément commun (lieu, objet, événement).\n- Les choix donnent une illusion de contrôle mais ne cassent pas la narration.\n\n---\n\n=== INFLUENCE DES TRAITS ===\n- Les traits du personnage influencent :\n  - ses décisions\n  - ses réactions\n  - la manière dont il résout le problème\n\n---\n\n=== QUALITÉ D’ÉCRITURE ===\n- Langue : français\n- Phrases simples, max 15 mots\n- Ton vivant, immersif, enfant-friendly\n- Montrer les émotions plutôt que les expliquer\n\n\n---\n\n=== STRUCTURE DE SORTIE ===\n- Chaque page a :\n  - paragraph_text\n  - scene_summary\n  - panels\n- Chaque choix a :\n  - id\n  - text (max 10 mots)\n  - next_page_id\n\n---\n\n=== CONTRAINTES IMAGES (CRITIQUE) ===\n- scene_summary = description visuelle PURE (aucun texte, bulle ou UI).\n- CHAQUE scene_summary re-décrit le personnage (cohérence totale).\n- p1a/p1b et p2a/p2b DOIVENT être visuellement DIFFERENTS.\n- p3, p4, p5 = EXACTEMENT les mêmes scènes pour les 2 chemins.\n\n---\n\n=== PANELS (CRITIQUE) ===\n- Chaque page doit contenir STRICTEMENT 2 ou 3 panels maximum.\n- Chaque panel montre un moment DIFFERENT de la scène.\n- Les panels doivent raconter une progression visuelle claire (début → action → résultat).\n- Aucun panel ne doit être dupliqué, similaire ou légèrement modifié.\n- Chaque panel doit avoir une composition différente (pose, angle de caméra, action, cadrage).\n\n- Les descriptions des panels doivent être TRÈS PRÉCISES et VISUELLES :\n  - décrire l’action exacte du personnage\n  - décrire la position du corps (debout, en mouvement, en train d’agir)\n  - décrire l’environnement et les changements visibles\n  - décrire l’émotion ou la réaction visible\n\n- Chaque panel doit introduire un CHANGEMENT CLAIR :\n  - mouvement du personnage\n  - interaction avec un objet ou un élément\n  - transformation de l’environnement\n  - progression de l’action\n\n- Les panels doivent être compréhensibles sans texte et raconter une mini-histoire complète.\n\n- ÉVITER absolument :\n  - même pose répétée\n  - même cadrage\n  - même décor sans évolution\n  - simple zoom ou variation mineure\n\n- Si deux panels semblent similaires ou redondants → REGENERATE.\n\n---\n\nTACHE :\n${taskBlock}\n\nFORMAT : JSON strict, pas de markdown.\n\nSCHEMA :\n{\n  \"universe\": { \"id\": \"${universeId}\", \"name\": \"str\", \"description\": \"1 phrase\", \"image_url\": \"\", \"color\": \"#hex\", \"emoji\": \"emoji\", \"gender\": \"girl|boy\", \"display_order\": 1 },\n  \"story_starts\": [\n    { \"id\": \"start-A\", \"title\": \"max 6 mots\", \"text\": \"accroche A\", \"first_page_id\": \"p1a\" },\n    { \"id\": \"start-B\", \"title\": \"max 6 mots\", \"text\": \"accroche B\", \"first_page_id\": \"p1b\" }\n  ],\n  \"pages\": [\n    { \"page_id\": \"p1a\", \"universe_id\": \"${universeId}\", \"paragraph_text\": \"ouverture A\", \"scene_summary\": \"...\", \"panels\": [...], \"choices\": [{ \"id\": \"c-p1a-1\", \"text\": \"...\", \"next_page_id\": \"p2a\" }, { \"id\": \"c-p1a-2\", \"text\": \"...\", \"next_page_id\": \"p2a\" }] },\n    { \"page_id\": \"p1b\", ..., \"choices\": [{ ..., \"next_page_id\": \"p2b\" }, { ..., \"next_page_id\": \"p2b\" }] },\n    { \"page_id\": \"p2a\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }, { ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p2b\", ..., \"choices\": [{ ..., \"next_page_id\": \"p3\" }, { ..., \"next_page_id\": \"p3\" }] },\n    { \"page_id\": \"p3\", ..., \"choices\": [{ ..., \"next_page_id\": \"p4\" }, { ..., \"next_page_id\": \"p4\" }] },\n    { \"page_id\": \"p4\", ..., \"choices\": [{ ..., \"next_page_id\": \"p5\" }, { ..., \"next_page_id\": \"p5\" }] },\n    { \"page_id\": \"p5\", ..., \"choices\": [] }\n  ]\n}\n\nREGLES :\n- Exactement 7 pages : p1a, p1b, p2a, p2b, p3, p4, p5.\n- 2 story_starts avec first_page_id.\n- universe_id = \"${universeId}\" sur chaque page.\n- Parcours enfant = 5 pages max (p1a->p2a->p3->p4->p5 OU p1b->p2b->p3->p4->p5).`;\n\nreturn [{ json: { fullPrompt, characterBible, characterPrompts, characterTraits, universeId, detectedSetting, inputType } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6432,
-        1840
+        15184,
+        3968
       ],
-      "id": "ed29cdd9-90b2-406b-9f19-23e2f84142e7",
+      "id": "da8a6cb6-f176-4d97-95e0-d2bdca65c66d",
       "name": "Build story prompt with bible"
     },
     {
@@ -132,10 +132,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
       "position": [
-        6656,
-        1840
+        15408,
+        3968
       ],
-      "id": "98178639-2771-4bd6-ac73-66008d7ca021",
+      "id": "217a05d1-553c-4732-b37c-af55bcb23648",
       "name": "Generate story JSON",
       "credentials": {
         "openAiApi": {
@@ -146,15 +146,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json?.output?.[0]?.content?.[0]?.text;\nif (!raw) throw new Error('No LLM output received. Check Generate story JSON node.');\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('LLM returned invalid JSON: ' + e.message + ' | First 300 chars: ' + cleaned.substring(0, 300));\n}\n\nlet pages = parsed.pages || (parsed.page ? [parsed.page] : []);\nif (!pages || pages.length === 0) throw new Error('No pages found in LLM output.');\n\nlet preGenUniverseId = '';\nlet detectedSetting = { color: '#6B7DB3', emoji: '\\u{1F4D6}' };\nlet characterBible = '';\nlet characterPrompts = [];\nlet characterTraits = '';\nlet avatarGender = 'girl';\ntry {\n  const promptData = $('Build story prompt with bible').first().json;\n  preGenUniverseId = promptData.universeId || '';\n  detectedSetting = promptData.detectedSetting || detectedSetting;\n  characterBible = promptData.characterBible || '';\n  characterPrompts = promptData.characterPrompts || [];\n  characterTraits = promptData.characterTraits || '';\n} catch (e) {}\ntry {\n  const m = $('Merge chatInput + character bible').first().json;\n  avatarGender = m.avatarGender || 'girl';\n} catch (e) {}\n\nconst universeId = preGenUniverseId || (parsed.universe && parsed.universe.id) || 'univ-fallback';\n\nconst universe = parsed.universe\n  ? { ...parsed.universe, id: universeId, color: parsed.universe.color || detectedSetting.color, emoji: parsed.universe.emoji || detectedSetting.emoji }\n  : { id: universeId, name: 'Univers genere', description: '', image_url: '', color: detectedSetting.color, emoji: detectedSetting.emoji, gender: avatarGender, display_order: 1 };\n\nconst BUCKET = 'BD-Pages';\nconst SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst now = new Date().toISOString();\n\n// Raw character_prompt as MODEL SHEET for Gemini\nconst modelSheetEntries = characterPrompts.length > 0\n  ? characterPrompts.map(cp => cp.name + ':\\n' + cp.prompt).join('\\n\\n')\n  : characterBible;\n\nconst MODEL_SHEET =\n'\\n=== CHARACTER MODEL SHEET (MANDATORY - ZERO DEVIATION) ===\\n\\n'\n+ modelSheetEntries\n+ '\\n\\n=== RENDERING RULES (ALL MANDATORY) ===\\n'\n+ '- EXACT same character on ALL pages: hair, face, eyes, skin tone, clothing, accessories, proportions, colors. ZERO deviation.\\n'\n+ '- ZERO text in image: no words, letters, numbers, speech bubbles, captions, watermarks, page numbers, UI elements, signs, or symbols.\\n'\n+ '- All panels COMPLETE and fully visible: no cut, half, or broken panels. Clean closed borders.\\n'\n+ '- Consistent panel style: same border thickness, spacing, and corners across all pages.\\n'\n+ '- Clean storybook/comic layout with margins on all sides. No panels touching image edges.\\n'\n+ '- Character clearly visible, never cut. Stable scale across pages.\\n'\n+ '- Same illustration style and line thickness on every page.\\n'\n+ '- Background matches scene context. No text or symbols in background.\\n'\n+ '- Soft, child-friendly pastel colors. No dark or aggressive tones.\\n'\n+ '- Child-safe: no violence, no scary elements.\\n'\n+ '- VALIDATION: if ANY text visible, ANY panel cut, or layout inconsistent, image is INVALID.\\n'\n+ '\\n=== END MODEL SHEET ===\\n';\n\nconst TRAIT_CONTEXT = characterTraits\n  ? '\\nCharacter personality (expression/mood): ' + characterTraits + '\\n'\n  : '';\n\nconst hasBranching = pages[0] && pages[0].page_id != null;\nconst pageIdToNumber = {};\nif (hasBranching) {\n  pages.forEach((p, i) => { if (p.page_id) pageIdToNumber[p.page_id] = i + 1; });\n}\n\n\n\nreturn pages.map((page, index) => {\n  const pageNumber = hasBranching ? (index + 1) : (page.page_number || index + 1);\n  const pageId = page.page_id || ('p' + pageNumber);\n  const fileName = `${universeId}-page-${pageId}.png`;\n  const storagePath = `${universeId}/${fileName}`;\n  let choices = page.choices || [];\n  if (hasBranching && choices.length) {\n    choices = choices.map(c => ({\n      ...c,\n      next_page_number: c.next_page_id ? pageIdToNumber[c.next_page_id] : null\n    }));\n  }\n  return {\n    json: {\n      universe,\n      universeId,\n      pageNumber,\n      pageId,\n      paragraphText: page.paragraph_text,\n      sceneSummary: page.scene_summary,\n      panels: page.panels,\n      choices,\n      storyStarts: parsed.story_starts || [],\n      avatarGender,\n      bucket: BUCKET,\n      fileName,\n      storagePath,\n      supabaseUrl: SUPABASE_URL,\n      createdAt: now,\n      geminiPrompt: [\n  MODEL_SHEET,\n  TRAIT_CONTEXT,\n  'Create a single children manga page illustration.',\n  '',\n  'STYLE: Soft pastel Japanese children manga. Warm colors. Expressive chibi characters.',\n  '',\n  'SCENE:',\n  page.scene_summary || '',\n  '',\n  'PANELS:',\n  JSON.stringify(page.panels),\n  '',\n  'VERIFY: character matches model sheet exactly | zero text in image | child-safe | consistent art style across all pages',\n].join('\\n')\n    }\n  };\n});"
+        "jsCode": "const raw = $input.first().json?.output?.[0]?.content?.[0]?.text;\nif (!raw) throw new Error('No LLM output received. Check Generate story JSON node.');\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('LLM returned invalid JSON: ' + e.message + ' | First 300 chars: ' + cleaned.substring(0, 300));\n}\n\nlet pages = parsed.pages || (parsed.page ? [parsed.page] : []);\nif (!pages || pages.length === 0) throw new Error('No pages found in LLM output.');\n\nlet preGenUniverseId = '';\nlet detectedSetting = { color: '#6B7DB3', emoji: '\\u{1F4D6}' };\nlet characterBible = '';\nlet characterPrompts = [];\nlet characterTraits = '';\nlet avatarGender = 'girl';\ntry {\n  const promptData = $('Build story prompt with bible').first().json;\n  preGenUniverseId = promptData.universeId || '';\n  detectedSetting = promptData.detectedSetting || detectedSetting;\n  characterBible = promptData.characterBible || '';\n  characterPrompts = promptData.characterPrompts || [];\n  characterTraits = promptData.characterTraits || '';\n} catch (e) {}\ntry {\n  const m = $('Merge chatInput + character bible').first().json;\n  avatarGender = m.avatarGender || 'girl';\n} catch (e) {}\n\nconst universeId = preGenUniverseId || (parsed.universe && parsed.universe.id) || 'univ-fallback';\n\nconst universe = parsed.universe\n  ? { ...parsed.universe, id: universeId, color: parsed.universe.color || detectedSetting.color, emoji: parsed.universe.emoji || detectedSetting.emoji }\n  : { id: universeId, name: 'Univers genere', description: '', image_url: '', color: detectedSetting.color, emoji: detectedSetting.emoji, gender: avatarGender, display_order: 1 };\n\nconst BUCKET = 'BD-Pages';\nconst SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst now = new Date().toISOString();\n\n// Raw character_prompt as MODEL SHEET for Gemini\nconst modelSheetEntries = characterPrompts.length > 0\n  ? characterPrompts.map(cp => cp.name + ':\\n' + cp.prompt).join('\\n\\n')\n  : characterBible;\n\nconst MODEL_SHEET =\n'\\n=== CHARACTER MODEL SHEET (MANDATORY - ZERO DEVIATION) ===\\n\\n'\n+ modelSheetEntries\n+ '\\n\\n=== CRITICAL RULES ===\\n'\n+ '- EXACT same character on ALL pages: same hair, face, eyes, skin tone, clothing, accessories, proportions and colors.\\n'\n+ '- ZERO creative deviation allowed.\\n'\n+ '\\n'\n+ '=== ABSOLUTE NO TEXT POLICY (CRITICAL) ===\\n'\n+ '- The image MUST contain ZERO text.\\n'\n+ '- NO page numbers.\\n'\n+ '- NO choices.\\n'\n+ '- NO UI elements.\\n'\n+ '- NO letters, words, symbols, or signs.\\n'\n+ '- NO speech bubbles or captions.\\n'\n+ '- NO hidden text in background.\\n'\n+ '- NO watermark or signature.\\n'\n+ '- If ANY text appears, the image is INVALID.\\n'\n+ '\\n'\n+ '=== PANEL INTEGRITY RULES (CRITICAL) ===\\n'\n+ '- Panels must be COMPLETE and FULLY visible.\\n'\n+ '- NO cut panels.\\n'\n+ '- NO half panels.\\n'\n+ '- NO panels going outside the image frame.\\n'\n+ '- ALL panel borders must be fully visible.\\n'\n+ '- Panels must be clean, closed shapes.\\n'\n+ '- NO broken or missing borders.\\n'\n+ '\\n'\n+ '=== PANEL CONSISTENCY ===\\n'\n+ '- Same panel style across ALL pages.\\n'\n+ '- Same border thickness (stroke).\\n'\n+ '- Same spacing between panels.\\n'\n+ '- Same rounded corners (if used).\\n'\n+ '- Do NOT change layout style randomly.\\n'\n+ '\\n'\n'=== PANEL STORYTELLING (CRITICAL) ===\\n'\n+ '- Each panel MUST show a DIFFERENT moment in time.\\n'\n+ '- Panels must represent a clear sequence: beginning → action → result.\\n'\n+ '- NEVER repeat the same scene, pose, or composition across panels.\\n'\n+ '- Each panel must introduce a NEW visual element (movement, reaction, change, discovery).\\n'\n+ '- Character position, pose, or camera angle MUST change between panels.\\n'\n+ '- Show progression of action: something MUST change from one panel to the next.\\n'\n+ '- Panels must feel like a mini-story inside one page.\\n'\n+ '- Avoid static scenes: each panel must contain action, emotion, or interaction.\\n'\n+ '- Panels must be visually distinct and instantly recognizable as different moments.\\n'\n+ '- The child must understand the story ONLY by looking at panels (no text needed).\\n'\n+ '\\n'\n  '=== PANEL STRUCTURE (CRITICAL) ===\\n'\n+ '- Panel 1: setup (introduce situation or environment)\\n'\n+ '- Panel 2: action (character doing something important)\\n'\n+ '- Panel 3: result (reaction or consequence)\\n'\n+ '- Each panel MUST be visually different.\\n'\n+ '- Different pose, different composition, different action.\\n'\n+ '- NEVER repeat same framing or scene.\\n'\n    + '\\n'\n+ '=== SAFE LAYOUT RULE ===\\n'\n+ '- Use a clean storybook layout OR clean comic layout.\\n'\n+ '- Keep margins on all sides.\\n'\n+ '- NEVER place panels touching or crossing image edges.\\n'\n+ '\\n'\n'=== CHARACTER LOCK (CRITICAL) ===\\n'\n+ '- The character design is LOCKED.\\n'\n+ '- SAME face, SAME hairstyle, SAME outfit in ALL panels.\\n'\n+ '- No variation allowed.\\n'\n+ '- Do NOT reinterpret the character.\\n'\n+ '- Do NOT simplify or change details.\\n'\n+ '- The character must look like the SAME exact person in every panel.\\n'\n+ '\\n'\n+ '=== COMPOSITION ===\\n'\n+ '- Character must be clearly visible.\\n'\n+ '- Do NOT cut head, face or body.\\n'\n+ '- Keep stable scale across pages.\\n'\n+ '\\n'\n+ '=== STYLE CONSISTENCY ===\\n'\n+ '- Same illustration style across all pages.\\n'\n+ '- Same line thickness and rendering.\\n'\n+ '\\n'\n+ '=== BACKGROUND ===\\n'\n+ '- Background must match the scene.\\n'\n+ '- MUST NOT contain text or symbols.\\n'\n+ '\\n'\n+ '=== COLORS & LIGHT ===\\n'\n+ '- Use soft, child-friendly colors.\\n'\n+ '- Avoid dark or aggressive tones.\\n'\n+ '\\n'\n+ '=== SAFETY ===\\n'\n+ '- No violence.\\n'\n+ '- No scary elements.\\n'\n+ '\\n'\n+ '=== HARD VALIDATION ===\\n'\n+ '- If ANY text is visible → REGENERATE.\\n'\n+ '- If ANY panel is cut or incomplete → REGENERATE.\\n'\n+ '- If panels show duplicated content → REGENERATE.\\n'\n+ '- If story progression is unclear → REGENERATE.\\n'\n+ '\\n'\n+ '=== END MODEL SHEET ===\\n';\n\nconst TRAIT_CONTEXT = characterTraits\n  ? '\\nCharacter personality (expression/mood): ' + characterTraits + '\\n'\n  : '';\n\n// Normalize LLM field names (handles camelCase vs snake_case variants)\npages = pages.map(p => ({\n  ...p,\n  page_id: p.page_id || p.pageId || null,\n  paragraph_text: p.paragraph_text || p.paragraphText || '',\n  scene_summary: p.scene_summary || p.sceneSummary || '',\n  choices: (p.choices || []).map(c => ({\n    ...c,\n    next_page_id: c.next_page_id || c.nextPageId || null,\n  })),\n}));\n\nconst hasBranching = pages[0] && pages[0].page_id != null;\nconst pageIdToNumber = {};\nif (hasBranching) {\n  pages.forEach((p, i) => { if (p.page_id) pageIdToNumber[p.page_id] = i + 1; });\n}\n\nreturn pages.map((page, index) => {\n  const pageNumber = hasBranching ? (index + 1) : (page.page_number || page.pageNumber || index + 1);\n  const pageId = page.page_id || ('p' + pageNumber);\n  const fileName = `${universeId}-page-${pageId}.png`;\n  const storagePath = `${universeId}/${fileName}`;\n  let choices = page.choices || [];\n  if (hasBranching && choices.length) {\n    choices = choices.map(c => ({\n      ...c,\n      next_page_number: c.next_page_id ? pageIdToNumber[c.next_page_id] : null\n    }));\n  }\n  return {\n    json: {\n      universe,\n      universeId,\n      pageNumber,\n      pageId,\n      paragraphText: page.paragraph_text,\n      sceneSummary: page.scene_summary,\n      panels: page.panels,\n      choices,\n      storyStarts: parsed.story_starts || [],\n      avatarGender,\n      bucket: BUCKET,\n      fileName,\n      storagePath,\n      supabaseUrl: SUPABASE_URL,\n      createdAt: now,\n      geminiPrompt: [\n  MODEL_SHEET,\n  TRAIT_CONTEXT,\n  'Create a single children manga page illustration.',\n  '',\n  'STYLE: Soft pastel Japanese children manga. Warm colors. Expressive chibi characters.',\n  '',\n  'SCENE:',\n  page.scene_summary || '',\n  '',\n  'PANELS:',\n  JSON.stringify(page.panels),\n  '',\n  'VERIFY: character matches model sheet exactly | zero text in image | child-safe | consistent art style across all pages',\n].join('\\n')\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6144,
-        2528
+        14896,
+        4656
       ],
-      "id": "6c0b1703-4359-4968-8e5a-7ae8b746e11c",
+      "id": "564b92fd-3fd6-47b0-ae40-db4c16fab4b6",
       "name": "Parse story JSON"
     },
     {
@@ -164,10 +164,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6544,
-        2304
+        15296,
+        4432
       ],
-      "id": "fb073a53-6892-4143-b465-592dd877868d",
+      "id": "89628a90-caca-4871-be63-28b748e057fc",
       "name": "Prepare universe row"
     },
     {
@@ -193,10 +193,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        6832,
-        2160
+        15584,
+        4288
       ],
-      "id": "d780e8da-46cb-49b2-ba0d-ce7a3f7d8949",
+      "id": "f1a4653d-e38e-47f8-be88-34bee4dca580",
       "name": "Upsert universe",
       "retryOnFail": true,
       "maxTries": 3,
@@ -210,15 +210,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const parseItem = $('Parse story JSON').first().json;\nconst starts = parseItem.storyStarts || [];\nconst universeId = parseItem.universeId;\n\nif (!starts.length || !universeId) {\n  console.log('No story_starts or missing universeId, skipping');\n  return [];\n}\n\n// Generate a truly unique id per row so new generations INSERT instead of overwriting.\n// Format: ss-{universeId_suffix}-{timestamp_base36}-{random}-{path_suffix}\n// path_id preserves the original LLM label (start-A, start-B) for sorting + page mapping.\nconst ts = Date.now().toString(36);\nconst univSuffix = universeId.replace('univ-', '').substring(0, 8);\n\nreturn starts.map(s => {\n  const pathLabel = (s.id || 'start-x').toLowerCase();\n  const pathSuffix = pathLabel.replace('start-', '');\n  const rand = Math.random().toString(36).substring(2, 6);\n  const uniqueId = `ss-${univSuffix}-${ts}-${rand}-${pathSuffix}`;\n  return {\n    json: {\n      id: uniqueId,\n      path_id: s.id || pathLabel,\n      universe_id: universeId,\n      title: s.title || 'Sans titre',\n      text: s.text || '',\n    }\n  };\n});"
+        "jsCode": "const parseItem = $('Parse story JSON').first().json;\nconst starts = parseItem.storyStarts || [];\nconst universeId = parseItem.universeId;\n\nif (!starts.length || !universeId) {\n  console.log('No story_starts or missing universeId, skipping');\n  return [];\n}\n\n// Generate a truly unique id per row so new generations INSERT instead of overwriting.\n// Format: ss-{universeId_suffix}-{timestamp_base36}-{random}-{path_suffix}\n// path_id preserves the original LLM label (start-A, start-B) for sorting + page mapping.\nconst ts = Date.now().toString(36);\nconst univSuffix = universeId.replace('univ-', '').substring(0, 8);\n\nreturn starts.map(s => {\n  const pathLabel = (s.id || 'start-x').toLowerCase();\n  const pathSuffix = pathLabel.replace('start-', '');\n  const rand = Math.random().toString(36).substring(2, 6);\n  const uniqueId = `ss-${univSuffix}-${ts}-${rand}-${pathSuffix}`;\n  return {\n    json: {\n      id: uniqueId,\n      path_id: s.id || pathLabel,\n      first_page_id: s.first_page_id || s.firstPageId || null,\n      universe_id: universeId,\n      title: s.title || 'Sans titre',\n      text: s.text || '',\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7168,
-        2336
+        15920,
+        4464
       ],
-      "id": "5ad1a4fc-c49d-4a3a-a825-b9ae6ebfbf5b",
+      "id": "e1be6494-c35a-4766-9d6d-c6c27cb40f15",
       "name": "Prepare story_starts rows"
     },
     {
@@ -244,10 +244,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        7504,
-        2336
+        16256,
+        4464
       ],
-      "id": "0c6f84ae-52be-487c-b782-05222d314927",
+      "id": "09489dd4-799a-471d-82d1-adfe6fdeff4b",
       "name": "Upsert story_starts",
       "retryOnFail": true,
       "maxTries": 3,
@@ -276,21 +276,21 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.1,
       "position": [
-        6880,
-        2896
+        15632,
+        5024
       ],
-      "id": "d43cebca-bd3e-4783-8f0c-72e378cd47d8",
+      "id": "5dc36b55-07c4-482c-bedd-ab0785b26e00",
       "name": "Generate single image",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
       "credentials": {
         "googlePalmApi": {
           "id": "yIkNrcZ8dCenkK89",
           "name": "Google Gemini(PaLM) Api account"
         }
       },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -319,12 +319,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        7600,
-        2576
+        16352,
+        4704
       ],
-      "id": "b552fb79-aca0-4639-be30-0f9c6b7024ac",
+      "id": "fb8d4944-a750-4870-bb83-378a5cee24fc",
       "name": "Upload image to Storage",
-      "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
@@ -333,7 +332,8 @@
           "id": "8YCd2l80cg0wfDQ1",
           "name": "Supabase account"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -342,10 +342,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7600,
-        2736
+        16352,
+        4864
       ],
-      "id": "b1b7423f-9557-439a-9d2e-ceb30adeb6f9",
+      "id": "9a92217b-0ff8-46a4-97d5-8d6af40a75fd",
       "name": "Prepare paragraph rows"
     },
     {
@@ -371,10 +371,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        7936,
-        2736
+        16688,
+        4864
       ],
-      "id": "79d42692-8ce3-48d4-ad62-bebe62d444a4",
+      "id": "5843d319-58a9-4b9f-9800-3e2596e00887",
       "name": "Upsert story_paragraphs",
       "retryOnFail": true,
       "maxTries": 3,
@@ -388,15 +388,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst results = [];\nfor (const item of items) {\n  if (!item.json.universeId || !item.json.pageNumber) continue;\n  const choices = item.json.choices || [];\n  choices.forEach((choice, index) => {\n    const row = {\n      id: choice.id || `choice-p${item.json.pageNumber}-${String.fromCharCode(97 + index)}`,\n      universe_id: item.json.universeId,\n      page_number: item.json.pageNumber,\n      choice_order: index + 1,\n      text: choice.text || '',\n      created_at: item.json.createdAt\n    };\n    if (choice.next_page_number != null) row.next_page_number = choice.next_page_number;\n    results.push({ json: row });\n  });\n}\nreturn results;"
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst ts = Date.now().toString(36);\nfor (const item of items) {\n  if (!item.json.universeId || !item.json.pageNumber) continue;\n  const univSuffix = item.json.universeId.replace('univ-', '').substring(0, 8);\n  const choices = item.json.choices || [];\n  choices.forEach((choice, index) => {\n    const rand = Math.random().toString(36).substring(2, 6);\n    const row = {\n      id: `nc-${univSuffix}-${ts}-${rand}-p${item.json.pageNumber}-${String.fromCharCode(97 + index)}`,\n      universe_id: item.json.universeId,\n      page_number: item.json.pageNumber,\n      choice_order: index + 1,\n      text: choice.text || '',\n      created_at: item.json.createdAt\n    };\n    if (choice.next_page_number != null) row.next_page_number = choice.next_page_number;\n    results.push({ json: row });\n  });\n}\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7600,
-        2896
+        16352,
+        5024
       ],
-      "id": "a5afbea8-9c21-4fba-93cc-bb00521c8137",
+      "id": "89d2deeb-71a7-4951-9bed-9e49f12d6331",
       "name": "Prepare choices rows"
     },
     {
@@ -422,10 +422,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        7936,
-        2896
+        16688,
+        5024
       ],
-      "id": "c27ffafe-98a2-4af6-a29f-f6b437074393",
+      "id": "88cf82dd-3cf3-4c0e-8504-5b01332270c9",
       "name": "Upsert narrative_choices",
       "retryOnFail": true,
       "maxTries": 3,
@@ -444,24 +444,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7232,
-        2896
+        15984,
+        5024
       ],
-      "id": "recombine-data-image-001",
+      "id": "b9d91811-d3a8-48bb-a5df-bcaf1e1c8f5e",
       "name": "Recombine data + image"
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        6400,
-        2736
+        15152,
+        4864
       ],
-      "id": "split-batch-img-001",
+      "id": "062d533e-dc79-4046-be50-bcb84f41e176",
       "name": "Loop pages (1 by 1)"
     },
     {
@@ -471,11 +470,105 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6608,
-        2896
+        15360,
+        5024
       ],
-      "id": "save-metadata-001",
+      "id": "f818dacf-43ba-4a34-a4c7-399116c23d8c",
       "name": "Save page metadata"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet characterBible = '';\nlet characterPrompts = [];\ntry {\n  const bibleData = $('Build character bible').first().json;\n  characterBible = bibleData.characterBible || '';\n  characterPrompts = bibleData.characterPrompts || [];\n} catch(e) {}\n\nconst modelSheet = characterPrompts.length > 0\n  ? characterPrompts.map(cp => cp.name + ':\\n' + cp.prompt).join('\\n\\n')\n  : characterBible;\n\nconst coverPrompt = [\n  '=== CHARACTER MODEL SHEET (MANDATORY - ZERO DEVIATION) ===',\n  modelSheet,\n  '=== END CHARACTER MODEL SHEET ===',\n  '',\n  'Create a STUNNING manga cover illustration for a children manga book.',\n  'This is the COVER of the book, NOT a page from the story.',\n  'It must be spectacular, captivating, with a strong WOW effect that makes a child excited to read.',\n  '',\n  'UNIVERSE: ' + (item.name || 'Adventure World'),\n  'DESCRIPTION: ' + (item.description || ''),\n  'COLOR PALETTE: dominant ' + (item.color || '#6B7DB3') + ' with rich complementary colors',\n  '',\n  'FORMAT (MANDATORY):',\n  '- Create a wide landscape cover optimized for a mobile card preview.',\n  '- Target aspect ratio: about 1.7:1.',\n  '- Recommended generation size: 1024x600.',\n  '- The cover will be displayed with resizeMode cover inside a responsive card.',\n  '- Keep all critical content inside the central safe area so slight side cropping never cuts the face, head, or key action.',\n  '',\n  'COMPOSITION (MANDATORY):',\n  '- Main character MUST be front and center, taking 50-60% of the image.',\n  '- Dynamic heroic pose: confident, adventurous, looking forward or slightly upward.',\n  '- Character MUST match the model sheet EXACTLY (hair, face, clothes, accessories).',\n  '- Universe panorama as dramatic background: sweeping, cinematic, immersive.',\n  '- Depth layers: character sharp in foreground, universe environment behind with atmosphere.',\n  '',\n  'STYLE (MANDATORY):',\n  '- Premium Japanese children manga cover quality.',\n  '- Vibrant, saturated colors with magical glow effects.',\n  '- Dramatic warm lighting with sparkles, light rays or energy effects.',\n  '- Rich details in both character and background.',\n  '- Professional illustration standard, not sketch or draft.',\n  '',\n  'ABSOLUTE RULES:',\n  '- ZERO text in the image. No title, words, letters, numbers, symbols, signs.',\n  '- No speech bubbles, no UI elements, no watermarks.',\n  '- No panels or comic grid. Single continuous illustration.',\n  '- Child-safe: no violence, no scary elements.',\n  '- The image must radiate adventure, wonder and excitement.',\n].join('\\n');\n\nconst BUCKET = 'BD-Pages';\nconst SUPABASE_URL = 'https://wddatxgqhdiosuhcztex.supabase.co';\nconst storagePath = item.id + '/cover.png';\n\nreturn [{ json: {\n  ...item,\n  coverPrompt,\n  bucket: BUCKET,\n  supabaseUrl: SUPABASE_URL,\n  coverStoragePath: storagePath,\n  coverPublicUrl: SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + storagePath\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [15296, 4050],
+      "id": "cover-build-prompt-001",
+      "name": "Build cover prompt"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "={{$json.coverPrompt}}",
+        "options": {
+          "binaryPropertyOutput": "data"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [15520, 4050],
+      "id": "cover-generate-001",
+      "name": "Generate universe cover",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yIkNrcZ8dCenkK89",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const metadata = $('Build cover prompt').first().json;\nconst image = $input.first();\nconst hasBinary = !!(image.binary && image.binary.data);\nif (!hasBinary) {\n  console.log('Gemini failed to generate universe cover - no binary returned');\n}\nreturn [{\n  json: { ...metadata, coverGenerated: hasBinary },\n  binary: hasBinary ? image.binary : undefined\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [15740, 4050],
+      "id": "cover-process-001",
+      "name": "Process cover result"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wddatxgqhdiosuhcztex.supabase.co/storage/v1/object/{{ $json.bucket }}/{{ $json.coverStoragePath }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "image/png" },
+            { "name": "x-upsert", "value": "true" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [15960, 4050],
+      "id": "cover-upload-001",
+      "name": "Upload cover to Storage",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "8YCd2l80cg0wfDQ1",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const coverData = $('Process cover result').first().json;\nreturn [{\n  json: {\n    id: coverData.id,\n    name: coverData.name || 'Unnamed Universe',\n    description: coverData.description || '',\n    image_url: coverData.coverGenerated ? coverData.coverPublicUrl : '',\n    color: coverData.color || '#6B7DB3',\n    emoji: coverData.emoji || '\\u{1F4D6}',\n    gender: coverData.gender || 'girl',\n    display_order: coverData.display_order || 1,\n    avatar_character_names: coverData.avatar_character_names || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [16180, 4050],
+      "id": "cover-finalize-001",
+      "name": "Finalize universe with cover"
     }
   ],
   "pinData": {},
@@ -563,6 +656,61 @@
       ]
     },
     "Prepare universe row": {
+      "main": [
+        [
+          {
+            "node": "Build cover prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build cover prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate universe cover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate universe cover": {
+      "main": [
+        [
+          {
+            "node": "Process cover result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process cover result": {
+      "main": [
+        [
+          {
+            "node": "Upload cover to Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload cover to Storage": {
+      "main": [
+        [
+          {
+            "node": "Finalize universe with cover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize universe with cover": {
       "main": [
         [
           {
@@ -670,13 +818,6 @@
       "main": [
         [
           {
-            "node": "Save page metadata",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "Upload image to Storage",
             "type": "main",
             "index": 0
@@ -688,6 +829,13 @@
           },
           {
             "node": "Prepare choices rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save page metadata",
             "type": "main",
             "index": 0
           }
@@ -712,7 +860,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "c74d7f0f-533f-4e9e-b5b0-ee13759c98a8",
+  "versionId": "3c5eb9eb-c5e4-4922-b868-3aca57e303db",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "027eb02d4a7b0317fa0bdafe90c76187906eee4230a62cbad1a63f53a21b3d79"
