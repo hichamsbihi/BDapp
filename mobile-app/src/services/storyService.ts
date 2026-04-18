@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
-import { NarrativeChoice, StoryStart, Universe, UniverseConfig } from '@/types';
+import { NarrativeChoice, StoryStart, Universe, UniverseConfig, GeneratedStory, StoryPart } from '@/types';
+import {
+  getMockStoriesForUniverse,
+  getMockPartsForStory,
+  getMockUniverses,
+} from '@/mocks/storyMock';
 
 // Supabase row types (snake_case from DB)
 interface UniverseRow {
@@ -7,11 +12,12 @@ interface UniverseRow {
   name: string;
   description: string;
   image_url: string;
+  background_image_url: string;
   color: string;
+  language: string;
   emoji: string;
   gender: 'boy' | 'girl';
   display_order: number;
-  avatar_character_names: string[];
 }
 
 interface StoryStartRow {
@@ -34,16 +40,21 @@ interface NarrativeChoiceRow {
   next_page_number?: number | null;
 }
 
+// TODO: set to false to switch to real Supabase data
+const USE_MOCK = true;
+
 // DB row to app model mappers
 const toUniverseConfig = (row: UniverseRow): UniverseConfig => ({
   id: row.id,
   name: row.name,
   description: row.description,
   imageUrl: row.image_url,
+  backgroundImageUrl: row.background_image_url,
   color: row.color,
+  language: row.language,
   emoji: row.emoji,
-  // isLocked is computed client-side via unlockedUniverses in Zustand store
   isLocked: true,
+  gender: row.gender,
 });
 
 const toStoryStart = (row: StoryStartRow): StoryStart => ({
@@ -63,27 +74,19 @@ const toNarrativeChoice = (row: NarrativeChoiceRow): NarrativeChoice => ({
 });
 
 /**
- * Fetch universes linked to a specific avatar character.
- * Falls back to gender-based filtering when avatar has no character name
- * (e.g. during migration or if avatar_character_names is not yet populated).
+ * Fetch universes filtered by gender (boy/girl).
  */
-export const fetchUniversesByAvatar = async (
-  avatarCharacterName: string | undefined,
+export const fetchUniversesByGender = async (
   gender: 'boy' | 'girl'
 ): Promise<UniverseConfig[]> => {
-  let query = supabase
+  if (USE_MOCK) return getMockUniverses(gender);
+
+  const { data, error } = await supabase
     .from('universes')
     .select('*')
+    .eq('gender', gender)
     .order('display_order', { ascending: true });
 
-  if (avatarCharacterName) {
-    query = query.contains('avatar_character_names', [avatarCharacterName]);
-  } else {
-    // Fallback for profiles without avatarCharacterName
-    query = query.eq('gender', gender);
-  }
-
-  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map(toUniverseConfig);
 };
@@ -218,4 +221,44 @@ export const fetchParagraphById = async (
     pageNumber: data.page_number ?? 0,
     step: data.step ?? undefined,
   };
+};
+
+// ─── Story Generator model (stories + parts) ───────────────
+
+/**
+ * Fetch generated stories for a universe.
+ * Returns mock data for now; swap to Supabase when tables are populated.
+ */
+export const fetchStoriesForUniverse = async (
+  universeId: string
+): Promise<GeneratedStory[]> => {
+  if (USE_MOCK) return getMockStoriesForUniverse(universeId);
+
+  const { data, error } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('universeId', universeId)
+    .eq('status', 'complete')
+    .order('createdAt', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as GeneratedStory[];
+};
+
+/**
+ * Fetch all parts for a story, ordered by partNumber.
+ */
+export const fetchPartsForStory = async (
+  storyId: string
+): Promise<StoryPart[]> => {
+  if (USE_MOCK) return getMockPartsForStory(storyId);
+
+  const { data, error } = await supabase
+    .from('parts')
+    .select('*')
+    .eq('storyId', storyId)
+    .order('partNumber', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as StoryPart[];
 };

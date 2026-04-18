@@ -72,7 +72,7 @@ Table **`public.profiles`** extends `auth.users`: one row per user, created by t
 | `updated_at`      | TIMESTAMPTZ  | Last update. |
 | `last_login_at`   | TIMESTAMPTZ  | Last sign-in (analytics/support). |
 | `provider`        | TEXT         | `email` \| `google` \| `apple`. |
-| `is_child_account`| BOOLEAN DEFAULT false | For safety/parental rules. |
+| `is_child_account`| BOOLEAN DEFAULT false | Legacy field, unused. |
 
 SQL is in `mobile-app/supabase/migrations/001_profiles_auth.sql`.
 

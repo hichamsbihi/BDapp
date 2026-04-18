@@ -5,12 +5,8 @@ import { useAppStore } from '@/store';
 import { getCurrentUser } from '@/services/authService';
 import { upsertStoryProgress } from '@/services/syncService';
 
-/**
- * Story creation stack layout
- * Flow: universe-select → start-select → paragraph → page
- * Saves story progress when app goes to background so user can resume later.
- */
-export default function StoryLayout() {
+
+export default function SelectionLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (state: AppStateStatus) => {
       if (state !== 'background') return;
@@ -31,25 +27,19 @@ export default function StoryLayout() {
         animation: 'fade',
       }}
     >
-      
-
-      {/* Creation phase - swipe back disabled */}
+      {/* Exploration phase - swipe back allowed */}
       <Stack.Screen
-        name="generating"
+        name="universe-select"
         options={{
-          gestureEnabled: false,
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
         }}
       />
       <Stack.Screen
-        name="reader"
+        name="start-select"
         options={{
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen
-        name="completed"
-        options={{
-          gestureEnabled: false,
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
         }}
       />
     </Stack>

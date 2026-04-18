@@ -276,7 +276,7 @@ const MagicCanvas: React.FC<{ canvasSize: number }> = ({ canvasSize }) => {
  * GeneratingScreen
  * 
  * A spectacular waiting experience for image generation.
- * The child sees visible creation happening - not a loading spinner.
+ * The user sees visible creation happening - not a loading spinner.
  * 
  * Design philosophy:
  * - Show an active "painting" process

@@ -45,16 +45,37 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="index" 
+        options={{
+          gestureEnabled: false,
+          fullScreenGestureEnabled: false,
+        }}
+        />
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(tabs)"
+        options={{
+          gestureEnabled: false,
+          fullScreenGestureEnabled: false,
+        }} />
         <Stack.Screen
           name="onboarding"
           options={{
             gestureEnabled: false,
           }}
         />
-        <Stack.Screen name="story" />
+          <Stack.Screen name="selection" 
+          options={{
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true,
+          }}
+          />
+          <Stack.Screen
+          name="story"
+          options={{
+            gestureEnabled: false,
+            fullScreenGestureEnabled: false,
+          }}
+        />
         <Stack.Screen
           name="paywall"
           options={{

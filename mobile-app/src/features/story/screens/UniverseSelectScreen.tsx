@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,7 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  Modal as RNModal,
-  ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -28,7 +25,6 @@ import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { ErrorFallback } from '@/shared/ErrorFallback';
 import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import { useAppStore } from '@/store';
-import { UNIVERSE_UNLOCK_COST } from '@/constants/stars';
 import { UniverseConfig } from '@/types';
 import { useUniverses } from '@/hooks/useStoryData';
 import { generateStoryId } from '@/utils/ids';
@@ -44,65 +40,54 @@ const EASING = Easing.out(Easing.cubic);
  * Animated universe card - "Magic Door" design
  */
 interface UniverseCardProps {
+  universeId: string;
   universe: UniverseConfig;
   index: number;
   isSelected: boolean;
   onSelect: (id: string) => void;
-  onLockedPress: (universe: UniverseConfig) => void;
 }
 
 const UniverseCard: React.FC<UniverseCardProps> = ({
+  universeId,
   universe,
   index,
   isSelected,
   onSelect,
-  onLockedPress,
 }) => {
   const progress = useSharedValue(0);
   const scale = useSharedValue(1);
-  const shakeX = useSharedValue(0);
   const glowOpacity = useSharedValue(0);
   const sparkle = useSharedValue(1);
 
-  // Entrance animation
   useEffect(() => {
     progress.value = withDelay(
       400 + index * 180,
       withTiming(1, { duration: 600, easing: EASING })
     );
 
-    // Subtle glow animation for unlocked universe
-    if (!universe.isLocked) {
-      glowOpacity.value = withDelay(
-        800 + index * 180,
-        withRepeat(
-          withTiming(0.6, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-          -1,
-          true
-        )
-      );
-    }
-  }, [index, universe.isLocked]);
+    glowOpacity.value = withDelay(
+      800 + index * 180,
+      withRepeat(
+        withTiming(0.6, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true
+      )
+    );
+  }, [index]);
 
   const handlePress = () => {
-    if (universe.isLocked) {
-      // Delegate to parent — may auto-unlock or show modal
-      onLockedPress(universe);
-    } else {
-      scale.value = withSequence(
-        withSpring(0.96, { damping: 10, stiffness: 400 }),
-        withSpring(1.03, { damping: 10, stiffness: 300 }),
-        withSpring(1, { damping: 12, stiffness: 400 })
-      );
-      onSelect(universe.id);
-    }
+    scale.value = withSequence(
+      withSpring(0.96, { damping: 10, stiffness: 400 }),
+      withSpring(1.03, { damping: 10, stiffness: 300 }),
+      withSpring(1, { damping: 12, stiffness: 400 })
+    );
+    onSelect(universeId);
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [
       { scale: progress.value * scale.value },
-      { translateX: shakeX.value },
     ],
   }));
 
@@ -120,27 +105,21 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
         style={[
           styles.card,
           isSelected && styles.cardSelected,
-          universe.isLocked && styles.cardLocked,
         ]}
         onPress={handlePress}
       >
-        {/* Animated glow for unlocked */}
-        {!universe.isLocked && (
-          <Animated.View
-            style={[
-              styles.cardGlow,
-              { backgroundColor: universe.color },
-              glowStyle,
-            ]}
-          />
-        )}
+        <Animated.View
+          style={[
+            styles.cardGlow,
+            { backgroundColor: universe.color },
+            glowStyle,
+          ]}
+        />
 
-        {/* Universe visual — cover image or emoji fallback */}
         <View
           style={[
             styles.cardVisual,
             !universe.imageUrl && { backgroundColor: universe.color },
-            universe.isLocked && styles.cardVisualLocked,
           ]}
         >
           {universe.imageUrl ? (
@@ -155,47 +134,26 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
             </Animated.Text>
           )}
 
-          {/* FREE badge for unlocked */}
-          {!universe.isLocked && (
-            <View style={styles.freeBadge}>
-              <Text style={styles.freeBadgeText}>OUVERT</Text>
-            </View>
-          )}
-
-          {/* Locked overlay - "endormi" */}
-          {universe.isLocked && (
-            <View style={styles.lockedOverlay}>
-              <View style={styles.lockBadge}>
-                <Text style={styles.lockIcon}>✨</Text>
-              </View>
-              <Text style={styles.lockedHint}>Tu peux le réveiller ✨</Text>
-            </View>
-          )}
-
-          {/* Selection glow */}
           {isSelected && (
             <View style={[styles.selectedGlow, { backgroundColor: universe.color }]} />
           )}
         </View>
 
-        {/* Universe info */}
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, universe.isLocked && styles.cardTitleLocked]}>
+            <Text style={styles.cardTitle}>
               {universe.name}
             </Text>
-            {!universe.isLocked && isSelected && (
+            {isSelected && (
               <View style={styles.selectedBadge}>
                 <Text style={styles.selectedBadgeText}>✓</Text>
               </View>
             )}
           </View>
-          <Text style={[styles.cardDescription, universe.isLocked && styles.cardDescriptionLocked]}>
-            {universe.isLocked
-              ? "Ce monde dort encore..."
-              : universe.description}
+          <Text style={styles.cardDescription}>
+            {universe.description}
           </Text>
-          {!universe.isLocked && !isSelected && (
+          {!isSelected && (
             <Text style={styles.availableHint}>Disponible maintenant ✨</Text>
           )}
         </View>
@@ -204,250 +162,23 @@ const UniverseCard: React.FC<UniverseCardProps> = ({
   );
 };
 
-/** Random messages shown in the confirmation modal when the user can afford to unlock */
-const UNLOCK_CONFIRM_MESSAGES = [
-  "Ce monde n'attendait que toi pour s'éveiller !",
-  "Une aventure extraordinaire est sur le point de commencer...",
-  "Les secrets de ce monde vont se révéler rien que pour toi !",
-  "Tu es sur le point de vivre quelque chose d'inoubliable !",
-  "Ce monde a été créé spécialement pour des héros comme toi !",
-  "La magie se prépare... es-tu prêt pour l'aventure ?",
-  "Quelque chose de merveilleux t'attend derrière cette porte !",
-  "Ce monde rêve d'un héros comme toi depuis si longtemps !",
-] as const;
-
-interface LockedModalProps {
-  visible: boolean;
-  universe: UniverseConfig | null;
-  onClose: () => void;
-  onUnlocked: () => void;
-  canAfford: boolean;
-  canAffordFn: (amount: number) => boolean;
-  onUnlock: (id: string) => boolean;
-  onWatchMagic: () => Promise<unknown>;
-}
-
-/**
- * Unified unlock modal — two visual states:
- *   canAfford=true  → beautiful confirmation with random enticing message
- *   canAfford=false → stars progress + inline options to earn/buy more
- */
-const LockedModal: React.FC<LockedModalProps> = ({
-  visible,
-  universe,
-  onClose,
-  onUnlocked,
-  canAfford,
-  canAffordFn,
-  onUnlock,
-  onWatchMagic,
-}) => {
-  const stars = useAppStore((state) => state.stars);
-  const [isWatching, setIsWatching] = useState(false);
-
-  // Pick a new random message every time the modal opens
-  const randomMessage = useMemo(() => {
-    if (!visible) return '';
-    const idx = Math.floor(Math.random() * UNLOCK_CONFIRM_MESSAGES.length);
-    return UNLOCK_CONFIRM_MESSAGES[idx];
-  }, [visible]);
-
-  if (!universe) return null;
-
-  const handleUseStars = () => {
-    if (onUnlock(universe.id)) {
-      onUnlocked();
-      onClose();
-    }
-  };
-
-  const handleWatchMagic = async () => {
-    setIsWatching(true);
-    try {
-      await onWatchMagic();
-      if (canAffordFn(UNIVERSE_UNLOCK_COST) && onUnlock(universe.id)) {
-        onUnlocked();
-        onClose();
-      }
-    } finally {
-      setIsWatching(false);
-    }
-  };
-
-  const handleBuyStars = async () => {
-    onClose();
-    const user = await getCurrentUser();
-    if (user) {
-      router.push('/paywall');
-    } else {
-      router.push('/(auth)/login?from=paywall');
-    }
-  };
-
-  // --- Branch 1: user has enough stars — confirmation modal ---
-  if (canAfford) {
-    return (
-      <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
-          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
-            {/* Universe-colored gradient header */}
-            <LinearGradient
-              colors={[universe.color, colors.background] as const}
-              style={styles.confirmHeader}
-            >
-              <Text style={styles.confirmEmoji}>{universe.emoji}</Text>
-            </LinearGradient>
-
-            <View style={styles.confirmContent}>
-              <Text style={styles.confirmTitle}>{universe.name}</Text>
-              <Text style={styles.confirmMessage}>{randomMessage}</Text>
-
-              <View style={styles.costBadge}>
-                <Text style={styles.costBadgeText}>⭐ {UNIVERSE_UNLOCK_COST} étoiles</Text>
-              </View>
-
-              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseStars}>
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryDark] as const}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.confirmButtonGradient}
-                >
-                  <Text style={styles.confirmButtonPrimaryText}>Réveiller ce monde</Text>
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable style={styles.confirmButtonSecondary} onPress={onClose}>
-                <Text style={styles.confirmButtonSecondaryText}>Plus tard</Text>
-              </AnimatedPressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </RNModal>
-    );
-  }
-
-  // --- Branch 2: not enough stars — progress + options modal ---
-  const missing = UNIVERSE_UNLOCK_COST - stars;
-  return (
-    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.noStarsCard} onPress={(e) => e.stopPropagation()}>
-          <LinearGradient
-            colors={['#FFD54F', '#FFEB9C', colors.background] as const}
-            style={styles.noStarsHeader}
-          >
-            <Text style={styles.noStarsHeaderEmoji}>⭐</Text>
-            <Text style={styles.noStarsHeaderTitle}>Presque là !</Text>
-          </LinearGradient>
-
-          <View style={styles.noStarsContent}>
-            {/* Stars progress dots */}
-            <View style={styles.starsProgressRow}>
-              {Array.from({ length: UNIVERSE_UNLOCK_COST }).map((_, i) => (
-                <View key={i} style={[styles.starDot, i < stars && styles.starDotFilled]}>
-                  <Text style={styles.starDotText}>{i < stars ? '⭐' : '☆'}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.starsProgressLabel}>{stars}/{UNIVERSE_UNLOCK_COST} étoiles</Text>
-
-            <Text style={styles.noStarsMessage}>
-              {missing === 1
-                ? `Il te manque encore 1 étoile pour réveiller « ${universe.name} » !`
-                : `Il te manque encore ${missing} étoiles pour réveiller « ${universe.name} » !`}
-            </Text>
-
-            <View style={styles.noStarsButtons}>
-              <AnimatedPressable
-                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
-                onPress={handleWatchMagic}
-                disabled={isWatching}
-              >
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryDark] as const}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.noStarsButtonGradient}
-                >
-                  {isWatching ? (
-                    <ActivityIndicator color={colors.text.inverse} size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.noStarsButtonIcon}>✨</Text>
-                      <Text style={styles.noStarsButtonTextWhite}>Gagner une étoile magique</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
-                onPress={handleBuyStars}
-                disabled={isWatching}
-              >
-                <LinearGradient
-                  colors={['#FFD54F', '#F5C430'] as const}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.noStarsButtonGradient}
-                >
-                  <Text style={styles.noStarsButtonIcon}>⭐</Text>
-                  <Text style={styles.noStarsButtonTextDark}>Obtenir plus d'étoiles</Text>
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={styles.noStarsButtonLater}
-                onPress={onClose}
-                disabled={isWatching}
-              >
-                <Text style={styles.noStarsButtonLaterText}>Plus tard</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
-        </Pressable>
-      </Pressable>
-    </RNModal>
-  );
-};
-
 /**
  * Universe selection screen - "Magic Doors" experience
  */
 export const UniverseSelectScreen: React.FC = () => {
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
-  const [lockedModalVisible, setLockedModalVisible] = useState(false);
-  const [selectedLockedUniverse, setSelectedLockedUniverse] = useState<UniverseConfig | null>(null);
 
   const setCurrentStory = useAppStore((state) => state.setCurrentStory);
   const heroProfile = useAppStore((state) => state.heroProfile);
-  const isPremium = useAppStore((state) => state.isPremium);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
   const setHasCompletedOnboarding = useAppStore((state) => state.setHasCompletedOnboarding);
-  const stars = useAppStore((state) => state.stars);
-  const unlockedUniverses = useAppStore((state) => state.unlockedUniverses);
-  const canAfford = useAppStore((state) => state.canAfford);
-  const unlockUniverse = useAppStore((state) => state.unlockUniverse);
-  const rewardStar = useAppStore((state) => state.rewardStar);
   const storyProgressList = useAppStore((state) => state.storyProgressList);
   const stories = useAppStore((state) => state.stories);
 
   const isNewUser = !hasCompletedOnboarding;
 
-  const avatarCharacterName = heroProfile?.avatarCharacterName;
   const gender = heroProfile?.gender || 'boy';
-  const { data: rawUniverses, error: universesError, refetch: refetchUniverses } = useUniverses(avatarCharacterName, gender);
-
-  const universes = useMemo(() => {
-    if (isPremium) {
-      return rawUniverses.map((u) => ({ ...u, isLocked: false }));
-    }
-    return rawUniverses.map((u) => {
-      const isUnlocked = (unlockedUniverses ?? []).includes(u.id);
-      return { ...u, isLocked: !isUnlocked };
-    });
-  }, [rawUniverses, isPremium, unlockedUniverses]);
+  const { data: universes, error: universesError, refetch: refetchUniverses } = useUniverses(gender);
 
   const resumeProgress = storyProgressList.find((p) => p.currentPageNumber >= 1);
   const hasCompletedInResumeUniverse =
@@ -500,18 +231,8 @@ export const UniverseSelectScreen: React.FC = () => {
     ],
   }));
 
-  const handleLockedPress = (universe: UniverseConfig) => {
-    // Always show the modal — canAfford determines which branch is rendered
-    setSelectedLockedUniverse(universe);
-    setLockedModalVisible(true);
-  };
-
   const handleContinue = async () => {
     if (!selectedUniverseId) return;
-
-    if (!hasCompletedOnboarding) {
-      setHasCompletedOnboarding(true);
-    }
 
     setCurrentStory({
       id: generateStoryId(),
@@ -529,7 +250,14 @@ export const UniverseSelectScreen: React.FC = () => {
       await setLastUniverse(user.id, selectedUniverseId);
     }
 
-    router.push('/story/start-select');
+    router.push({
+      pathname: '/selection/start-select',
+      params: { universeId: selectedUniverseId },
+    });
+
+    if (!hasCompletedOnboarding) {
+      setHasCompletedOnboarding(true);
+    }
   };
 
   const handleResumeProgress = () => {
@@ -543,18 +271,14 @@ export const UniverseSelectScreen: React.FC = () => {
       updatedAt: new Date(),
       isComplete: false,
     });
-    router.push('/story/start-select');
+    router.push('/selection/start-select');
   };
 
   const selectedUniverse = universes.find((u) => u.id === selectedUniverseId);
 
-  // router.replace() is used to navigate here from onboarding, so the stack may be empty.
-  // canGoBack() guards against the "unhandled action" warning.
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
-    } else if (isNewUser) {
-      router.replace('/onboarding/avatar-select');
     } else {
       router.replace('/(tabs)');
     }
@@ -628,11 +352,11 @@ export const UniverseSelectScreen: React.FC = () => {
           {universes.map((universe, index) => (
             <UniverseCard
               key={universe.id}
+              universeId={universe.id}
               universe={universe}
               index={index}
               isSelected={selectedUniverseId === universe.id}
               onSelect={setSelectedUniverseId}
-              onLockedPress={handleLockedPress}
             />
           ))}
         </View>
@@ -654,16 +378,6 @@ export const UniverseSelectScreen: React.FC = () => {
         </AnimatedPressable>
       </Animated.View>
 
-      <LockedModal
-        visible={lockedModalVisible}
-        universe={selectedLockedUniverse}
-        onClose={() => setLockedModalVisible(false)}
-        onUnlocked={() => setSelectedUniverseId(selectedLockedUniverse?.id ?? null)}
-        canAfford={canAfford(UNIVERSE_UNLOCK_COST)}
-        canAffordFn={canAfford}
-        onUnlock={unlockUniverse}
-        onWatchMagic={() => rewardStar('watch_ad').then(() => {})}
-      />
     </ScreenContainer>
   );
 };

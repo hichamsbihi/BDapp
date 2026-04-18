@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   Pressable,
   ActivityIndicator,
 } from 'react-native';
@@ -88,7 +89,7 @@ export const AvatarSelectScreen: React.FC = () => {
     if (fromHome) {
       router.back();
     } else {
-      router.replace('/story/universe-select');
+      router.push('/selection/universe-select');
     }
   };
 
@@ -115,7 +116,14 @@ export const AvatarSelectScreen: React.FC = () => {
         </AnimatedPressable>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        ref={(ref) => { ref?.flashScrollIndicators(); }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        persistentScrollbar={true}
+        indicatorStyle="black"
+      >
         <Animated.View style={[styles.header, headerStyle]}>
           {isNewUser && (
             <View style={styles.stepContainer}>
@@ -165,7 +173,7 @@ export const AvatarSelectScreen: React.FC = () => {
             ))}
           </View>
         )}
-      </View>
+      </ScrollView>
 
       <Animated.View style={[styles.footer, buttonStyle]}>
         <Animated.Text style={[styles.confirmMessage, confirmStyle]}>
@@ -209,9 +217,12 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
   },
   header: {
     alignItems: 'center',
@@ -284,8 +295,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   grid: {
-    flex: 1,
-    justifyContent: 'center',
+    marginTop: spacing.sm,
   },
   gridRow: {
     flexDirection: 'row',
@@ -301,7 +311,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.semibold,
     color: colors.primary,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: spacing.xs,
   },
   button: {
     backgroundColor: colors.primary,

@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StoryStart, NarrativeChoice, UniverseConfig } from '@/types';
+import { StoryStart, NarrativeChoice, UniverseConfig, GeneratedStory, StoryPart } from '@/types';
 import {
-  fetchUniversesByAvatar,
+  fetchUniversesByGender,
   fetchStoryStarts,
   fetchParagraphForPage,
   fetchParagraphById,
   fetchChoicesForPage,
+  fetchStoriesForUniverse,
+  fetchPartsForStory,
 } from '@/services/storyService';
 
 interface AsyncState<T> {
@@ -15,13 +17,9 @@ interface AsyncState<T> {
 }
 
 /**
- * Fetch universes for the current avatar from Supabase.
- * Uses avatar character name as primary filter, falls back to gender.
+ * Fetch universes filtered by user gender (boy/girl).
  */
-export const useUniverses = (
-  avatarCharacterName: string | undefined,
-  gender: 'boy' | 'girl'
-) => {
+export const useUniverses = (gender: 'boy' | 'girl') => {
   const [state, setState] = useState<AsyncState<UniverseConfig[]>>({
     data: [],
     loading: true,
@@ -31,13 +29,13 @@ export const useUniverses = (
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchUniversesByAvatar(avatarCharacterName, gender);
+      const data = await fetchUniversesByGender(gender);
       setState({ data, loading: false, error: null });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setState((prev) => ({ ...prev, loading: false, error: message }));
     }
-  }, [avatarCharacterName, gender]);
+  }, [gender]);
 
   useEffect(() => {
     load();
@@ -182,6 +180,72 @@ export const useNarrativeChoices = (
       setState((prev) => ({ ...prev, loading: false, error: message }));
     }
   }, [universeId, pageNumber, isLastPage]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { ...state, refetch: load };
+};
+
+// ─── Story Generator model hooks ────────────────────────
+
+/**
+ * Fetch generated stories for a universe (story-generator-service model).
+ */
+export const useGeneratedStories = (universeId: string | undefined) => {
+  const [state, setState] = useState<AsyncState<GeneratedStory[]>>({
+    data: [],
+    loading: true,
+    error: null,
+  });
+
+  const load = useCallback(async () => {
+    if (!universeId) {
+      setState({ data: [], loading: false, error: null });
+      return;
+    }
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await fetchStoriesForUniverse(universeId);
+      setState({ data, loading: false, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setState((prev) => ({ ...prev, loading: false, error: message }));
+    }
+  }, [universeId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { ...state, refetch: load };
+};
+
+/**
+ * Fetch all parts for a story (story-generator-service model).
+ */
+export const useStoryParts = (storyId: string | undefined) => {
+  const [state, setState] = useState<AsyncState<StoryPart[]>>({
+    data: [],
+    loading: true,
+    error: null,
+  });
+
+  const load = useCallback(async () => {
+    if (!storyId) {
+      setState({ data: [], loading: false, error: null });
+      return;
+    }
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await fetchPartsForStory(storyId);
+      setState({ data, loading: false, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setState((prev) => ({ ...prev, loading: false, error: message }));
+    }
+  }, [storyId]);
 
   useEffect(() => {
     load();

@@ -28,7 +28,6 @@ type Gender = 'boy' | 'girl';
 
 /**
  * Hero info screen - collect hero name, age, and gender
- * Designed as a warm, engaging experience for children (6-10 years)
  * 
  * Animation sequence matches WelcomeScreen philosophy:
  * - Progressive reveal (storytelling)
@@ -187,6 +186,7 @@ export const HeroInfoScreen: React.FC = () => {
     });
 
     router.push('/onboarding/avatar-select');
+
   };
 
   const handleAgeChange = (text: string) => {
@@ -265,7 +265,7 @@ export const HeroInfoScreen: React.FC = () => {
                 placeholder="Ton âge"
                 placeholderTextColor={colors.text.muted}
                 keyboardType="number-pad"
-                maxLength={2}
+                maxLength={3}
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
               />

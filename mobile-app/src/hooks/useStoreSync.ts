@@ -20,6 +20,7 @@ export function useStoreSync(): void {
         stars: state.stars ?? 0,
         heroProfile: state.heroProfile,
         unlockedUniverses: state.unlockedUniverses ?? [],
+        unlockedStories: state.unlockedStories ?? [],
         isPremium: state.isPremium,
       };
       const key = JSON.stringify({
@@ -27,6 +28,7 @@ export function useStoreSync(): void {
         n: payload.heroProfile?.name,
         a: payload.heroProfile?.avatarId,
         u: payload.unlockedUniverses.slice().sort(),
+        st: payload.unlockedStories.slice().sort(),
         p: payload.isPremium,
       });
       if (key === prevRef.current) return;
@@ -45,6 +47,7 @@ export function useStoreSync(): void {
             age: payload.heroProfile?.age ?? null,
             gender: payload.heroProfile?.gender ?? null,
             unlocked_universe_ids: payload.unlockedUniverses,
+            unlocked_story_ids: payload.unlockedStories,
             is_premium: payload.isPremium,
           });
         } catch (e) {
@@ -65,6 +68,7 @@ export function useStoreSync(): void {
           age: state.heroProfile?.age ?? null,
           gender: state.heroProfile?.gender ?? null,
           unlocked_universe_ids: state.unlockedUniverses ?? [],
+          unlocked_story_ids: state.unlockedStories ?? [],
           is_premium: state.isPremium,
         });
       } catch (e) {

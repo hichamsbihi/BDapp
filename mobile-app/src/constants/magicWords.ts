@@ -2,7 +2,7 @@
  * Magic Words Configuration
  * 
  * Central source for all dynamic, poetic phrases in the app.
- * Designed for children (6-10): simple, evocative, wonder-inducing.
+ * Simple, evocative, wonder-inducing.
  * 
  * Philosophy:
  * - Each phrase should spark imagination
@@ -56,7 +56,7 @@ export const SCENE_REVEAL_PHRASES = [
 // Transition phrases between scenes (pivot moments)
 // Large variety to keep each story fresh and engaging
 export const PIVOT_PHRASES = {
-  // Question-style pivots - invites the child to wonder
+  // Question-style pivots - invites the reader to wonder
   questions: [
     'Que va-t-il se passer ?',
     'Quelle sera la suite ?',

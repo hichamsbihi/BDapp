@@ -22,13 +22,14 @@ export async function syncStars(starsBalance: number): Promise<void> {
   await updateProfile(user.id, { stars_balance: Math.max(0, starsBalance) });
 }
 
-/** Sync hero profile + unlocked universes + is_premium to profile. Call when store changes. */
+/** Sync hero profile + unlocked universes/stories + is_premium to profile. Call when store changes. */
 export async function syncProfileFromStore(payload: {
   username: string | null;
   selected_avatar_id: string | null;
   age: number | null;
   gender: 'boy' | 'girl' | null;
   unlocked_universe_ids: string[];
+  unlocked_story_ids: string[];
   last_universe_id?: string | null;
   is_premium?: boolean;
 }): Promise<void> {
@@ -40,6 +41,7 @@ export async function syncProfileFromStore(payload: {
     age: payload.age ?? null,
     gender: payload.gender ?? null,
     unlocked_universe_ids: payload.unlocked_universe_ids ?? [],
+    unlocked_story_ids: payload.unlocked_story_ids ?? [],
     ...(payload.last_universe_id !== undefined && { last_universe_id: payload.last_universe_id }),
     ...(payload.is_premium !== undefined && { is_premium: payload.is_premium }),
   });

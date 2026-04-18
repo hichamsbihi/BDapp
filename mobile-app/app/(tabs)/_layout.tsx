@@ -16,9 +16,14 @@ export default function MainLayout() {
         contentStyle: { backgroundColor: '#FFFCF5' },
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="index" 
+      options={{
+        gestureEnabled: false,
+        fullScreenGestureEnabled: false,
+      }}/>
       <Stack.Screen name="library" />
-      <Stack.Screen name="profile" />
+      <Stack.Screen name="profile" 
+      />
     </Stack>
   );
 }

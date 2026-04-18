@@ -246,12 +246,20 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
   await touchLastLogin(user.id);
   store.setStarsFromServer(profile.stars_balance);
   store.setIsPremium(profile.is_premium ?? false);
+
   const fromServer = profile.unlocked_universe_ids ?? [];
   const currentLocal = store.unlockedUniverses ?? [];
   const merged = fromServer.length > 0
     ? [...new Set([...fromServer, ...currentLocal])]
     : currentLocal;
   store.setUnlockedUniverses(merged);
+
+  const storiesFromServer = profile.unlocked_story_ids ?? [];
+  const storiesLocal = store.unlockedStories ?? [];
+  const mergedStories = storiesFromServer.length > 0
+    ? [...new Set([...storiesFromServer, ...storiesLocal])]
+    : storiesLocal;
+  store.setUnlockedStories(mergedStories);
 
   const avatarId = profile.selected_avatar_id;
   let avatarImageUrl: string | undefined;

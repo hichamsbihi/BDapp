@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## What Is This App
 
-MangaKids is an interactive manga/comic app for children (6-10 years). Kids pick an avatar, choose a universe, and an AI-generated branching story unfolds page by page with illustrations. Stories are exported as PDF. The app uses a stars economy for monetisation.
+MangaKids is an interactive manga/comic app. Users pick an avatar, choose a universe, and an AI-generated branching story unfolds page by page with illustrations. Stories are exported as PDF. The app uses a stars economy for monetisation.
 
 ## Monorepo Structure
 

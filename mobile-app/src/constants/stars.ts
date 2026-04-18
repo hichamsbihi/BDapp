@@ -2,7 +2,7 @@
  * STARS ECONOMY - Single source of truth
  *
  * 1. COSTS
- *    - Debloquer un univers : 3 etoiles
+ *    - Debloquer une histoire : 3 etoiles
  *    - Telecharger le livre en PDF : 1 etoile
  *
  * 2. REWARDS
@@ -21,8 +21,10 @@
  */
 
 // --- COSTS ---
-/** Etoiles pour debloquer un univers */
+/** @deprecated Use STORY_UNLOCK_COST instead */
 export const UNIVERSE_UNLOCK_COST = 3;
+/** Etoiles pour debloquer une histoire */
+export const STORY_UNLOCK_COST = 3;
 /** Etoiles pour telecharger le livre en PDF */
 export const PDF_EXPORT_COST = 1;
 

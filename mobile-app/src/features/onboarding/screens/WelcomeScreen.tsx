@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Dimensions, Image } from 'react-native';
 import { router } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -220,16 +221,17 @@ const HeroImage: React.FC<{ animatedStyle: object }> = ({ animatedStyle }) => (
 export const WelcomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
+  const isFocused = useIsFocused();
   const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   // ✅ FIX #4 — nav timeout ref so it can be cleaned up on unmount
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (hasCompletedOnboarding) {
+    if (hasCompletedOnboarding && isFocused) {
       router.replace('/(tabs)');
     }
-  }, [hasCompletedOnboarding]);
+  }, [hasCompletedOnboarding, isFocused]);
 
   // --- Shared values ---
   const bgOpacity = useSharedValue(0);

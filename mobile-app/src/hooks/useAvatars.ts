@@ -23,6 +23,7 @@ export const useAvatars = (gender?: 'boy' | 'girl'): UseAvatarsResult => {
     setError(null);
     try {
       const data = await fetchAvatarCharacters(gender);
+      
       setAvatars(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load avatars';

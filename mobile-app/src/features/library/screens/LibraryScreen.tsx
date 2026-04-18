@@ -27,7 +27,7 @@ const OVERLAY_TEXT_SECONDARY_SPINE = `${colors.text.secondary}26`;
  * LibraryScreen
  * 
  * A place of memories, not a list of content.
- * Each story is a treasure the child created.
+ * Each story is a treasure the user created.
  * 
  * The latest creation is highlighted.
  * Older stories rest quietly, ready to be revisited.
@@ -124,7 +124,7 @@ export const LibraryScreen: React.FC = () => {
   };
 
   const handleCreateNew = () => {
-    router.push('/story/universe-select');
+    router.push('/selection/universe-select');
   };
 
   // Featured story card (latest creation)

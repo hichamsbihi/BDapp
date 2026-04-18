@@ -1,10 +1,10 @@
 # Monde d'Histoires - Application Mobile
 
-Application mobile React Native / Expo permettant aux enfants de creer des histoires illustrees (bandes dessinees) de maniere interactive et ludique.
+Application mobile React Native / Expo permettant de creer des histoires illustrees (bandes dessinees) de maniere interactive et ludique.
 
 ## Vue d'ensemble
 
-Application destinee aux enfants permettant de :
+Application permettant de :
 - Creer des histoires personnalisees avec leur heros
 - Choisir parmi differents univers (Fantasy, Space, Ocean)
 - Generer des pages de bande dessinee avec images et textes
@@ -205,7 +205,7 @@ if (!canAfford(PDF_EXPORT_COST)) {
 
 ## Economie d'Etoiles (Stars)
 
-Systeme de monnaie narrative (non-monetaire, adapte aux enfants) :
+Systeme de monnaie narrative :
 
 | Action | Cout/Gain |
 |--------|-----------|

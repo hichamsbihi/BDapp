@@ -43,13 +43,16 @@ export interface Universe {
   name: string;
   description: string;
   imageUrl: string;
+  backgroundImageUrl: string;
   color: string;
+  language: string;
 }
 
 // Extended universe with client-side display properties
 export interface UniverseConfig extends Universe {
   isLocked: boolean;
   emoji: string;
+  gender: 'boy' | 'girl';
 }
 
 // Story types
@@ -111,6 +114,12 @@ export interface Story {
   nextChoices?: NarrativeChoice[];
   // Selected choice for the next page
   selectedChoiceId?: string;
+
+  // Story generator model fields
+  generatedStoryId?: string;
+  currentPartId?: string;
+  allParts?: StoryPart[];
+  synopsis?: string;
 }
 
 // Stars reward types (non-monetary, narrative)
@@ -140,6 +149,7 @@ export interface AppState {
   // Stars (narrative currency - non-monetary)
   stars: number;
   unlockedUniverses: string[];
+  unlockedStories: string[];
   /** Last time user claimed the 12h countdown reward (ISO string) */
   lastCountdownClaimDate: string | null;
   addStars: (amount: number) => void;
@@ -149,10 +159,17 @@ export interface AppState {
   setUnlockedUniverses: (ids: string[]) => void;
   /** Add one universe to unlocked (e.g. after completing a story) without spending stars. */
   addUnlockedUniverse: (universeId: string) => void;
+  /** Set unlocked stories from server (e.g. on login). */
+  setUnlockedStories: (ids: string[]) => void;
+  /** Add one story to unlocked without spending stars (e.g. after completing). */
+  addUnlockedStory: (storyId: string) => void;
   spendStars: (amount: number) => boolean;
   canAfford: (amount: number) => boolean;
   rewardStar: (type: RewardStarType) => Promise<number>;
+  /** @deprecated Use unlockStory instead */
   unlockUniverse: (universeId: string) => boolean;
+  /** Spend stars to unlock a story. Returns true if unlocked (already or just now). */
+  unlockStory: (storyId: string) => boolean;
 
   // Premium status
   isPremium: boolean;
@@ -191,7 +208,50 @@ export interface SupabaseProfile {
   age: number | null;
   gender: 'boy' | 'girl' | null;
   unlocked_universe_ids: string[];
+  unlocked_story_ids: string[];
   is_premium: boolean;
+}
+
+// ─── Story Generator Service model ─────────────────────
+
+export interface StoryChoice {
+  id: string;
+  label: string;
+  description: string;
+  leadsToPartId: string;
+}
+
+export interface StoryPart {
+  id: string;
+  storyId: string;
+  universeId: string;
+  partNumber: number;
+  isOpening: boolean;
+  isEnding: boolean;
+  title: string;
+  narrativeText: string;
+  mood: string;
+  choices: StoryChoice[];
+  imagePrompt: string;
+  imagePath: string;
+  imageUrl?: string;
+  status: string;
+  generatedAt: string;
+}
+
+export interface GeneratedStory {
+  id: string;
+  universeId: string;
+  title: string;
+  synopsis: string;
+  theme: string;
+  imageUrl: string;
+  isLocked: boolean;
+  totalParts: number;
+  partIds: string[];
+  status: string;
+  createdAt: string;
+  completedAt?: string;
 }
 
 // Navigation types for story creation flow

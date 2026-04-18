@@ -6,6 +6,8 @@ import {
   Pressable,
   useWindowDimensions,
   ScrollView,
+  BackHandler,
+  Modal as RNModal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -24,9 +26,8 @@ import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { ErrorFallback } from '@/shared/ErrorFallback';
 import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import { useAppStore } from '@/store';
-import { useNarrativeChoices } from '@/hooks/useStoryData';
 import { generatePageId } from '@/utils/ids';
-import { Story, StoryPage, NarrativeChoice } from '@/types';
+import { Story, StoryPage, StoryChoice } from '@/types';
 import { getCurrentUser } from '@/services/authService';
 import { upsertStoryProgress, insertUserChoice, saveCreatedStory } from '@/services/syncService';
 import {
@@ -36,29 +37,8 @@ import {
   getRandomPhrase,
 } from '@/constants/magicWords';
 
-/** No fixed total: story length is dynamic (driven by universe/story data). Last page = no choices. */
+// ─── Image Reveal ─────────────────────────────────────────
 
-/**
- * Branching fallback: maps current page_number to the next page_number in the default path.
- * Used when narrative_choices.next_page_number is missing from DB.
- * Story structure: p1a(1)→p2a(3), p1b(2)→p2b(4), then converge at p3(5)→p4(6)→p5(7).
- */
-const BRANCHING_NEXT_PAGE: Record<number, number> = {
-  1: 3,
-  2: 4,
-  3: 5,
-  4: 5,
-  5: 6,
-  6: 7,
-};
-
-/**
- * Image Reveal Component
- *
- * Shimmer reveal, then pinch-to-zoom + pan via react-native-gesture-handler.
- * Runs on the UI thread via Reanimated worklets = perfectly smooth.
- * Image starts fully visible (contain). Resets on each new image.
- */
 interface ImageRevealProps {
   imageUrl: string;
   onRevealComplete: () => void;
@@ -75,7 +55,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
   const { width: windowWidth } = useWindowDimensions();
   const maxZoom = isTablet ? 2.5 : 3;
 
-  // Reveal animations
   const revealScale = useSharedValue(1.1);
   const imageOpacity = useSharedValue(0);
   const curtainProgress = useSharedValue(0);
@@ -83,7 +62,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
   const [revealed, setRevealed] = useState(false);
   const [containerHeight, setContainerHeight] = useState(0);
 
-  // Zoom + pan shared values (UI thread)
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -91,7 +69,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  // Reset zoom/pan when imageUrl changes (new page)
   useEffect(() => {
     scale.value = 1;
     savedScale.value = 1;
@@ -101,7 +78,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
     savedTranslateY.value = 0;
   }, [imageUrl]);
 
-  // Reveal animation
   useEffect(() => {
     glowOpacity.value = withTiming(0.6, { duration: 400 });
     imageOpacity.value = withDelay(200, withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) }));
@@ -114,8 +90,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
     return () => clearTimeout(timer);
   }, [onRevealComplete]);
 
-  // --- Gestures (all worklets, UI thread) ---
-
   const pinchGesture = Gesture.Pinch()
     .enabled(revealed)
     .onStart(() => {
@@ -127,7 +101,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
     })
     .onEnd(() => {
       if (scale.value < 1.1) {
-        // Snap back to 1
         scale.value = withSpring(1, { damping: 15 });
         translateX.value = withSpring(0, { damping: 15 });
         translateY.value = withSpring(0, { damping: 15 });
@@ -136,7 +109,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
         savedTranslateY.value = 0;
       } else {
         savedScale.value = scale.value;
-        // Clamp translate at new scale
         const maxX = (windowWidth * (scale.value - 1)) / 2;
         const maxY = ((containerHeight || windowWidth) * (scale.value - 1)) / 2;
         const clampedX = Math.max(-maxX, Math.min(maxX, translateX.value));
@@ -177,7 +149,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
     .enabled(revealed)
     .onEnd(() => {
       if (scale.value > 1.1) {
-        // Reset
         scale.value = withSpring(1, { damping: 15 });
         translateX.value = withSpring(0, { damping: 15 });
         translateY.value = withSpring(0, { damping: 15 });
@@ -185,20 +156,17 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
       } else {
-        // Zoom to 2x
         const zoomTo = isTablet ? 1.8 : 2;
         scale.value = withSpring(zoomTo, { damping: 15 });
         savedScale.value = zoomTo;
       }
     });
 
-  // Compose: simultaneous pinch+pan, race with double-tap
   const composedGesture = Gesture.Race(
     doubleTapGesture,
     Gesture.Simultaneous(pinchGesture, panGesture)
   );
 
-  // Animated styles
   const imageStyle = useAnimatedStyle(() => ({
     opacity: imageOpacity.value,
     transform: [
@@ -207,14 +175,12 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
       { translateY: translateY.value },
     ],
   }));
-
   const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(curtainProgress.value, [0, 1], [-windowWidth, windowWidth * 2]) }],
     opacity: interpolate(curtainProgress.value, [0, 0.5, 1], [0.8, 0.4, 0]),
   }));
 
-  // Hint
   const hintOpacity = useSharedValue(0);
   useEffect(() => {
     if (revealed) {
@@ -233,7 +199,6 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
   return (
     <View style={styles.imageRevealContainer} onLayout={handleLayout}>
       <Animated.View style={[styles.imageGlow, glowStyle]} />
-
       <GestureDetector gesture={composedGesture}>
         <Animated.Image
           source={{ uri: imageUrl }}
@@ -241,9 +206,7 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
           resizeMode="contain"
         />
       </GestureDetector>
-
       <Animated.View style={[styles.shimmerOverlay, shimmerStyle]} />
-
       {revealed && (
         <Animated.View style={[styles.zoomHint, hintStyle]}>
           <Text style={styles.zoomHintText}>🔍 Pince pour zoomer</Text>
@@ -253,18 +216,14 @@ const ImageReveal: React.FC<ImageRevealProps> = ({
   );
 };
 
-/**
- * Choice Cards Component
- * 
- * Narrative choices appear after the image moment.
- * Designed to not distract from the image.
- */
+// ─── Choice Cards ─────────────────────────────────────────
+
 interface ChoiceCardsProps {
-  choices: NarrativeChoice[];
-  selectedChoice: NarrativeChoice | null;
-  onSelect: (choice: NarrativeChoice) => void;
+  choices: StoryChoice[];
+  selectedChoice: StoryChoice | null;
+  onSelect: (choice: StoryChoice) => void;
   visible: boolean;
-  pageNumber: number;
+  partNumber: number;
 }
 
 const ChoiceCards: React.FC<ChoiceCardsProps> = ({
@@ -272,15 +231,14 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
   selectedChoice,
   onSelect,
   visible,
-  pageNumber,
+  partNumber,
 }) => {
   const containerOpacity = useSharedValue(0);
   const containerY = useSharedValue(20);
 
-  // Dynamic pivot phrase
   const pivotText = useMemo(
-    () => getPivotPhraseForPage(pageNumber),
-    [pageNumber]
+    () => getPivotPhraseForPage(partNumber),
+    [partNumber]
   );
 
   useEffect(() => {
@@ -300,12 +258,10 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
   return (
     <Animated.View style={[styles.choicesSection, containerStyle]}>
       <Text style={styles.pivotText}>{pivotText}</Text>
-
       <View style={styles.choicesContainer}>
         {choices.map((choice) => {
           const isSelected = selectedChoice?.id === choice.id;
           const isDimmed = selectedChoice !== null && !isSelected;
-
           return (
             <Pressable
               key={choice.id}
@@ -316,8 +272,11 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
               ]}
               onPress={() => onSelect(choice)}
             >
-              <Text style={[styles.choiceText, isSelected && styles.choiceTextSelected]}>
-                {choice.text}
+              <Text style={[styles.choiceLabel, isSelected && styles.choiceLabelSelected]}>
+                {choice.label}
+              </Text>
+              <Text style={[styles.choiceDesc, isSelected && styles.choiceDescSelected]}>
+                {choice.description}
               </Text>
             </Pressable>
           );
@@ -327,89 +286,80 @@ const ChoiceCards: React.FC<ChoiceCardsProps> = ({
   );
 };
 
-/**
- * PageScreen
- * 
- * The illustrated story page. IMAGE IS THE HERO.
- * 
- * UX Philosophy:
- * - Image appears first with spectacular reveal
- * - Pivot phrase and choices appear after image moment
- * - Everything else orbits around the image
- * - CTA is inside scroll content (doesn't hide choices)
- * 
- * Reveal sequence:
- * 1. Image reveals with shimmer effect (0-1.5s)
- * 2. Brief pause for child to absorb the image (1.5-2.5s)
- * 3. Choices appear with pivot phrase
- * 4. CTA appears when a choice is selected
- */
+// ─── PageScreen ───────────────────────────────────────────
+
 export const PageScreen: React.FC = () => {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isTablet = Math.min(windowWidth, windowHeight) >= 600;
-  const { paragraphText, imageUrl: paramImageUrl } = useLocalSearchParams<{
-    paragraphText: string;
-    imageUrl: string;
-  }>();
+  const { partId } = useLocalSearchParams<{ partId: string }>();
 
-  // Phase states for reveal sequence (simplified - removed caption phase)
-  const [phase, setPhase] = useState<'image' | 'choices' | 'ready'>('image');
-  const [selectedChoice, setSelectedChoice] = useState<NarrativeChoice | null>(null);
+  const [phase, setPhase] = useState<'image' | 'text' | 'choices' | 'ready'>('image');
+  const [selectedChoice, setSelectedChoice] = useState<StoryChoice | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
   const isNavigatingRef = useRef(false);
 
   const handleImageInteraction = useCallback((active: boolean) => {
     setScrollEnabled(!active);
   }, []);
 
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
+
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const addStory = useAppStore((state) => state.addStory);
   const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
-
   const storyProgressList = useAppStore((state) => state.storyProgressList);
   const setStoryProgressList = useAppStore((state) => state.setStoryProgressList);
-  const addUnlockedUniverse = useAppStore((state) => state.addUnlockedUniverse);
+  const addUnlockedStory = useAppStore((state) => state.addUnlockedStory);
 
-  // Use the tracked DB page_number, same as ParagraphScreen
-  const currentPageNumber = currentStory?.currentDbPageNumber ?? (currentStory?.pages?.length || 0) + 1;
+  const currentPart = useMemo(() => {
+    if (!currentStory?.allParts || !partId) return null;
+    return currentStory.allParts.find((p) => p.id === partId) ?? null;
+  }, [currentStory?.allParts, partId]);
 
-  // Fetch choices for current step; when choices are empty (and loaded), this is the last page
-  const {
-    data: choices,
-    loading: choicesLoading,
-    error: choicesError,
-    refetch: refetchChoices,
-  } = useNarrativeChoices(currentStory?.universeId, currentPageNumber, false);
-  const isLastPage = !choicesLoading && Array.isArray(choices) && choices.length === 0;
+  const choices = currentPart?.choices ?? [];
+  const isLastPage = currentPart?.isEnding === true;
 
-  // Image comes from ParagraphScreen (fetched alongside the paragraph text)
-  const imageUrl = paramImageUrl
-    || `https://picsum.photos/seed/${currentStory?.universeId ?? 'default'}-${currentPageNumber}/400/300`;
+  const imageUrl = currentPart?.imageUrl
+    || `https://picsum.photos/seed/${partId ?? 'default'}/512/512`;
 
-  // Image takes more space on tablets where there's room
   const imageHeight = windowHeight * (isTablet ? 0.6 : 0.55);
 
-  // Dynamic CTA text
   const ctaText = useMemo(() => {
     if (isLastPage) return "Terminer l'histoire";
     return getContinuePhrase();
   }, [isLastPage]);
 
-  // Animation values for CTA
+  const narrativeText = currentPart?.narrativeText ?? '';
+
+  const textOpacity = useSharedValue(0);
+  const textTranslateY = useSharedValue(15);
   const ctaOpacity = useSharedValue(0);
   const ctaY = useSharedValue(20);
 
-  // Handle reveal sequence phases (simplified)
   const handleImageRevealComplete = useCallback(() => {
-    // After image reveals, show choices directly
     setTimeout(() => {
-      setPhase(isLastPage ? 'ready' : 'choices');
-    }, 800); // Brief pause to absorb the image
-  }, [isLastPage]);
+      setPhase('text');
+    }, 600);
+  }, []);
 
-  // Show CTA when appropriate
+  useEffect(() => {
+    if (phase === 'text') {
+      textOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+      textTranslateY.value = withSpring(0, { damping: 15 });
+
+      const timer = setTimeout(() => {
+        setPhase(isLastPage ? 'ready' : 'choices');
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, isLastPage]);
+
   useEffect(() => {
     const shouldShowCTA = isLastPage
       ? phase === 'ready'
@@ -421,17 +371,22 @@ export const PageScreen: React.FC = () => {
     }
   }, [selectedChoice, phase, isLastPage]);
 
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: textTranslateY.value }],
+  }));
+
   const ctaStyle = useAnimatedStyle(() => ({
     opacity: ctaOpacity.value,
     transform: [{ translateY: ctaY.value }],
   }));
 
-  const handleChoiceSelect = (choice: NarrativeChoice) => {
+  const handleChoiceSelect = (choice: StoryChoice) => {
     setSelectedChoice(choice);
   };
 
   const handleContinue = useCallback(async () => {
-    if (!currentStory || isExiting) return;
+    if (!currentStory || !currentPart || isExiting) return;
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     setIsExiting(true);
@@ -439,36 +394,20 @@ export const PageScreen: React.FC = () => {
     try {
       const newPage: StoryPage = {
         id: generatePageId(),
-        paragraphText: paragraphText || '',
+        paragraphText: narrativeText,
         imageUrl,
-        pageNumber: currentPageNumber,
+        pageNumber: currentPart.partNumber,
         choiceId: selectedChoice?.id,
       };
 
       const updatedPages = [...(currentStory.pages || []), newPage];
       const universeId = currentStory.universeId;
 
-      // Determine the next DB page_number from the choice's next_page_number field.
-      // Branching fallback avoids the naive +1 which breaks diverging paths
-      // (e.g. page 1→2 would land on p1b instead of p2a).
-      const nextDbPageNumber = selectedChoice?.nextPageNumber
-        ?? BRANCHING_NEXT_PAGE[currentPageNumber]
-        ?? currentPageNumber + 1;
-
-      if (!selectedChoice?.nextPageNumber) {
-        console.log('PageScreen: nextPageNumber missing on choice, using branching fallback',
-          currentPageNumber, '->', nextDbPageNumber);
-      }
-
       const user = await getCurrentUser();
       if (user && universeId) {
-        await upsertStoryProgress(
-          user.id,
-          universeId,
-          isLastPage ? currentPageNumber : nextDbPageNumber
-        );
+        await upsertStoryProgress(user.id, universeId, currentPart.partNumber);
         if (selectedChoice?.id) {
-          await insertUserChoice(user.id, universeId, currentPageNumber, selectedChoice.id);
+          await insertUserChoice(user.id, universeId, currentPart.partNumber, selectedChoice.id);
         }
       }
 
@@ -481,7 +420,7 @@ export const PageScreen: React.FC = () => {
         } as Story;
 
         addStory(completedStory);
-        if (universeId) addUnlockedUniverse(universeId);
+        if (currentStory?.generatedStoryId) addUnlockedStory(currentStory.generatedStoryId);
         if (user) {
           saveCreatedStory(user.id, completedStory).catch((e) => __DEV__ && console.warn('Story save failed', e));
         }
@@ -493,13 +432,18 @@ export const PageScreen: React.FC = () => {
           params: { storyId: completedStory.id },
         });
       } else {
+        const nextPartId = selectedChoice?.leadsToPartId;
+
         updateCurrentStory({
           pages: updatedPages,
           selectedChoiceId: selectedChoice?.id,
-          currentDbPageNumber: nextDbPageNumber,
+          currentPartId: nextPartId,
         });
 
-        router.replace('/story/paragraph');
+        router.replace({
+          pathname: '/story/page',
+          params: { partId: nextPartId ?? '' },
+        });
       }
     } finally {
       setTimeout(() => {
@@ -508,14 +452,14 @@ export const PageScreen: React.FC = () => {
     }
   }, [
     currentStory,
+    currentPart,
     isExiting,
-    paragraphText,
+    narrativeText,
     imageUrl,
-    currentPageNumber,
     selectedChoice,
     isLastPage,
     addStory,
-    addUnlockedUniverse,
+    addUnlockedStory,
     storyProgressList,
     setStoryProgressList,
     clearCurrentStory,
@@ -524,19 +468,36 @@ export const PageScreen: React.FC = () => {
 
   const showCTA = isLastPage ? phase === 'ready' : selectedChoice !== null;
 
-  if (choicesError) {
+  if (!currentPart) {
     return (
       <ScreenContainer style={styles.container}>
         <ErrorFallback
-          message="Impossible de charger les choix. Vérifie ta connexion."
-          onRetry={refetchChoices}
+          message="Impossible de charger cette page."
+          onRetry={() => router.back()}
         />
       </ScreenContainer>
     );
   }
 
+  const handleClose = () => setCloseConfirmVisible(true);
+
+  const confirmClose = () => {
+    setCloseConfirmVisible(false);
+    router.dismissTo('/(tabs)');
+  };
+
   return (
     <ScreenContainer style={styles.container}>
+      <View style={styles.closeButtonContainer}>
+        <AnimatedPressable
+          style={styles.closeButton}
+          onPress={handleClose}
+          accessibilityLabel="Fermer"
+          hitSlop={16}
+        >
+          <Text style={styles.closeButtonText}>Fermer</Text>
+        </AnimatedPressable>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -544,7 +505,6 @@ export const PageScreen: React.FC = () => {
         bounces={true}
         scrollEnabled={scrollEnabled}
       >
-        {/* THE HERO: The illustrated scene */}
         <View style={[styles.imageContainer, { height: imageHeight }]}>
           <ImageReveal
             imageUrl={imageUrl}
@@ -554,20 +514,24 @@ export const PageScreen: React.FC = () => {
           />
         </View>
 
-        {/* Secondary content area - below the image */}
         <View style={styles.secondaryContent}>
-          {/* Narrative choices - not on last page */}
+          {phase !== 'image' && narrativeText.length > 0 && (
+            <Animated.View style={[styles.narrativeSection, textStyle]}>
+              <Text style={styles.narrativeTitle}>{currentPart.title}</Text>
+              <Text style={styles.narrativeText}>{narrativeText}</Text>
+            </Animated.View>
+          )}
+
           {!isLastPage && (
             <ChoiceCards
               choices={choices}
               selectedChoice={selectedChoice}
               onSelect={handleChoiceSelect}
               visible={phase === 'choices' || phase === 'ready'}
-              pageNumber={currentPageNumber}
+              partNumber={currentPart.partNumber}
             />
           )}
 
-          {/* Last page ending message */}
           {isLastPage && phase === 'ready' && (
             <View style={styles.endSection}>
               <Text style={styles.endTitle}>
@@ -579,11 +543,10 @@ export const PageScreen: React.FC = () => {
             </View>
           )}
 
-          {/* CTA - inside scroll content so it doesn't hide choices */}
           {showCTA && (
             <Animated.View style={[styles.ctaContainer, ctaStyle]}>
               <AnimatedPressable
-                style={[styles.button]}
+                style={styles.button}
                 onPress={handleContinue}
                 disabled={isExiting}
               >
@@ -593,6 +556,34 @@ export const PageScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+
+      <RNModal
+        visible={closeConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCloseConfirmVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalEmoji}>⚠️</Text>
+            <Text style={styles.modalTitle}>Quitter l'histoire ?</Text>
+            <Text style={styles.modalMessage}>
+              Ta progression sur cette page sera perdue.
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.modalBtnContinue}
+                onPress={() => setCloseConfirmVisible(false)}
+              >
+                <Text style={styles.modalBtnContinueText}>Continuer</Text>
+              </Pressable>
+              <Pressable style={styles.modalBtnQuit} onPress={confirmClose}>
+                <Text style={styles.modalBtnQuitText}>Quitter</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </RNModal>
     </ScreenContainer>
   );
 };
@@ -601,6 +592,28 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
   },
+  closeButtonContainer: {
+    paddingTop: spacing.sm,
+    paddingLeft: spacing.lg,
+    zIndex: 10,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  closeButton: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    ...shadows.md,
+  },
+  closeButtonText: {
+    fontSize: typography.size.sm,
+    color: '#fff',
+    fontWeight: typography.weight.semibold,
+    letterSpacing: 0.5,
+  },
   scrollView: {
     flex: 1,
   },
@@ -608,8 +621,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xl,
   },
-
-  // Image container - the hero takes center stage
   imageContainer: {
     width: '100%',
     overflow: 'hidden',
@@ -649,14 +660,29 @@ const styles = StyleSheet.create({
     width: spacing.xxxl * 3 + spacing.lg,
     backgroundColor: colors.shimmerSheen,
   },
-
-  // Secondary content - everything orbits around the image
   secondaryContent: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg + spacing.xs,
   },
-
-  // Choices section
+  narrativeSection: {
+    marginBottom: spacing.xl,
+  },
+  narrativeTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+  },
+  narrativeText: {
+    fontSize: typography.size.md + 1,
+    fontStyle: 'italic',
+    color: colors.text.primary,
+    lineHeight: (typography.size.md + 1) * 1.6,
+    textAlign: 'center',
+  },
   choicesSection: {
     marginTop: spacing.xs,
   },
@@ -686,18 +712,25 @@ const styles = StyleSheet.create({
   choiceCardDimmed: {
     opacity: 0.4,
   },
-  choiceText: {
+  choiceLabel: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  choiceLabelSelected: {
+    color: colors.primaryDark,
+  },
+  choiceDesc: {
     fontSize: typography.size.md,
     color: colors.text.secondary,
     lineHeight: typography.size.lg + spacing.sm,
     textAlign: 'center',
   },
-  choiceTextSelected: {
+  choiceDescSelected: {
     color: colors.text.primary,
-    fontWeight: typography.weight.medium,
   },
-
-  // End section
   endSection: {
     marginTop: spacing.lg + spacing.xs,
     alignItems: 'center',
@@ -714,8 +747,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: typography.size.lg + spacing.sm,
   },
-
-  // CTA - inside scroll content
   ctaContainer: {
     marginTop: spacing.xl,
     paddingBottom: spacing.lg,
@@ -731,5 +762,69 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
     color: colors.text.inverse,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.xl + spacing.md,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+    ...shadows.lg,
+  },
+  modalEmoji: {
+    fontSize: 40,
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    fontSize: typography.size.md,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.md * 1.5,
+    marginBottom: spacing.xl,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalBtnContinue: {
+    flex: 1,
+    backgroundColor: '#FF9800',
+    paddingVertical: spacing.md + spacing.xxs,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
+  modalBtnContinueText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold,
+    color: '#fff',
+  },
+  modalBtnQuit: {
+    flex: 1,
+    backgroundColor: colors.surfaceMuted,
+    paddingVertical: spacing.md + spacing.xxs,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
+  modalBtnQuitText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
   },
 });

@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 import { AvatarCharacter, AvatarFrames, FrameType } from '@/types';
+import { getMockAvatars, getMockAvatarByName, getMockAvatarById } from '@/mocks/storyMock';
+
+const USE_MOCK = true;
 
 interface AvatarRow {
   id: string;
@@ -55,6 +58,8 @@ export const groupAvatarRows = (rows: AvatarRow[]): AvatarCharacter[] => {
 export const fetchAvatarCharacters = async (
   gender?: 'boy' | 'girl'
 ): Promise<AvatarCharacter[]> => {
+  if (USE_MOCK) return getMockAvatars(gender);
+
   let query = supabase
     .from('avatars')
     .select('*')
@@ -76,6 +81,8 @@ export const fetchAvatarCharacters = async (
 export const fetchAvatarByName = async (
   characterName: string
 ): Promise<AvatarCharacter | null> => {
+  if (USE_MOCK) return getMockAvatarByName(characterName);
+
   const { data, error } = await supabase
     .from('avatars')
     .select('*')
@@ -93,6 +100,8 @@ export const fetchAvatarByName = async (
 export async function fetchAvatarById(
   avatarId: string
 ): Promise<{ id: string; characterName: string; imageUrl: string } | null> {
+  if (USE_MOCK) return getMockAvatarById(avatarId);
+
   const { data, error } = await supabase
     .from('avatars')
     .select('id, character_name, image_url')

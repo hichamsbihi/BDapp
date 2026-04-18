@@ -1,5 +1,5 @@
 /**
- * MangaKids Design System - Single source of truth for all design tokens.
+ * Design System - Single source of truth for all design tokens.
  *
  * Palette: warm parchment tones matching the "illustrated storybook" identity.
  * Every shared component and feature screen should import from here

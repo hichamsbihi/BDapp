@@ -1,0 +1,128 @@
+{
+  "universe": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "The Shattered Dominion",
+    "description": "A post-collapse steampunk world where ancient automatons roam ruined citadels...",
+    "theme": "sci-fi",
+    "setting": "Ruined mega-city of Varanthos, year 2847 post-Collapse",
+    "tone": "dark and tense with glimmers of hope",
+    "lore": "The Collapse wiped out the Architects 300 years ago. Their automatons still patrol the ruins following corrupted directives. The Shard Guilds scavenge ancient tech. Aether crystals power everything — and are running out.",
+    "visualStyle": "steampunk ruins, rust and copper tones, flickering aether-light, dramatic shadows, cinematic wide shots",
+    "mainCharacter": {
+      "name": "Kael Voss",
+      "age": 28,
+      "gender": "male",
+      "appearance": "Lean figure with mechanical left arm, oil-stained goggles, weathered leather coat. Deep-set amber eyes that miss nothing.",
+      "personality": "Pragmatic and guarded, with a buried idealism he rarely shows. Speaks little, observes everything.",
+      "backstory": "Former Guild engineer who went rogue after discovering the Guilds were hoarding Aether crystals. Now operates alone, searching for the Architect's final vault.",
+      "skills": ["engineering", "stealth", "aether-tech hacking"],
+      "flaws": ["distrustful", "reckless when desperate"]
+    },
+    "visualStyle": "steampunk ruins, rust and copper color palette, flickering aether-light, cinematic wide angle, atmospheric fog",
+    "storyIds": ["f1e2d3c4-b5a6-7890-abcd-ef0987654321"],
+    "createdAt": "2026-04-17T10:00:00.000Z",
+    "updatedAt": "2026-04-17T10:45:00.000Z"
+  },
+  "story": {
+    "id": "f1e2d3c4-b5a6-7890-abcd-ef0987654321",
+    "universeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "title": "The Last Aether Signal",
+    "synopsis": "Kael picks up a dormant Architect signal deep in the Forbidden Quarter — and must decide how far he'll go to answer it, with two rival factions closing in.",
+    "theme": "sci-fi",
+    "totalParts": 3,
+    "partIds": [
+      "part-uuid-001",
+      "part-uuid-002",
+      "part-uuid-003"
+    ],
+    "mainCharacter": {
+      "name": "Kael Voss",
+      "age": 28,
+      "gender": "male",
+      "appearance": "Lean figure with mechanical left arm, oil-stained goggles, weathered leather coat.",
+      "personality": "Pragmatic and guarded, with a buried idealism he rarely shows.",
+      "backstory": "Former Guild engineer who went rogue after discovering the Guilds' hoarding.",
+      "skills": ["engineering", "stealth", "aether-tech hacking"],
+      "flaws": ["distrustful", "reckless when desperate"]
+    },
+    "status": "complete",
+    "createdAt": "2026-04-17T10:00:00.000Z",
+    "completedAt": "2026-04-17T10:45:00.000Z",
+    "parts": [
+      {
+        "id": "part-uuid-001",
+        "storyId": "f1e2d3c4-b5a6-7890-abcd-ef0987654321",
+        "universeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "partNumber": 1,
+        "isOpening": true,
+        "isEnding": false,
+        "title": "A Signal in the Dark",
+        "narrativeText": "You crouch in the collapsed archway of what was once the Varanthos Central Exchange, your mechanical arm's sensor array pinging with something impossible: an Architect frequency. Clean. Repeating. Intentional. You haven't heard one in the three years since you burned your Guild credentials. The signal pulses from somewhere below the Forbidden Quarter — the district no Shard Guild dares enter since the Warden automatons went rogue four months ago. Your aether-lantern flickers as a gust of cold rot-smelling air rolls up from the collapsed street ahead. You check your toolkit: three aether slugs, a signal cracker two generations out of date, and the mechanical arm that's been glitching since last winter. Behind you, boots crunch on rubble. Someone else picked up the signal.",
+        "mood": "tense and mysterious",
+        "imagePrompt": "Ruined steampunk city at night, collapsed gothic arches, a lone figure with a mechanical arm crouching in dramatic aether-light glow, atmospheric fog, copper and rust tones, cinematic wide angle, desolate and haunting",
+        "imagePath": "images/a1b2c3d4-e5f6-7890-abcd-ef1234567890/f1e2d3c4-b5a6-7890-abcd-ef0987654321/part-uuid-001.png",
+        "choices": [
+          {
+            "id": "choice_a",
+            "label": "Descend into the Forbidden Quarter",
+            "description": "Go for the signal before whoever is behind you catches up — but the Wardens patrol below.",
+            "leadsToPartId": "part-uuid-002"
+          },
+          {
+            "id": "choice_b",
+            "label": "Turn and confront the follower",
+            "description": "Face whoever tracked you here — ally or enemy, you need to know before going deeper.",
+            "leadsToPartId": "part-uuid-002"
+          }
+        ],
+        "status": "generated",
+        "generatedAt": "2026-04-17T10:10:00.000Z"
+      },
+      {
+        "id": "part-uuid-002",
+        "storyId": "f1e2d3c4-b5a6-7890-abcd-ef0987654321",
+        "universeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "partNumber": 2,
+        "isOpening": false,
+        "isEnding": false,
+        "title": "The Warden's Eye",
+        "narrativeText": "You make the call and drop into the shaft, landing hard on a maintenance catwalk forty feet below street level. Your mechanical arm sparks on impact — the glitch worsens, fingers locking at half-curl. The Forbidden Quarter's underground is different from the maps you memorized. The walls breathe with condensation. Aether crystals embedded in the ceiling pulse in sync with the signal, which is growing stronger. Then you hear it: the measured hydraulic hiss of a Warden automaton. Twelve feet tall, vision sensors wide as dinner plates. The Architects built them to protect — the Collapse corrupted that directive into something simpler: eliminate. It hasn't spotted you yet. The signal source is behind a sealed Architect-grade vault door, thirty meters past the Warden's patrol path. Your cracker might open the door. Your arm might not cooperate.",
+        "mood": "desperate and urgent",
+        "imagePrompt": "Underground steampunk vault corridor, massive corrupted automaton guardian patrolling in dim aether-crystal light, small human figure hiding behind machinery, blue and amber glow, tense atmosphere, rust and copper industrial aesthetic, cinematic",
+        "imagePath": "images/a1b2c3d4-e5f6-7890-abcd-ef1234567890/f1e2d3c4-b5a6-7890-abcd-ef0987654321/part-uuid-002.png",
+        "choices": [
+          {
+            "id": "choice_a",
+            "label": "Hack the Warden's patrol routine",
+            "description": "Use the signal cracker to loop its movement pattern — risky if the cracker fails mid-attempt.",
+            "leadsToPartId": "part-uuid-003"
+          },
+          {
+            "id": "choice_b",
+            "label": "Force the vault door now",
+            "description": "Burn your remaining aether slugs to blast the door open and run — the noise will draw the Warden instantly.",
+            "leadsToPartId": "part-uuid-003"
+          }
+        ],
+        "status": "generated",
+        "generatedAt": "2026-04-17T10:25:00.000Z"
+      },
+      {
+        "id": "part-uuid-003",
+        "storyId": "f1e2d3c4-b5a6-7890-abcd-ef0987654321",
+        "universeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "partNumber": 3,
+        "isOpening": false,
+        "isEnding": true,
+        "title": "What the Architects Left Behind",
+        "narrativeText": "The vault door groans open and you throw yourself inside, slamming it shut behind you. The Warden's impacts shake dust from the ceiling — then silence. It can't follow through Architect-sealed doors. You turn around. The chamber is small, clean, impossibly preserved. At its center: a single aether crystal the size of a child's fist, pulsing with the signal. Beside it, a data slate still running on three hundred year old power. The message is short. The Architects didn't collapse by accident. They left. And they left this: a set of coordinates — deep in the Unmapped Wastes — and a question inscribed in old-script at the bottom of the slate: 'Will you finish what we started?' Your mechanical arm unfolds properly for the first time in months, as if the crystal's field repaired something. You pocket both items. Behind you, someone begins working on the vault door from the other side. You've got maybe four minutes. The Wastes are six days away. You start planning.",
+        "mood": "revelatory and quietly hopeful",
+        "imagePrompt": "Ancient pristine underground chamber amid ruins, glowing aether crystal on a stone plinth, a traveler reading a illuminated data slate, warm amber crystal light against dark surroundings, steampunk aesthetic, sense of discovery and weight, cinematic",
+        "imagePath": "images/a1b2c3d4-e5f6-7890-abcd-ef1234567890/f1e2d3c4-b5a6-7890-abcd-ef0987654321/part-uuid-003.png",
+        "choices": [],
+        "status": "generated",
+        "generatedAt": "2026-04-17T10:42:00.000Z"
+      }
+    ]
+  }
+}

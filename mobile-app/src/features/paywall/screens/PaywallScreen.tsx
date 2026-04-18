@@ -327,9 +327,9 @@ export function PaywallScreen() {
         />
 
         <View style={styles.parentNotice}>
-          <Text style={styles.parentNoticeTitle}>Pour les parents</Text>
+          <Text style={styles.parentNoticeTitle}>Information</Text>
           <Text style={styles.parentNoticeText}>
-            Les achats doivent être effectués par un adulte. Tu peux restaurer tes achats sur un autre appareil.
+            Tu peux restaurer tes achats sur un autre appareil via le bouton ci-dessous.
           </Text>
         </View>
       </ScrollView>

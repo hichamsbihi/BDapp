@@ -1,6 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Dimensions,
+  ActivityIndicator,
+  ImageBackground,
+  Modal as RNModal,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,35 +20,35 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
-import { useStoryStarts } from '@/hooks/useStoryData';
-import { StoryStart } from '@/types';
+import { useGeneratedStories } from '@/hooks/useStoryData';
+import { GeneratedStory } from '@/types';
+import { getMockUniverses } from '@/mocks/storyMock';
+import { STORY_UNLOCK_COST } from '@/constants/stars';
+import { getCurrentUser } from '@/services/authService';
 import { colors, spacing, radius, typography } from '@/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 2 * (spacing.xl + spacing.xs);
 
-/**
- * Chapter choice component
- * 
- * Minimal design: title + paragraph only.
- * Subtle press feedback (scale 0.985) for tactile response.
- * Soft dimming on non-selected cards (0.45 opacity).
- */
-interface ChapterProps {
-  chapter: StoryStart;
+// ─── StoryCard ──────────────────────────────────────────
+
+interface StoryCardProps {
+  story: GeneratedStory;
   index: number;
   isSelected: boolean;
+  isLocked: boolean;
   hasSelection: boolean;
-  onSelect: (chapter: StoryStart) => void;
+  onSelect: (story: GeneratedStory) => void;
 }
 
-const Chapter: React.FC<ChapterProps> = ({
-  chapter,
+const StoryCard: React.FC<StoryCardProps> = ({
+  story,
   index,
   isSelected,
+  isLocked,
   hasSelection,
   onSelect,
 }) => {
@@ -45,7 +56,6 @@ const Chapter: React.FC<ChapterProps> = ({
   const pressScale = useSharedValue(1);
 
   useEffect(() => {
-    // Stagger: 120ms between cards, 500ms fade+slide
     progress.value = withDelay(
       1000 + index * 120,
       withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })
@@ -60,14 +70,11 @@ const Chapter: React.FC<ChapterProps> = ({
     ],
   }));
 
-  // Softer dimming: 0.45 instead of 0.38
   const dimmed = hasSelection && !isSelected;
 
   const handlePressIn = () => {
-    // Subtle tactile feedback: scale 0.985, 100ms
     pressScale.value = withTiming(0.985, { duration: 100 });
   };
-
   const handlePressOut = () => {
     pressScale.value = withTiming(1, { duration: 100 });
   };
@@ -76,164 +83,379 @@ const Chapter: React.FC<ChapterProps> = ({
     <Animated.View style={style}>
       <Pressable
         style={[
-          styles.chapter,
-          isSelected && styles.chapterSelected,
-          dimmed && styles.chapterDimmed,
+          styles.card,
+          isSelected && styles.cardSelected,
+          dimmed && styles.cardDimmed,
         ]}
-        onPress={() => onSelect(chapter)}
+        onPress={() => onSelect(story)}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        <Text style={[styles.title, isSelected && styles.titleSelected]}>
-          {chapter.title}
-        </Text>
-        <Text style={[styles.paragraph, isSelected && styles.paragraphSelected]}>
-          {chapter.text}
-        </Text>
+        <ImageBackground
+          source={{ uri: story.imageUrl }}
+          style={styles.cardBackground}
+          imageStyle={styles.cardBackgroundImage}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={isLocked ? ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.85)'] : ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.75)']}
+            style={styles.cardGradient}
+          >
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.title, isSelected && styles.titleSelected, isLocked && styles.titleLocked]}>
+                {story.title}
+              </Text>
+              {isLocked && (
+                <View style={styles.lockBadge}>
+                  <Text style={styles.lockBadgeText}>✨ {STORY_UNLOCK_COST}</Text>
+                </View>
+              )}
+              {!isLocked && (
+                <View style={styles.openBadge}>
+                  <Text style={styles.openBadgeText}>OUVERT</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.synopsis, isSelected && styles.synopsisSelected]}>
+              {isLocked ? 'Cette histoire attend d\'être déverrouillée...' : story.synopsis}
+            </Text>
+            <Text style={styles.meta}>
+              {story.totalParts} chapitres · {story.theme}
+            </Text>
+          </LinearGradient>
+        </ImageBackground>
       </Pressable>
     </Animated.View>
   );
 };
 
-/**
- * OpeningPageScreen (exported as StartSelectScreen for route compatibility)
- * 
- * The first page of the child's book.
- * Not a menu. Not an interface. A literary moment.
- * 
- * The text is sacred. Everything else disappears.
- */
+// ─── Unlock Modal ───────────────────────────────────────
+
+const UNLOCK_MESSAGES = [
+  "Cette histoire n'attendait que toi !",
+  "Une aventure extraordinaire est sur le point de commencer...",
+  "Les secrets de cette histoire vont se révéler rien que pour toi !",
+  "Tu es sur le point de vivre quelque chose d'inoubliable !",
+  "Cette histoire a été créée spécialement pour des héros comme toi !",
+  "La magie se prépare... es-tu prêt pour l'aventure ?",
+  "Quelque chose de merveilleux t'attend dans cette histoire !",
+] as const;
+
+interface StoryUnlockModalProps {
+  visible: boolean;
+  story: GeneratedStory | null;
+  onClose: () => void;
+  onUnlocked: () => void;
+}
+
+const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
+  visible,
+  story,
+  onClose,
+  onUnlocked,
+}) => {
+  const stars = useAppStore((s) => s.stars);
+  const canAfford = useAppStore((s) => s.canAfford);
+  const unlockStory = useAppStore((s) => s.unlockStory);
+  const rewardStar = useAppStore((s) => s.rewardStar);
+  const [isWatching, setIsWatching] = useState(false);
+
+  const randomMessage = useMemo(() => {
+    if (!visible) return '';
+    return UNLOCK_MESSAGES[Math.floor(Math.random() * UNLOCK_MESSAGES.length)];
+  }, [visible]);
+
+  if (!story) return null;
+
+  const affordable = canAfford(STORY_UNLOCK_COST);
+
+  const handleUseStars = () => {
+    if (unlockStory(story.id)) {
+      onUnlocked();
+      onClose();
+    }
+  };
+
+  const handleWatchMagic = async () => {
+    setIsWatching(true);
+    try {
+      await rewardStar('watch_ad');
+      if (canAfford(STORY_UNLOCK_COST) && unlockStory(story.id)) {
+        onUnlocked();
+        onClose();
+      }
+    } finally {
+      setIsWatching(false);
+    }
+  };
+
+  const handleBuyStars = async () => {
+    onClose();
+    const user = await getCurrentUser();
+    if (user) {
+      router.push('/paywall');
+    } else {
+      router.push('/(auth)/login?from=paywall');
+    }
+  };
+
+  if (affordable) {
+    return (
+      <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Pressable style={styles.modalOverlay} onPress={onClose}>
+          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
+            <LinearGradient
+              colors={[colors.primary, colors.background]}
+              style={styles.confirmHeader}
+            >
+              <Text style={styles.confirmEmoji}>📖</Text>
+            </LinearGradient>
+
+            <View style={styles.confirmContent}>
+              <Text style={styles.confirmTitle}>{story.title}</Text>
+              <Text style={styles.confirmMessage}>{randomMessage}</Text>
+
+              <View style={styles.costBadge}>
+                <Text style={styles.costBadgeText}>⭐ {STORY_UNLOCK_COST} étoiles</Text>
+              </View>
+
+              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseStars}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.confirmButtonGradient}
+                >
+                  <Text style={styles.confirmButtonPrimaryText}>Débloquer cette histoire</Text>
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable style={styles.confirmButtonSecondary} onPress={onClose}>
+                <Text style={styles.confirmButtonSecondaryText}>Plus tard</Text>
+              </AnimatedPressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </RNModal>
+    );
+  }
+
+  const missing = STORY_UNLOCK_COST - stars;
+  return (
+    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.noStarsCard} onPress={(e) => e.stopPropagation()}>
+          <LinearGradient
+            colors={['#FFD54F', '#FFEB9C', colors.background]}
+            style={styles.noStarsHeader}
+          >
+            <Text style={styles.noStarsHeaderEmoji}>⭐</Text>
+            <Text style={styles.noStarsHeaderTitle}>Presque là !</Text>
+          </LinearGradient>
+
+          <View style={styles.noStarsContent}>
+            <View style={styles.starsProgressRow}>
+              {Array.from({ length: STORY_UNLOCK_COST }).map((_, i) => (
+                <View key={i} style={[styles.starDot, i < stars && styles.starDotFilled]}>
+                  <Text style={styles.starDotText}>{i < stars ? '⭐' : '☆'}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.starsProgressLabel}>{stars}/{STORY_UNLOCK_COST} étoiles</Text>
+
+            <Text style={styles.noStarsMessage}>
+              {missing === 1
+                ? `Il te manque encore 1 étoile pour débloquer « ${story.title} » !`
+                : `Il te manque encore ${missing} étoiles pour débloquer « ${story.title} » !`}
+            </Text>
+
+            <View style={styles.noStarsButtons}>
+              <AnimatedPressable
+                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
+                onPress={handleWatchMagic}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.noStarsButtonGradient}
+                >
+                  {isWatching ? (
+                    <ActivityIndicator color={colors.text.inverse} size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.noStarsButtonIcon}>✨</Text>
+                      <Text style={styles.noStarsButtonTextWhite}>Gagner une étoile magique</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
+                onPress={handleBuyStars}
+                disabled={isWatching}
+              >
+                <LinearGradient
+                  colors={['#FFD54F', '#F5C430']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.noStarsButtonGradient}
+                >
+                  <Text style={styles.noStarsButtonIcon}>⭐</Text>
+                  <Text style={styles.noStarsButtonTextDark}>Obtenir plus d'étoiles</Text>
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={styles.noStarsButtonLater}
+                onPress={onClose}
+                disabled={isWatching}
+              >
+                <Text style={styles.noStarsButtonLaterText}>Plus tard</Text>
+              </AnimatedPressable>
+            </View>
+          </View>
+        </Pressable>
+      </Pressable>
+    </RNModal>
+  );
+};
+
+// ─── Main Screen ────────────────────────────────────────
+
 export const StartSelectScreen: React.FC = () => {
-  const [selectedChapter, setSelectedChapter] = useState<StoryStart | null>(null);
+  const { universeId } = useLocalSearchParams<{ universeId: string }>();
+  const [selectedStory, setSelectedStory] = useState<GeneratedStory | null>(null);
+  const [loadingParts, setLoadingParts] = useState(false);
+  const [unlockModalVisible, setUnlockModalVisible] = useState(false);
+  const [storyToUnlock, setStoryToUnlock] = useState<GeneratedStory | null>(null);
   const isNavigatingRef = useRef(false);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
+  const isPremium = useAppStore((state) => state.isPremium);
+  const unlockedStories = useAppStore((state) => state.unlockedStories);
 
-  const { data: chapters, loading: chaptersLoading, error: chaptersError, refetch } = useStoryStarts(currentStory?.universeId);
+  const resolvedUniverseId = universeId || currentStory?.universeId;
 
-  const pageIdToPageNumber = (pageId: string): number | null => {
-    // n8n uses stable page_ids for branching: p1a, p1b, p2a, p2b, p3, p4, p5
-    // We map them to the DB `page_number` used by `story_paragraphs` and `narrative_choices`.
-    // This avoids relying on array order which can be unstable with legacy rows / missing path_id.
-    const normalized = pageId.trim().toLowerCase();
-    const mapping: Record<string, number> = {
-      p1a: 1,
-      p1b: 2,
-      p2a: 3,
-      p2b: 4,
-      p3: 5,
-      p4: 6,
-      p5: 7,
-    };
-    return mapping[normalized] ?? null;
-  };
+  const universe = useMemo(
+    () => getMockUniverses().find((u) => u.id === resolvedUniverseId),
+    [resolvedUniverseId]
+  );
 
-  const startToStartPageNumber = (chapter: StoryStart): number => {
-    const fromFirstPageId = chapter.firstPageId ? pageIdToPageNumber(chapter.firstPageId) : null;
-    if (fromFirstPageId != null) return fromFirstPageId;
+  const {
+    data: rawStories,
+    loading: storiesLoading,
+    error: storiesError,
+    refetch,
+  } = useGeneratedStories(resolvedUniverseId);
 
-    const pathId = (chapter.pathId || '').trim().toLowerCase();
-    if (pathId === 'start-a') return 1;
-    if (pathId === 'start-b') return 2;
+  const stories = useMemo(() => {
+    if (isPremium) return rawStories.map((s) => ({ ...s, isLocked: false }));
+    return rawStories.map((s) => ({
+      ...s,
+      isLocked: s.isLocked && !(unlockedStories ?? []).includes(s.id),
+    }));
+  }, [rawStories, isPremium, unlockedStories]);
 
-    // Fallback: assume first start = p1a(1), second = p1b(2)
-    // (kept for legacy DB rows without `path_id` / `first_page_id`).
-    const idx = chapters.findIndex((c) => c.id === chapter.id);
-    return idx >= 0 ? idx + 1 : 1;
-  };
-
-  // Animation values
   const introProgress = useSharedValue(0);
   const hintProgress = useSharedValue(0);
-  const ctaProgress = useSharedValue(0);
 
   useEffect(() => {
-    // Intro: meditative, 1200ms
     introProgress.value = withTiming(1, {
       duration: 1200,
       easing: Easing.out(Easing.cubic),
     });
-
-    // Hint: appears after cards (1800ms delay)
     hintProgress.value = withDelay(
       1800,
       withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })
     );
   }, []);
 
-  // Hide hint and show CTA when selection is made
   useEffect(() => {
-    if (selectedChapter) {
-      // Fade out hint
+    if (selectedStory) {
       hintProgress.value = withTiming(0, { duration: 300 });
-      // Fade in CTA
-      ctaProgress.value = withTiming(1, {
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
-      });
-    } else {
-      ctaProgress.value = withTiming(0, { duration: 200 });
     }
-  }, [selectedChapter]);
+  }, [selectedStory]);
 
   const introStyle = useAnimatedStyle(() => ({
     opacity: introProgress.value,
     transform: [{ scale: interpolate(introProgress.value, [0, 1], [0.98, 1]) }],
   }));
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hintProgress.value }));
 
-  const hintStyle = useAnimatedStyle(() => ({
-    opacity: hintProgress.value,
-  }));
-
-  const ctaStyle = useAnimatedStyle(() => ({
-    opacity: ctaProgress.value,
-    transform: [{ translateY: interpolate(ctaProgress.value, [0, 1], [8, 0]) }],
-  }));
-
-  const handleSelect = (chapter: StoryStart) => {
-    setSelectedChapter(chapter);
+  const handleSelect = (story: GeneratedStory) => {
+    if (story.isLocked) {
+      setStoryToUnlock(story);
+      setUnlockModalVisible(true);
+    } else {
+      setSelectedStory(story);
+    }
   };
 
-  const handleContinue = useCallback(() => {
-    if (!selectedChapter) return;
+  const handleUnlocked = () => {
+    if (storyToUnlock) {
+      setSelectedStory({ ...storyToUnlock, isLocked: false });
+    }
+  };
+
+  const handleContinue = useCallback(async () => {
+    if (!selectedStory) return;
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
+    setLoadingParts(true);
 
-    const startPageNumber = startToStartPageNumber(selectedChapter);
+    try {
+      const { fetchPartsForStory } = await import('@/services/storyService');
+      const parts = await fetchPartsForStory(selectedStory.id);
+      const openingPart = parts.find((p) => p.isOpening) ?? parts[0];
 
-    updateCurrentStory({
-      title: selectedChapter.title,
-      startId: selectedChapter.id,
-      openingText: selectedChapter.text,
-      currentDbPageNumber: startPageNumber,
-    });
+      if (!openingPart) {
+        setLoadingParts(false);
+        isNavigatingRef.current = false;
+        return;
+      }
 
-    router.push('/story/paragraph');
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 1000);
-  }, [selectedChapter, startToStartPageNumber, updateCurrentStory]);
+      updateCurrentStory({
+        title: selectedStory.title,
+        generatedStoryId: selectedStory.id,
+        synopsis: selectedStory.synopsis,
+        currentPartId: openingPart.id,
+        allParts: parts,
+      });
 
-  // Loading state — shown while Supabase fetch is in progress
-  if (chaptersLoading) {
+      router.replace({
+        pathname: '/story/page',
+        params: { partId: openingPart.id },
+      });
+    } catch (err) {
+      if (__DEV__) console.log('Failed to load story parts:', err);
+    } finally {
+      setLoadingParts(false);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 1000);
+    }
+  }, [selectedStory, updateCurrentStory]);
+
+  if (storiesLoading) {
     return (
       <ScreenContainer style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Préparation de ton livre...</Text>
+          <Text style={styles.loadingText}>Préparation des histoires...</Text>
         </View>
       </ScreenContainer>
     );
   }
 
-  // Error state — fetch failed
-  if (chaptersError) {
-    console.log('StartSelectScreen: fetch error', chaptersError);
+  if (storiesError) {
     return (
       <ScreenContainer style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Impossible de charger les débuts d'histoire.</Text>
+          <Text style={styles.errorText}>Impossible de charger les histoires.</Text>
           <Pressable style={styles.retryButton} onPress={refetch}>
             <Text style={styles.retryButtonText}>Réessayer</Text>
           </Pressable>
@@ -242,14 +464,12 @@ export const StartSelectScreen: React.FC = () => {
     );
   }
 
-  // Empty state — no story starts in DB for this universe
-  if (chapters.length === 0) {
-    console.log('StartSelectScreen: no story starts for universeId', currentStory?.universeId);
+  if (stories.length === 0) {
     return (
       <ScreenContainer style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>
-            Aucun début d'histoire disponible pour cet univers.
+            Aucune histoire disponible pour cet univers.
           </Text>
           <Pressable style={styles.retryButton} onPress={() => router.back()}>
             <Text style={styles.retryButtonText}>Retour</Text>
@@ -260,66 +480,105 @@ export const StartSelectScreen: React.FC = () => {
   }
 
   return (
-    <ScreenContainer style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Literary intro — one phrase, nothing else */}
-        <Animated.View style={[styles.intro, introStyle]}>
-          <Text style={styles.introText}>
-            Il était une fois,{'\n'}une première phrase...
-          </Text>
-        </Animated.View>
-
-        {/* Chapter choices — like pages waiting to be read */}
-        {chapters.map((chapter, index) => (
-          <Chapter
-            key={chapter.id}
-            chapter={chapter}
-            index={index}
-            isSelected={selectedChapter?.id === chapter.id}
-            hasSelection={selectedChapter !== null}
-            onSelect={handleSelect}
+    <View style={styles.wrapper}>
+      {universe?.backgroundImageUrl && (
+        <ImageBackground
+          source={{ uri: universe.backgroundImageUrl }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.9)']}
+            style={StyleSheet.absoluteFill}
           />
-        ))}
+        </ImageBackground>
+      )}
+      <ScreenContainer style={styles.container}>
+        <View style={styles.topBar}>
+          <StarsBadgeWithModal />
+        </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.intro, introStyle]}>
+            <Text style={styles.introText}>
+              Choisis ton{'\n'}aventure...
+            </Text>
+          </Animated.View>
 
-        {/* Poetic hint — disappears after selection */}
-        <Animated.View style={[styles.hintContainer, hintStyle]}>
-          <Text style={styles.hintText}>
-            Choisis la phrase qui ouvrira ton livre...
-          </Text>
-        </Animated.View>
-      </ScrollView>
+          {stories.map((story, index) => (
+            <StoryCard
+              key={story.id}
+              story={story}
+              index={index}
+              isSelected={selectedStory?.id === story.id}
+              isLocked={story.isLocked}
+              hasSelection={selectedStory !== null}
+              onSelect={handleSelect}
+            />
+          ))}
 
-      {/* CTA — appears only after choice */}
-      <Animated.View
-        style={[styles.footer, ctaStyle]}
-        pointerEvents={selectedChapter ? 'auto' : 'none'}
-      >
-        <AnimatedPressable style={[styles.button]} onPress={handleContinue}>
-          <Text style={styles.buttonText}>Commencer ce chapitre</Text>
-        </AnimatedPressable>
-      </Animated.View>
-    </ScreenContainer>
+          <Animated.View style={[styles.hintContainer, hintStyle]}>
+            <Text style={styles.hintText}>
+              Choisis l'histoire qui t'appelle...
+            </Text>
+          </Animated.View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <AnimatedPressable
+            style={[styles.button, !selectedStory && styles.buttonDisabled]}
+            onPress={handleContinue}
+            disabled={!selectedStory || loadingParts}
+          >
+            {loadingParts ? (
+              <ActivityIndicator size="small" color={colors.text.inverse} />
+            ) : (
+              <Text style={[styles.buttonText, !selectedStory && styles.buttonTextDisabled]}>
+                {selectedStory ? 'Commencer cette histoire' : 'Choisis une aventure pour commencer'}
+              </Text>
+            )}
+          </AnimatedPressable>
+        </View>
+      </ScreenContainer>
+
+      <StoryUnlockModal
+        visible={unlockModalVisible}
+        story={storyToUnlock}
+        onClose={() => setUnlockModalVisible(false)}
+        onUnlocked={handleUnlocked}
+      />
+    </View>
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
+    flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
+    backgroundColor: 'transparent',
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
   },
   scroll: {
     flex: 1,
   },
   content: {
-    paddingTop: spacing.xxxl + spacing.xxl,
+    paddingTop: spacing.xl,
     paddingHorizontal: spacing.xl + spacing.xs,
     paddingBottom: spacing.xl + spacing.lg,
   },
-
-  // Intro — poetic, centered, breathing
   intro: {
     marginBottom: spacing.xxxl + spacing.md,
     alignItems: 'center',
@@ -328,55 +587,98 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xxl,
     fontWeight: typography.weight.medium,
     fontStyle: 'italic',
-    color: colors.text.secondary,
+    color: colors.text.inverse,
     textAlign: 'center',
     lineHeight: typography.size.xxl * typography.lineHeight.normal + spacing.xs,
     letterSpacing: 0.3,
   },
 
-  // Chapter card — like a page laid down
-  chapter: {
+  // ── Card ──
+  card: {
     width: CARD_WIDTH,
     alignSelf: 'center',
     marginBottom: spacing.xl + spacing.lg,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl + spacing.xs,
-    backgroundColor: colors.background,
     borderRadius: radius.xl,
     borderWidth: 1.5,
-    borderColor: colors.borderMedium,
+    borderColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
   },
-  chapterSelected: {
+  cardSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.surfaceMuted,
+    borderWidth: 2,
   },
-  chapterDimmed: {
-    opacity: 0.45, // Softer than before (was 0.38)
+  cardBackground: {
+    width: '100%',
   },
-
-  // Title — chapter name
+  cardBackgroundImage: {
+    borderRadius: radius.xl - 1,
+  },
+  cardGradient: {
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl + spacing.xs,
+  },
+  cardDimmed: {
+    opacity: 0.45,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
   title: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.lg,
+    color: colors.text.inverse,
+    flex: 1,
   },
   titleSelected: {
-    color: colors.primaryDark,
+    color: colors.text.inverse,
   },
-
-  // Paragraph — THE HERO, the sacred text
-  paragraph: {
-    fontSize: typography.size.xl,
+  titleLocked: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  lockBadge: {
+    backgroundColor: 'rgba(255,215,0,0.25)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.4)',
+  },
+  lockBadgeText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+    color: '#FFD700',
+  },
+  openBadge: {
+    backgroundColor: 'rgba(76,175,80,0.25)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.md,
+  },
+  openBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: '#81C784',
+    letterSpacing: 1,
+  },
+  synopsis: {
+    fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: colors.text.secondary,
+    color: 'rgba(255,255,255,0.75)',
     lineHeight: typography.size.xl + spacing.md,
+    marginBottom: spacing.md,
   },
-  paragraphSelected: {
-    color: colors.text.primary,
+  synopsisSelected: {
+    color: 'rgba(255,255,255,0.9)',
   },
-
-  // Hint — poetic, disappears on selection
+  meta: {
+    fontSize: typography.size.sm,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: typography.weight.medium,
+  },
   hintContainer: {
     marginTop: spacing.sm,
     alignItems: 'center',
@@ -384,11 +686,11 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: typography.size.md,
     fontStyle: 'italic',
-    color: colors.text.muted,
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
 
-  // Loading / error / empty states
+  // ── Loading / Error ──
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -420,12 +722,11 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
 
-  // Footer — discrete, supportive
+  // ── Footer ──
   footer: {
     paddingHorizontal: spacing.xl + spacing.xs,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl - spacing.xs,
-    backgroundColor: colors.background,
   },
   button: {
     backgroundColor: colors.primary,
@@ -433,9 +734,189 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
   },
+  buttonDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
   buttonText: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
     color: colors.text.inverse,
+  },
+  buttonTextDisabled: {
+    color: 'rgba(255,255,255,0.45)',
+  },
+
+  // ── Unlock Modal — Can Afford ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  confirmCard: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+  },
+  confirmHeader: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl + spacing.md,
+  },
+  confirmEmoji: {
+    fontSize: 48,
+  },
+  confirmContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    alignItems: 'center',
+  },
+  confirmTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  confirmMessage: {
+    fontSize: typography.size.md,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.md * 1.5,
+    marginBottom: spacing.xl,
+  },
+  costBadge: {
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    marginBottom: spacing.xl,
+  },
+  costBadgeText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: '#D4A017',
+  },
+  confirmButtonPrimary: {
+    width: '100%',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  confirmButtonGradient: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    borderRadius: radius.lg,
+  },
+  confirmButtonPrimaryText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.inverse,
+  },
+  confirmButtonSecondary: {
+    paddingVertical: spacing.md,
+  },
+  confirmButtonSecondaryText: {
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+  },
+
+  // ── Unlock Modal — Not Enough Stars ──
+  noStarsCard: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+  },
+  noStarsHeader: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  noStarsHeaderEmoji: {
+    fontSize: 40,
+    marginBottom: spacing.sm,
+  },
+  noStarsHeaderTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  noStarsContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    alignItems: 'center',
+  },
+  starsProgressRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  starDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starDotFilled: {
+    backgroundColor: 'rgba(255,215,0,0.2)',
+  },
+  starDotText: {
+    fontSize: 16,
+  },
+  starsProgressLabel: {
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
+    marginBottom: spacing.lg,
+  },
+  noStarsMessage: {
+    fontSize: typography.size.md,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.md * 1.5,
+    marginBottom: spacing.xl,
+  },
+  noStarsButtons: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  noStarsButtonWrapper: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  noStarsButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+  },
+  noStarsButtonIcon: {
+    fontSize: 18,
+  },
+  noStarsButtonTextWhite: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.inverse,
+  },
+  noStarsButtonTextDark: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: '#5D4037',
+  },
+  noStarsButtonLater: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  noStarsButtonLaterText: {
+    fontSize: typography.size.md,
+    color: colors.text.muted,
+  },
+  buttonOpDisabled: {
+    opacity: 0.5,
   },
 });

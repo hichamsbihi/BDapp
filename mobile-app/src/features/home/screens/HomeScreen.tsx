@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
+import { useAppStore } from '@/store';
 import {
   useHeroProfile,
   useStories,
@@ -125,7 +126,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleCreateStory = () => {
-    router.push('/story/universe-select');
+    router.push('/selection/universe-select');
   };
 
   const handleLibrary = () => {
@@ -137,7 +138,11 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   const handleContinueStory = () => {
-    router.push('/story/paragraph');
+    const currentPartId = useAppStore.getState().currentStory?.currentPartId;
+    router.push({
+      pathname: '/story/page',
+      params: { partId: currentPartId ?? '' },
+    });
   };
 
   const coverImageUrl = useCallback((story: Story) => {
