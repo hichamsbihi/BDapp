@@ -4,28 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, HeroProfile, Story } from '@/types';
 import {
   INITIAL_STARS,
-  UNIVERSE_UNLOCK_COST,
-  STORY_UNLOCK_COST,
   REWARD_WATCH_AD,
-  COUNTDOWN_REWARD,
-  COUNTDOWN_HOURS,
 } from '@/constants/stars';
 
+const INITIAL_CREDITS = INITIAL_STARS;
 
-/**
- * Check if 12h have passed since last countdown claim
- */
-const canClaimCountdown = (lastDate: string | null): boolean => {
-  if (!lastDate) return true;
-  const last = new Date(lastDate);
-  const now = new Date();
-  const elapsedMs = now.getTime() - last.getTime();
-  return elapsedMs >= COUNTDOWN_HOURS * 60 * 60 * 1000;
-};
-
-/**
- * Mock ad watch - replace with real SDK integration later
- */
 const mockWatchAd = (): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, 1500));
 };
@@ -33,7 +16,6 @@ const mockWatchAd = (): Promise<void> => {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Hero profile state
       heroProfile: null,
       setHeroProfile: (profile: HeroProfile) => set({ heroProfile: profile }),
       updateHeroProfile: (updates: Partial<HeroProfile>) =>
@@ -44,7 +26,6 @@ export const useAppStore = create<AppState>()(
         })),
       clearHeroProfile: () => set({ heroProfile: null }),
 
-      // Current story state (story being created)
       currentStory: null,
       setCurrentStory: (story: Partial<Story>) => set({ currentStory: story }),
       updateCurrentStory: (updates: Partial<Story>) =>
@@ -55,7 +36,6 @@ export const useAppStore = create<AppState>()(
         })),
       clearCurrentStory: () => set({ currentStory: null }),
 
-      // Stories library
       stories: [],
       addStory: (story: Story) =>
         set((state) => ({ stories: [...state.stories, story] })),
@@ -71,25 +51,15 @@ export const useAppStore = create<AppState>()(
           ),
         })),
 
-      // Stars (narrative currency - non-monetary)
-      stars: INITIAL_STARS,
-      unlockedUniverses: [],
+      credits: INITIAL_CREDITS,
       unlockedStories: [],
-      lastCountdownClaimDate: null,
-      addStars: (amount: number) =>
+
+      addCredits: (amount: number) =>
         set((state) => ({
-          stars: Math.max(0, (state.stars ?? INITIAL_STARS) + amount),
+          credits: Math.max(0, (state.credits ?? INITIAL_CREDITS) + amount),
         })),
-      setStarsFromServer: (amount: number) =>
-        set({ stars: Math.max(0, amount) }),
-      setUnlockedUniverses: (ids: string[]) =>
-        set({ unlockedUniverses: Array.isArray(ids) ? ids : [] }),
-      addUnlockedUniverse: (universeId: string) =>
-        set((s) => {
-          const list = s.unlockedUniverses ?? [];
-          if (list.includes(universeId)) return s;
-          return { unlockedUniverses: [...list, universeId] };
-        }),
+      setCreditsFromServer: (amount: number) =>
+        set({ credits: Math.max(0, amount) }),
       setUnlockedStories: (ids: string[]) =>
         set({ unlockedStories: Array.isArray(ids) ? ids : [] }),
       addUnlockedStory: (storyId: string) =>
@@ -98,19 +68,18 @@ export const useAppStore = create<AppState>()(
           if (list.includes(storyId)) return s;
           return { unlockedStories: [...list, storyId] };
         }),
-      spendStars: (amount: number) => {
+      spendCredits: (amount: number) => {
         const state = get();
-        const current = state.stars ?? INITIAL_STARS;
+        const current = state.credits ?? INITIAL_CREDITS;
         if (current < amount) return false;
-        set({ stars: current - amount });
+        set({ credits: current - amount });
         return true;
       },
       canAfford: (amount: number) => {
-        const current = get().stars ?? INITIAL_STARS;
+        const current = get().credits ?? INITIAL_CREDITS;
         return current >= amount;
       },
-      rewardStar: async (type) => {
-        const state = get();
+      rewardCredits: async (type) => {
         let amount = 0;
 
         switch (type) {
@@ -118,39 +87,18 @@ export const useAppStore = create<AppState>()(
             await mockWatchAd();
             amount = REWARD_WATCH_AD;
             break;
-          case 'countdown_bonus':
-            if (!canClaimCountdown(state.lastCountdownClaimDate)) return 0;
-            amount = COUNTDOWN_REWARD;
-            set({ lastCountdownClaimDate: new Date().toISOString() });
-            break;
           default:
             return 0;
         }
 
         if (amount > 0) {
           set((s) => ({
-            stars: Math.max(0, (s.stars ?? INITIAL_STARS) + amount),
+            credits: Math.max(0, (s.credits ?? INITIAL_CREDITS) + amount),
           }));
         }
         return amount;
       },
-      unlockUniverse: (universeId: string) => {
-        const state = get();
-        if (state.unlockedUniverses?.includes(universeId)) return true;
-        if (state.isPremium) {
-          set((s) => ({
-            unlockedUniverses: [...(s.unlockedUniverses ?? []), universeId],
-          }));
-          return true;
-        }
-        if (!state.canAfford(UNIVERSE_UNLOCK_COST)) return false;
-        if (!state.spendStars(UNIVERSE_UNLOCK_COST)) return false;
-        set((s) => ({
-          unlockedUniverses: [...(s.unlockedUniverses ?? []), universeId],
-        }));
-        return true;
-      },
-      unlockStory: (storyId: string) => {
+      unlockStory: (storyId: string, cost: number) => {
         const state = get();
         if (state.unlockedStories?.includes(storyId)) return true;
         if (state.isPremium) {
@@ -159,28 +107,24 @@ export const useAppStore = create<AppState>()(
           }));
           return true;
         }
-        if (!state.canAfford(STORY_UNLOCK_COST)) return false;
-        if (!state.spendStars(STORY_UNLOCK_COST)) return false;
+        if (!state.canAfford(cost)) return false;
+        if (!state.spendCredits(cost)) return false;
         set((s) => ({
           unlockedStories: [...(s.unlockedStories ?? []), storyId],
         }));
         return true;
       },
 
-      // Premium status
       isPremium: false,
       setIsPremium: (status: boolean) => set({ isPremium: status }),
 
-      // Purchase tracking (first-purchase promo)
       hasEverPurchased: false,
       setHasEverPurchased: (value: boolean) => set({ hasEverPurchased: value }),
 
-      // Onboarding status
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (status: boolean) =>
         set({ hasCompletedOnboarding: status }),
 
-      // Story progress from server (for "Continue in X")
       storyProgressList: [],
       setStoryProgressList: (list) => set({ storyProgressList: list }),
 
@@ -189,12 +133,10 @@ export const useAppStore = create<AppState>()(
           heroProfile: null,
           stories: [],
           hasCompletedOnboarding: false,
-          stars: INITIAL_STARS,
-          unlockedUniverses: [],
+          credits: INITIAL_CREDITS,
           unlockedStories: [],
           isPremium: false,
           hasEverPurchased: false,
-          lastCountdownClaimDate: null,
           currentStory: null,
           storyProgressList: [],
         }),
@@ -206,21 +148,17 @@ export const useAppStore = create<AppState>()(
         heroProfile: state.heroProfile,
         stories: state.stories,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
-        stars: state.stars,
-        unlockedUniverses: state.unlockedUniverses,
+        credits: state.credits,
         unlockedStories: state.unlockedStories,
-        lastCountdownClaimDate: state.lastCountdownClaimDate,
         isPremium: state.isPremium,
         hasEverPurchased: state.hasEverPurchased,
       }),
-      version: 5,
+      version: 7,
       migrate: (persistedState: any) => {
         return {
           ...persistedState,
-          stars: persistedState?.stars ?? INITIAL_STARS,
-          unlockedUniverses: persistedState?.unlockedUniverses ?? [],
+          credits: persistedState?.credits ?? persistedState?.stars ?? INITIAL_CREDITS,
           unlockedStories: persistedState?.unlockedStories ?? [],
-          lastCountdownClaimDate: persistedState?.lastCountdownClaimDate ?? null,
           isPremium: persistedState?.isPremium ?? false,
           hasEverPurchased: persistedState?.hasEverPurchased ?? false,
         };
@@ -229,11 +167,10 @@ export const useAppStore = create<AppState>()(
   )
 );
 
-// Selector hooks for better performance
 export const useHeroProfile = () => useAppStore((state) => state.heroProfile);
 export const useCurrentStory = () => useAppStore((state) => state.currentStory);
 export const useStories = () => useAppStore((state) => state.stories);
 export const useIsPremium = () => useAppStore((state) => state.isPremium);
 export const useHasCompletedOnboarding = () =>
   useAppStore((state) => state.hasCompletedOnboarding);
-export const useStars = () => useAppStore((state) => state.stars);
+export const useCredits = () => useAppStore((state) => state.credits);

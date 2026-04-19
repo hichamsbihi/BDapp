@@ -1,11 +1,7 @@
-/**
- * Syncs app store with Supabase when user is connected.
- * Call from store subscription or after store mutations.
- */
-
 import type { Story, StoryPage } from '@/types';
 import { getCurrentUser } from './authService';
 import { updateProfile } from './profileService';
+import { syncCreditsToServer, unlockStoryOnServer } from './walletService';
 import { supabase } from './supabase';
 
 export interface StoryProgressRow {
@@ -15,21 +11,15 @@ export interface StoryProgressRow {
   updated_at?: string;
 }
 
-/** Sync stars to profile. Call after any stars change when user is logged in. */
-export async function syncStars(starsBalance: number): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) return;
-  await updateProfile(user.id, { stars_balance: Math.max(0, starsBalance) });
+export async function syncCredits(credits: number): Promise<void> {
+  await syncCreditsToServer(credits);
 }
 
-/** Sync hero profile + unlocked universes/stories + is_premium to profile. Call when store changes. */
 export async function syncProfileFromStore(payload: {
   username: string | null;
   selected_avatar_id: string | null;
   age: number | null;
   gender: 'boy' | 'girl' | null;
-  unlocked_universe_ids: string[];
-  unlocked_story_ids: string[];
   last_universe_id?: string | null;
   is_premium?: boolean;
 }): Promise<void> {
@@ -40,14 +30,19 @@ export async function syncProfileFromStore(payload: {
     selected_avatar_id: payload.selected_avatar_id ?? null,
     age: payload.age ?? null,
     gender: payload.gender ?? null,
-    unlocked_universe_ids: payload.unlocked_universe_ids ?? [],
-    unlocked_story_ids: payload.unlocked_story_ids ?? [],
     ...(payload.last_universe_id !== undefined && { last_universe_id: payload.last_universe_id }),
     ...(payload.is_premium !== undefined && { is_premium: payload.is_premium }),
   });
 }
 
-/** Upsert story progress (user_id, universe_id, current_page_number). Use when user advances or starts a story. */
+export async function syncUnlockedStories(storyIds: string[]): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) return;
+  for (const storyId of storyIds) {
+    await unlockStoryOnServer(storyId);
+  }
+}
+
 export async function upsertStoryProgress(
   userId: string,
   universeId: string,
@@ -62,13 +57,9 @@ export async function upsertStoryProgress(
     },
     { onConflict: 'user_id,universe_id' }
   );
-  if (error) {
-    if (__DEV__) console.log('upsertStoryProgress error:', error.message);
-    throw error;
-  }
+  if (error && __DEV__) console.log('upsertStoryProgress error:', error.message);
 }
 
-/** Record a narrative choice (for replay / resume). */
 export async function insertUserChoice(
   userId: string,
   universeId: string,
@@ -81,13 +72,9 @@ export async function insertUserChoice(
     page_number: pageNumber,
     choice_id: choiceId,
   });
-  if (error) {
-    if (__DEV__) console.log('insertUserChoice error:', error.message);
-    throw error;
-  }
+  if (error && __DEV__) console.log('insertUserChoice error:', error.message);
 }
 
-/** Fetch all story progress for user (for "Continue in X" and resume). */
 export async function fetchUserStoryProgress(
   userId: string
 ): Promise<StoryProgressRow[]> {
@@ -100,12 +87,10 @@ export async function fetchUserStoryProgress(
   return (data ?? []) as StoryProgressRow[];
 }
 
-/** Update profile last_universe_id (e.g. when user starts or resumes a story). */
 export async function setLastUniverse(userId: string, universeId: string): Promise<void> {
   await updateProfile(userId, { last_universe_id: universeId });
 }
 
-/** Row shape from user_created_stories (snake_case). */
 interface UserCreatedStoryRow {
   id: string;
   user_id: string;
@@ -121,7 +106,6 @@ interface UserCreatedStoryRow {
   updated_at: string;
 }
 
-/** Persist a completed story to the DB (when user is connected). Uses story.id as story_client_id for upsert. */
 export async function saveCreatedStory(userId: string, story: Story): Promise<void> {
   const pages = (story.pages ?? []) as StoryPage[];
   const { error } = await supabase.from('user_created_stories').upsert(
@@ -145,13 +129,9 @@ export async function saveCreatedStory(userId: string, story: Story): Promise<vo
     },
     { onConflict: 'user_id,story_client_id' }
   );
-  if (error) {
-    if (__DEV__) console.log('saveCreatedStory error:', error.message);
-    throw error;
-  }
+  if (error && __DEV__) console.log('saveCreatedStory error:', error.message);
 }
 
-/** Fetch all created (completed) stories for the user from the DB. Maps to Story[]. */
 export async function fetchUserCreatedStories(userId: string): Promise<Story[]> {
   const { data, error } = await supabase
     .from('user_created_stories')

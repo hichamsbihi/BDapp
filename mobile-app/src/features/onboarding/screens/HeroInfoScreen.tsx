@@ -22,6 +22,7 @@ import Animated, {
 import { ScreenContainer } from '@/shared';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
+import { getCurrentUser, signInAnonymously } from '@/services/authService';
 import { colors, radius, shadows, spacing, typography } from '@/theme/theme';
 
 type Gender = 'boy' | 'girl';
@@ -163,7 +164,7 @@ export const HeroInfoScreen: React.FC = () => {
     }
   }, [isValid]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     Keyboard.dismiss();
     if (!isValid || !gender) return;
 
@@ -175,6 +176,12 @@ export const HeroInfoScreen: React.FC = () => {
       });
       router.back();
       return;
+    }
+
+    const existingUser = await getCurrentUser();
+    if (!existingUser) {
+      const { error } = await signInAnonymously();
+      if (error && __DEV__) console.log('Anonymous sign-in failed:', error.message);
     }
 
     setHeroProfile({

@@ -72,7 +72,7 @@ interface StorySeed {
   synopsis: string;
   theme: string;
   imageUrl: string;
-  locked: boolean;
+  creditsRequired: number;
 }
 
 const STORY_SEEDS: StorySeed[] = UNIVERSE_SEEDS.map((u, i) => ({
@@ -82,7 +82,7 @@ const STORY_SEEDS: StorySeed[] = UNIVERSE_SEEDS.map((u, i) => ({
   synopsis: `An adventure awaits in ${u.name}: ${u.desc.slice(0, 80)}...`,
   theme: u.lang === 'fr' ? 'fantasy' : 'sci-fi',
   imageUrl: PLACEHOLDER_IMG(`story-${u.id}`),
-  locked: i % 3 !== 0,
+  creditsRequired: i % 3 === 0 ? 0 : 3,
 }));
 
 // ─── Part text templates ────────────────────────────────
@@ -139,7 +139,6 @@ function buildUniverse(s: UniverseSeed): UniverseConfig {
 }
 
 function buildStory(s: StorySeed): GeneratedStory {
-  const partIds = [`${s.id}-p1`, `${s.id}-p2`, `${s.id}-p3`];
   return {
     id: s.id,
     universeId: s.universeId,
@@ -147,9 +146,8 @@ function buildStory(s: StorySeed): GeneratedStory {
     synopsis: s.synopsis,
     theme: s.theme,
     imageUrl: s.imageUrl,
-    isLocked: s.locked,
+    creditsRequired: s.creditsRequired,
     totalParts: 3,
-    partIds,
     status: 'complete',
     createdAt: '2026-04-17T10:00:00.000Z',
     completedAt: '2026-04-17T10:45:00.000Z',

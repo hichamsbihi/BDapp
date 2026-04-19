@@ -42,11 +42,11 @@ export const LibraryScreen: React.FC = () => {
   const stories = useAppStore((state) => state.stories);
   const heroProfile = useAppStore((state) => state.heroProfile);
   const removeStory = useAppStore((state) => state.removeStory);
-  const stars = useAppStore((state) => state.stars);
+  const credits = useAppStore((state) => state.credits);
   const isPremium = useAppStore((state) => state.isPremium);
   const canAfford = useAppStore((state) => state.canAfford);
-  const spendStars = useAppStore((state) => state.spendStars);
-  const rewardStar = useAppStore((state) => state.rewardStar);
+  const spendCredits = useAppStore((state) => state.spendCredits);
+  const rewardCredits = useAppStore((state) => state.rewardCredits);
 
   // Cache universe data for story cards (color, name)
   const [universesMap, setUniversesMap] = useState<Record<string, Universe>>({});
@@ -102,7 +102,7 @@ export const LibraryScreen: React.FC = () => {
     setIsExporting(true);
     try {
       if (!isPremium) {
-        const spent = spendStars(PDF_EXPORT_COST);
+        const spent = spendCredits(PDF_EXPORT_COST);
         if (!spent) return;
       }
       await exportAndSharePdf(selectedStory, heroProfile?.name);
@@ -326,7 +326,7 @@ export const LibraryScreen: React.FC = () => {
         visible={showNotEnoughStars}
         onClose={() => setShowNotEnoughStars(false)}
         needed={PDF_EXPORT_COST}
-        onWatchMagic={() => rewardStar('watch_ad')}
+        onWatchMagic={() => rewardCredits('watch_ad')}
       />
     </ScreenContainer>
   );

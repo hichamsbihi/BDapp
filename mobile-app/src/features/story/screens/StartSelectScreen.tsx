@@ -25,8 +25,7 @@ import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useGeneratedStories } from '@/hooks/useStoryData';
 import { GeneratedStory } from '@/types';
-import { getMockUniverses } from '@/mocks/storyMock';
-import { STORY_UNLOCK_COST } from '@/constants/stars';
+import { fetchUniversesByGender, fetchStoriesForUniverse } from '@/services/storyService';
 import { getCurrentUser } from '@/services/authService';
 import { colors, spacing, radius, typography } from '@/theme/theme';
 
@@ -36,22 +35,21 @@ const CARD_WIDTH = SCREEN_WIDTH - 2 * (spacing.xl + spacing.xs);
 // ─── StoryCard ──────────────────────────────────────────
 
 interface StoryCardProps {
-  story: GeneratedStory;
+  story: GeneratedStory & { locked: boolean };
   index: number;
   isSelected: boolean;
-  isLocked: boolean;
   hasSelection: boolean;
-  onSelect: (story: GeneratedStory) => void;
+  onSelect: (story: GeneratedStory & { locked: boolean }) => void;
 }
 
 const StoryCard: React.FC<StoryCardProps> = ({
   story,
   index,
   isSelected,
-  isLocked,
   hasSelection,
   onSelect,
 }) => {
+  const isLocked = story.locked;
   const progress = useSharedValue(0);
   const pressScale = useSharedValue(1);
 
@@ -107,7 +105,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
               </Text>
               {isLocked && (
                 <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>✨ {STORY_UNLOCK_COST}</Text>
+                  <Text style={styles.lockBadgeText}>✨ {story.creditsRequired}</Text>
                 </View>
               )}
               {!isLocked && (
@@ -143,7 +141,7 @@ const UNLOCK_MESSAGES = [
 
 interface StoryUnlockModalProps {
   visible: boolean;
-  story: GeneratedStory | null;
+  story: (GeneratedStory & { locked: boolean }) | null;
   onClose: () => void;
   onUnlocked: () => void;
 }
@@ -154,10 +152,10 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
   onClose,
   onUnlocked,
 }) => {
-  const stars = useAppStore((s) => s.stars);
+  const credits = useAppStore((s) => s.credits);
   const canAfford = useAppStore((s) => s.canAfford);
   const unlockStory = useAppStore((s) => s.unlockStory);
-  const rewardStar = useAppStore((s) => s.rewardStar);
+  const rewardCredits = useAppStore((s) => s.rewardCredits);
   const [isWatching, setIsWatching] = useState(false);
 
   const randomMessage = useMemo(() => {
@@ -167,10 +165,11 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
 
   if (!story) return null;
 
-  const affordable = canAfford(STORY_UNLOCK_COST);
+  const cost = story.creditsRequired;
+  const affordable = canAfford(cost);
 
-  const handleUseStars = () => {
-    if (unlockStory(story.id)) {
+  const handleUseCredits = () => {
+    if (unlockStory(story.id, cost)) {
       onUnlocked();
       onClose();
     }
@@ -179,8 +178,8 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
   const handleWatchMagic = async () => {
     setIsWatching(true);
     try {
-      await rewardStar('watch_ad');
-      if (canAfford(STORY_UNLOCK_COST) && unlockStory(story.id)) {
+      await rewardCredits('watch_ad');
+      if (canAfford(cost) && unlockStory(story.id, cost)) {
         onUnlocked();
         onClose();
       }
@@ -189,7 +188,7 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
     }
   };
 
-  const handleBuyStars = async () => {
+  const handleBuyCredits = async () => {
     onClose();
     const user = await getCurrentUser();
     if (user) {
@@ -216,10 +215,10 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
               <Text style={styles.confirmMessage}>{randomMessage}</Text>
 
               <View style={styles.costBadge}>
-                <Text style={styles.costBadgeText}>⭐ {STORY_UNLOCK_COST} étoiles</Text>
+                <Text style={styles.costBadgeText}>⭐ {cost} étoiles</Text>
               </View>
 
-              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseStars}>
+              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseCredits}>
                 <LinearGradient
                   colors={[colors.primary, colors.primaryDark]}
                   start={{ x: 0, y: 0 }}
@@ -240,7 +239,7 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
     );
   }
 
-  const missing = STORY_UNLOCK_COST - stars;
+  const missing = cost - credits;
   return (
     <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
@@ -255,13 +254,13 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
 
           <View style={styles.noStarsContent}>
             <View style={styles.starsProgressRow}>
-              {Array.from({ length: STORY_UNLOCK_COST }).map((_, i) => (
-                <View key={i} style={[styles.starDot, i < stars && styles.starDotFilled]}>
-                  <Text style={styles.starDotText}>{i < stars ? '⭐' : '☆'}</Text>
+              {Array.from({ length: cost }).map((_, i) => (
+                <View key={i} style={[styles.starDot, i < credits && styles.starDotFilled]}>
+                  <Text style={styles.starDotText}>{i < credits ? '⭐' : '☆'}</Text>
                 </View>
               ))}
             </View>
-            <Text style={styles.starsProgressLabel}>{stars}/{STORY_UNLOCK_COST} étoiles</Text>
+            <Text style={styles.starsProgressLabel}>{credits}/{cost} étoiles</Text>
 
             <Text style={styles.noStarsMessage}>
               {missing === 1
@@ -294,7 +293,7 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
 
               <AnimatedPressable
                 style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
-                onPress={handleBuyStars}
+                onPress={handleBuyCredits}
                 disabled={isWatching}
               >
                 <LinearGradient
@@ -327,23 +326,30 @@ const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
 
 export const StartSelectScreen: React.FC = () => {
   const { universeId } = useLocalSearchParams<{ universeId: string }>();
-  const [selectedStory, setSelectedStory] = useState<GeneratedStory | null>(null);
+  type EnrichedStory = GeneratedStory & { locked: boolean };
+  const [selectedStory, setSelectedStory] = useState<EnrichedStory | null>(null);
   const [loadingParts, setLoadingParts] = useState(false);
   const [unlockModalVisible, setUnlockModalVisible] = useState(false);
-  const [storyToUnlock, setStoryToUnlock] = useState<GeneratedStory | null>(null);
+  const [storyToUnlock, setStoryToUnlock] = useState<EnrichedStory | null>(null);
+  const [universe, setUniverse] = useState<{ backgroundImageUrl?: string } | null>(null);
   const isNavigatingRef = useRef(false);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const isPremium = useAppStore((state) => state.isPremium);
   const unlockedStories = useAppStore((state) => state.unlockedStories);
+  const heroProfile = useAppStore((state) => state.heroProfile);
 
   const resolvedUniverseId = universeId || currentStory?.universeId;
+  const gender = heroProfile?.gender || 'boy';
 
-  const universe = useMemo(
-    () => getMockUniverses().find((u) => u.id === resolvedUniverseId),
-    [resolvedUniverseId]
-  );
+  useEffect(() => {
+    if (!resolvedUniverseId) return;
+    fetchUniversesByGender(gender).then((universes) => {
+      const found = universes.find((u) => u.id === resolvedUniverseId);
+      if (found) setUniverse(found);
+    });
+  }, [resolvedUniverseId, gender]);
 
   const {
     data: rawStories,
@@ -352,11 +358,10 @@ export const StartSelectScreen: React.FC = () => {
     refetch,
   } = useGeneratedStories(resolvedUniverseId);
 
-  const stories = useMemo(() => {
-    if (isPremium) return rawStories.map((s) => ({ ...s, isLocked: false }));
+  const stories: EnrichedStory[] = useMemo(() => {
     return rawStories.map((s) => ({
       ...s,
-      isLocked: s.isLocked && !(unlockedStories ?? []).includes(s.id),
+      locked: isPremium ? false : s.creditsRequired > 0 && !(unlockedStories ?? []).includes(s.id),
     }));
   }, [rawStories, isPremium, unlockedStories]);
 
@@ -386,8 +391,8 @@ export const StartSelectScreen: React.FC = () => {
   }));
   const hintStyle = useAnimatedStyle(() => ({ opacity: hintProgress.value }));
 
-  const handleSelect = (story: GeneratedStory) => {
-    if (story.isLocked) {
+  const handleSelect = (story: EnrichedStory) => {
+    if (story.locked) {
       setStoryToUnlock(story);
       setUnlockModalVisible(true);
     } else {
@@ -397,7 +402,7 @@ export const StartSelectScreen: React.FC = () => {
 
   const handleUnlocked = () => {
     if (storyToUnlock) {
-      setSelectedStory({ ...storyToUnlock, isLocked: false });
+      setSelectedStory({ ...storyToUnlock, locked: false });
     }
   };
 
@@ -514,7 +519,6 @@ export const StartSelectScreen: React.FC = () => {
               story={story}
               index={index}
               isSelected={selectedStory?.id === story.id}
-              isLocked={story.isLocked}
               hasSelection={selectedStory !== null}
               onSelect={handleSelect}
             />

@@ -1,12 +1,8 @@
 import { supabase } from './supabase';
-import { NarrativeChoice, StoryStart, Universe, UniverseConfig, GeneratedStory, StoryPart } from '@/types';
-import {
-  getMockStoriesForUniverse,
-  getMockPartsForStory,
-  getMockUniverses,
-} from '@/mocks/storyMock';
+import { NarrativeChoice, StoryStart, Universe, UniverseConfig, GeneratedStory, StoryPart, StoryChoice } from '@/types';
 
-// Supabase row types (snake_case from DB)
+// ─── DB row types ────────────────────────────────────────
+
 interface UniverseRow {
   id: string;
   name: string;
@@ -20,13 +16,44 @@ interface UniverseRow {
   display_order: number;
 }
 
+interface StoryRow {
+  id: string;
+  universe_id: string;
+  title: string;
+  synopsis: string;
+  theme: string;
+  image_url: string;
+  credits_required: number;
+  total_parts: number;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+interface StoryPartRow {
+  id: string;
+  story_id: string;
+  universe_id: string;
+  part_number: number;
+  is_opening: boolean;
+  is_ending: boolean;
+  title: string;
+  narrative_text: string;
+  mood: string;
+  choices: unknown;
+  image_prompt: string;
+  image_path: string;
+  image_url: string | null;
+  status: string;
+  generated_at: string;
+}
+
 interface StoryStartRow {
   id: string;
   universe_id: string;
   title: string;
   text: string;
   first_page_id?: string | null;
-  /** Narrative path label (e.g. "start-A", "start-B"). Used for ordering + page_number mapping. */
   path_id?: string | null;
 }
 
@@ -40,10 +67,8 @@ interface NarrativeChoiceRow {
   next_page_number?: number | null;
 }
 
-// TODO: set to false to switch to real Supabase data
-const USE_MOCK = true;
+// ─── Mappers ─────────────────────────────────────────────
 
-// DB row to app model mappers
 const toUniverseConfig = (row: UniverseRow): UniverseConfig => ({
   id: row.id,
   name: row.name,
@@ -53,9 +78,50 @@ const toUniverseConfig = (row: UniverseRow): UniverseConfig => ({
   color: row.color,
   language: row.language,
   emoji: row.emoji,
-  isLocked: true,
+  isLocked: false,
   gender: row.gender,
 });
+
+const toGeneratedStory = (row: StoryRow): GeneratedStory => ({
+  id: row.id,
+  universeId: row.universe_id,
+  title: row.title,
+  synopsis: row.synopsis,
+  theme: row.theme,
+  imageUrl: row.image_url,
+  creditsRequired: row.credits_required,
+  totalParts: row.total_parts,
+  status: row.status,
+  createdAt: row.created_at,
+  completedAt: row.completed_at ?? undefined,
+});
+
+const toStoryPart = (row: StoryPartRow): StoryPart => {
+  const rawChoices = Array.isArray(row.choices) ? row.choices : [];
+  const choices: StoryChoice[] = rawChoices.map((c: any) => ({
+    id: c.id,
+    label: c.label,
+    description: c.description,
+    leadsToPartId: c.leadsToPartId,
+  }));
+  return {
+    id: row.id,
+    storyId: row.story_id,
+    universeId: row.universe_id,
+    partNumber: row.part_number,
+    isOpening: row.is_opening,
+    isEnding: row.is_ending,
+    title: row.title,
+    narrativeText: row.narrative_text,
+    mood: row.mood,
+    choices,
+    imagePrompt: row.image_prompt,
+    imagePath: row.image_path,
+    imageUrl: row.image_url ?? undefined,
+    status: row.status,
+    generatedAt: row.generated_at,
+  };
+};
 
 const toStoryStart = (row: StoryStartRow): StoryStart => ({
   id: row.id,
@@ -73,14 +139,11 @@ const toNarrativeChoice = (row: NarrativeChoiceRow): NarrativeChoice => ({
   nextPageNumber: row.next_page_number ?? undefined,
 });
 
-/**
- * Fetch universes filtered by gender (boy/girl).
- */
+// ─── Queries ─────────────────────────────────────────────
+
 export const fetchUniversesByGender = async (
   gender: 'boy' | 'girl'
 ): Promise<UniverseConfig[]> => {
-  if (USE_MOCK) return getMockUniverses(gender);
-
   const { data, error } = await supabase
     .from('universes')
     .select('*')
@@ -91,10 +154,6 @@ export const fetchUniversesByGender = async (
   return (data ?? []).map(toUniverseConfig);
 };
 
-/**
- * Fetch a single universe by ID from Supabase.
- * Used by LibraryScreen to display universe name on story cards.
- */
 export const fetchUniverseById = async (
   universeId: string
 ): Promise<Universe | null> => {
@@ -104,28 +163,47 @@ export const fetchUniverseById = async (
     .eq('id', universeId)
     .single();
 
-  if (error) throw error;
-  if (!data) return null;
-
+  if (error || !data) return null;
   return {
     id: data.id,
     name: data.name,
     description: data.description,
     imageUrl: data.image_url,
+    backgroundImageUrl: data.background_image_url,
     color: data.color,
+    language: data.language,
   };
 };
 
-/**
- * Fetch story starts for a given universe from Supabase.
- *
- * With unique IDs, each n8n run inserts new rows for the same universe.
- * We sort by created_at DESC, then deduplicate client-side:
- * keep only the most-recent row per path_id (start-A, start-B, …).
- * Result: always 1 story start per narrative path, latest generation wins.
- *
- * Uses select('*') because path_id column may not exist yet (migration pending).
- */
+export const fetchStoriesForUniverse = async (
+  universeId: string
+): Promise<GeneratedStory[]> => {
+  const { data, error } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('universe_id', universeId)
+    .eq('status', 'complete')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(toGeneratedStory);
+};
+
+export const fetchPartsForStory = async (
+  storyId: string
+): Promise<StoryPart[]> => {
+  const { data, error } = await supabase
+    .from('story_parts')
+    .select('*')
+    .eq('story_id', storyId)
+    .order('part_number', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(toStoryPart);
+};
+
+// ─── Legacy queries (story_starts, story_paragraphs, narrative_choices) ──
+
 export const fetchStoryStarts = async (
   universeId: string
 ): Promise<StoryStart[]> => {
@@ -137,28 +215,21 @@ export const fetchStoryStarts = async (
 
   if (error) throw error;
 
-  // Deduplicate: keep only the first (newest) row per path_id.
-  // For legacy rows without path_id, fall back to id itself as the key.
   const seen = new Set<string>();
-  const latest = (data ?? []).filter((row) => {
+  const latest = (data ?? []).filter((row: any) => {
     const key = row.path_id ?? row.id;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  // Sort by path_id ASC so index 0 = path A = page 1
-  latest.sort((a, b) =>
+  latest.sort((a: any, b: any) =>
     (a.path_id ?? a.id).localeCompare(b.path_id ?? b.id)
   );
 
   return latest.map(toStoryStart);
 };
 
-/**
- * Fetch paragraph text and optional image for a specific universe page.
- * If image_url is null in DB, returns a placeholder URL.
- */
 export const fetchParagraphForPage = async (
   universeId: string,
   pageNumber: number
@@ -171,19 +242,13 @@ export const fetchParagraphForPage = async (
     .single();
 
   if (error) throw error;
-
   const placeholderImage = `https://picsum.photos/seed/${universeId}-${pageNumber}/400/300`;
-
   return {
     text: data.text,
     imageUrl: data.image_url ?? placeholderImage,
   };
 };
 
-/**
- * Fetch narrative choices for a specific universe page.
- * Returns choices with nextParagraphId when set (branching: each choice leads to a specific next paragraph).
- */
 export const fetchChoicesForPage = async (
   universeId: string,
   pageNumber: number
@@ -199,10 +264,6 @@ export const fetchChoicesForPage = async (
   return (data ?? []).map(toNarrativeChoice);
 };
 
-/**
- * Fetch a single paragraph by id (for branching: next paragraph after a choice).
- * Use when nextParagraphId is set on the chosen choice.
- */
 export const fetchParagraphById = async (
   paragraphId: string
 ): Promise<{ id: string; text: string; imageUrl: string; pageNumber: number; step?: number | null } | null> => {
@@ -221,44 +282,4 @@ export const fetchParagraphById = async (
     pageNumber: data.page_number ?? 0,
     step: data.step ?? undefined,
   };
-};
-
-// ─── Story Generator model (stories + parts) ───────────────
-
-/**
- * Fetch generated stories for a universe.
- * Returns mock data for now; swap to Supabase when tables are populated.
- */
-export const fetchStoriesForUniverse = async (
-  universeId: string
-): Promise<GeneratedStory[]> => {
-  if (USE_MOCK) return getMockStoriesForUniverse(universeId);
-
-  const { data, error } = await supabase
-    .from('stories')
-    .select('*')
-    .eq('universeId', universeId)
-    .eq('status', 'complete')
-    .order('createdAt', { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []) as GeneratedStory[];
-};
-
-/**
- * Fetch all parts for a story, ordered by partNumber.
- */
-export const fetchPartsForStory = async (
-  storyId: string
-): Promise<StoryPart[]> => {
-  if (USE_MOCK) return getMockPartsForStory(storyId);
-
-  const { data, error } = await supabase
-    .from('parts')
-    .select('*')
-    .eq('storyId', storyId)
-    .order('partNumber', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as StoryPart[];
 };

@@ -7,7 +7,7 @@ import { Story } from '@/types';
 import { fetchUniverseById } from '@/services/storyService';
 
 const SHARE_MESSAGE =
-  "Découvre cette histoire magique créée avec MangaKids ! " +
+  "Découvre cette histoire magique créée avec StoryMagic ! " +
   "Chaque aventure est unique, chaque page est illustrée par la magie de l'IA.";
 
 // A4 in points
@@ -293,7 +293,7 @@ html, body{
     <div class="c-title">${escapeHtml(story.title)}</div>
     <div class="c-author">${escapeHtml(authorLabel)}</div>
     <div class="c-meta">${totalPages} page${totalPages > 1 ? 's' : ''} illustree${totalPages > 1 ? 's' : ''}</div>
-    <span class="c-brand">MangaKids</span>
+    <span class="c-brand">StoryMagic</span>
   </div>
 </div>
 

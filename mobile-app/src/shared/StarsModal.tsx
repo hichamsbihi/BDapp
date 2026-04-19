@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Pressable,
   Modal as RNModal,
+  Alert,
   ActivityIndicator,
   ScrollView,
   Dimensions,
@@ -17,16 +18,12 @@ import Animated, {
   withSequence,
   withSpring,
   withDelay,
-  interpolate,
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
-import { router } from 'expo-router';
 import { useAppStore } from '@/store';
-import { useCountdownStatus } from '@/hooks/useCountdownStatus';
-import { getCurrentUser } from '@/services/authService';
-import { COUNTDOWN_REWARD, COUNTDOWN_HOURS } from '@/constants/stars';
+import { CREDIT_PACKS, PACK_UNLIMITED } from '@/constants/stars';
 import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 
@@ -34,7 +31,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODAL_MAX_WIDTH = spacing.xxxl * 7 + spacing.xl;
 const MODAL_WIDTH = Math.min(SCREEN_WIDTH - spacing.xl * 2, MODAL_MAX_WIDTH);
 const HERO_SIZE = spacing.xxxl + spacing.xxxl + spacing.xl;
-const RING_SIZE = spacing.xxxl * 2 + spacing.xs;
 const FLOAT_DURATION = 3000;
 
 interface StarsModalProps {
@@ -42,20 +38,6 @@ interface StarsModalProps {
   onClose: () => void;
 }
 
-function formatCountdown(ms: number): string {
-  if (ms <= 0) return '0:00';
-  const s = Math.floor((ms / 1000) % 60);
-  const m = Math.floor((ms / (1000 * 60)) % 60);
-  const h = Math.floor(ms / (1000 * 60 * 60));
-  // Always show seconds (requested UX)
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `0m ${s}s`;
-}
-
-/**
- * Floating star decoration - subtle drift animation
- */
 function FloatingStar({
   size,
   top,
@@ -111,38 +93,24 @@ function FloatingStar({
   );
 }
 
-/**
- * Stars modal: treasure-chest feel, hero balance, visual countdown, minimal text, delight animations.
- */
 export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
-  const stars = useAppStore((s) => s.stars);
-  const rewardStar = useAppStore((s) => s.rewardStar);
-  const { canClaim, nextClaimAt } = useCountdownStatus();
+  const credits = useAppStore((s) => s.credits);
+  const rewardCredits = useAppStore((s) => s.rewardCredits);
 
-  const handleGoToPaywall = async () => {
-    const user = await getCurrentUser();
-    onClose();
-    if (user) {
-      router.push('/paywall');
-    } else {
-      router.push('/(auth)/login?from=paywall');
-    }
+  const handleGoToPaywall = () => {
+    Alert.alert(
+      'Bientôt disponible 🚀',
+      'Le paiement sera disponible très prochainement. Reste connecté !',
+      [{ text: 'OK' }],
+    );
   };
 
-  const [countdownLabel, setCountdownLabel] = useState('');
-  const [isClaiming, setIsClaiming] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
-  const [showBurst, setShowBurst] = useState(false);
 
   const contentScale = useSharedValue(0.92);
   const contentOpacity = useSharedValue(0);
   const balanceScale = useSharedValue(1);
-  const claimScale = useSharedValue(1);
   const watchScale = useSharedValue(1);
-  const burstOpacity = useSharedValue(0);
-  const progress = useSharedValue(0);
-
-  const lottieBurstRef = React.useRef<LottieView>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -152,48 +120,11 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
     balanceScale.value = withDelay(200, withSpring(1, { damping: 10, stiffness: 100 }));
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible || !nextClaimAt) {
-      setCountdownLabel('');
-      progress.value = 0;
-      return;
-    }
-    const totalMs = COUNTDOWN_HOURS * 60 * 60 * 1000;
-    const update = () => {
-      const now = Date.now();
-      const next = nextClaimAt.getTime();
-      const remaining = Math.max(0, next - now);
-      setCountdownLabel(formatCountdown(remaining));
-      progress.value = withTiming(1 - remaining / totalMs, { duration: 500 });
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [visible, nextClaimAt]);
-
-  const handleClaimCountdown = async () => {
-    if (!canClaim || isClaiming) return;
-    setIsClaiming(true);
-    setShowBurst(true);
-    burstOpacity.value = withSequence(
-      withTiming(1, { duration: 100 }),
-      withDelay(1200, withTiming(0, { duration: 300 }))
-    );
-    lottieBurstRef.current?.reset();
-    lottieBurstRef.current?.play();
-    try {
-      await rewardStar('countdown_bonus');
-    } finally {
-      setShowBurst(false);
-      setIsClaiming(false);
-    }
-  };
-
   const handleWatchAd = async () => {
     if (isWatching) return;
     setIsWatching(true);
     try {
-      await rewardStar('watch_ad');
+      await rewardCredits('watch_ad');
     } finally {
       setIsWatching(false);
     }
@@ -208,20 +139,8 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
     transform: [{ scale: balanceScale.value }],
   }));
 
-  const claimButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: claimScale.value }],
-  }));
-
   const watchButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: watchScale.value }],
-  }));
-
-  const burstStyle = useAnimatedStyle(() => ({
-    opacity: burstOpacity.value,
-  }));
-
-  const progressStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0.15, 0.5]),
   }));
 
   return (
@@ -239,7 +158,6 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
               style={styles.gradientBg}
             />
 
-            {/* Background sparkles */}
             {visible && (
               <>
                 <LottieView
@@ -264,19 +182,6 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
               </>
             )}
 
-            {/* Star burst overlay when claiming */}
-            {showBurst && (
-              <Animated.View style={[styles.burstOverlay, burstStyle]} pointerEvents="none">
-                <LottieView
-                  ref={lottieBurstRef}
-                  source={require('@/assets/animations/stars-burst.json')}
-                  autoPlay
-                  loop={false}
-                  style={styles.burstLottie}
-                />
-              </Animated.View>
-            )}
-
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
@@ -285,56 +190,12 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
               <View style={styles.hero}>
                 <Animated.View style={[styles.heroBalance, balanceAnimatedStyle]}>
                   <View style={styles.heroGlow} />
-                  <Text style={styles.heroNumber} allowFontScaling={false}>{stars}</Text>
-                  <Text style={styles.heroLabel}>étoiles</Text>
+                  <Text style={styles.heroNumber} allowFontScaling={false}>{credits}</Text>
+                  <Text style={styles.heroLabel}>crédits</Text>
                 </Animated.View>
               </View>
 
-              {/* Claim: visual timer or treasure button */}
-              <View style={styles.claimSection}>
-                {canClaim ? (
-                  <Animated.View style={claimButtonStyle}>
-                    <AnimatedPressable
-                      accessibilityLabel="Réclamer les étoiles"
-                      onPressIn={() => {
-                        claimScale.value = withSpring(0.94, { damping: 12 });
-                      }}
-                      onPressOut={() => {
-                        claimScale.value = withSpring(1);
-                      }}
-                      onPress={handleClaimCountdown}
-                      disabled={isClaiming}
-                      style={[styles.claimButton, isClaiming && styles.buttonDimmed]}
-                    >
-                      <LinearGradient
-                        colors={['#FFD54F', '#FFB300', '#FF8F00'] as const}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.claimGradient}
-                      >
-                        {isClaiming ? (
-                          <ActivityIndicator color={colors.text.primary} size="small" />
-                        ) : (
-                          <>
-                            <Text style={styles.claimIcon}>⭐</Text>
-                            <Text style={styles.claimText}>+{COUNTDOWN_REWARD} étoile</Text>
-                          </>
-                        )}
-                      </LinearGradient>
-                    </AnimatedPressable>
-                  </Animated.View>
-                ) : (
-                  <View style={styles.timerRing}>
-                    <Animated.View style={[styles.timerRingFill, progressStyle]} />
-                    <View style={styles.timerCenter}>
-                      <Text style={styles.timerValue}>{countdownLabel || '...'}</Text>
-                      <Text style={styles.timerHint}>prochaine</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* Watch ad: icon + short label */}
+              {/* Watch ad */}
               <Animated.View style={watchButtonStyle}>
                 <AnimatedPressable
                   accessibilityLabel="Regarder une magie"
@@ -366,21 +227,40 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
                 </AnimatedPressable>
               </Animated.View>
 
-              {/* Button to paywall: if logged in go to paywall, else login then paywall */}
+              {/* Inline pack cards */}
               <View style={styles.packsSection}>
+                <Text style={styles.packsSectionTitle}>Obtenir des crédits</Text>
+                {CREDIT_PACKS.map((pack) => (
+                  <AnimatedPressable
+                    key={pack.productId}
+                    style={styles.packRow}
+                    onPress={handleGoToPaywall}
+                  >
+                    <Text style={styles.packEmoji}>{pack.emoji}</Text>
+                    <View style={styles.packInfo}>
+                      <Text style={styles.packLabel}>{pack.label}</Text>
+                      <Text style={styles.packCredits}>{pack.credits} crédits</Text>
+                    </View>
+                    <Text style={styles.packPrice}>{pack.priceDollar.toFixed(2)} $</Text>
+                  </AnimatedPressable>
+                ))}
+
                 <AnimatedPressable
-                  accessibilityLabel="Voir les packs d'étoiles"
-                  style={[styles.paywallButton]}
+                  style={styles.unlimitedRow}
                   onPress={handleGoToPaywall}
                 >
                   <LinearGradient
                     colors={['#FFE082', '#FFD54F', '#FFB300'] as const}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.paywallButtonGradient}
+                    style={styles.unlimitedGradient}
                   >
-                    <Text style={styles.paywallButtonIcon}>✨</Text>
-                    <Text style={styles.paywallButtonText}>Voir les packs d'étoiles</Text>
+                    <Text style={styles.packEmoji}>{PACK_UNLIMITED.emoji}</Text>
+                    <View style={styles.packInfo}>
+                      <Text style={styles.unlimitedLabel}>{PACK_UNLIMITED.label}</Text>
+                      <Text style={styles.unlimitedSub}>Crédits illimités — à vie</Text>
+                    </View>
+                    <Text style={styles.unlimitedPrice}>{PACK_UNLIMITED.priceDollar.toFixed(2)} $</Text>
                   </LinearGradient>
                 </AnimatedPressable>
               </View>
@@ -438,16 +318,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     pointerEvents: 'none',
   },
-  burstOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    pointerEvents: 'none',
-  },
-  burstLottie: {
-    width: spacing.xxxl * 3 + spacing.xxl + spacing.xl,
-    height: spacing.xxxl * 3 + spacing.xxl + spacing.xl,
-  },
   scrollContent: {
     padding: spacing.xxl,
     paddingBottom: spacing.xl,
@@ -481,64 +351,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
     textTransform: 'lowercase',
   },
-  claimSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  claimButton: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    ...shadows.md,
-    shadowColor: colors.semantic.warning,
-    shadowOpacity: 0.35,
-  },
-  claimGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xxl,
-  },
-  claimIcon: {
-    fontSize: typography.size.xxxl,
-  },
-  claimText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  timerRing: {
-    width: RING_SIZE + spacing.lg,
-    height: RING_SIZE + spacing.lg,
-    borderRadius: (RING_SIZE + spacing.lg) / 2,
-    borderWidth: spacing.xs,
-    borderColor: colors.borderLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  timerRingFill: {
-    position: 'absolute',
-    width: RING_SIZE + spacing.sm,
-    height: RING_SIZE + spacing.sm,
-    borderRadius: (RING_SIZE + spacing.sm) / 2,
-    backgroundColor: colors.accent,
-  },
-  timerCenter: {
-    alignItems: 'center',
-  },
-  timerValue: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text.secondary,
-    fontVariant: ['tabular-nums'],
-  },
-  timerHint: {
-    fontSize: typography.size.xs,
-    color: colors.text.muted,
-    marginTop: spacing.xxs,
-  },
   watchRow: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -563,26 +375,73 @@ const styles = StyleSheet.create({
   },
   packsSection: {
     marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  paywallButton: {
+  packsSectionTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.xs,
+  },
+  packRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  packEmoji: {
+    fontSize: 22,
+    marginRight: spacing.md,
+  },
+  packInfo: {
+    flex: 1,
+  },
+  packLabel: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  packCredits: {
+    fontSize: typography.size.xs,
+    color: colors.text.muted,
+    marginTop: 1,
+  },
+  packPrice: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
+  },
+  unlimitedRow: {
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.sm,
+    shadowColor: '#FFB300',
   },
-  paywallButtonGradient: {
+  unlimitedGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
-  paywallButtonIcon: {
-    fontSize: typography.size.xl,
-  },
-  paywallButtonText: {
+  unlimitedLabel: {
     fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  unlimitedSub: {
+    fontSize: typography.size.xs,
+    color: 'rgba(0,0,0,0.55)',
+    marginTop: 1,
+  },
+  unlimitedPrice: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.extrabold,
     color: colors.text.primary,
   },
   closeBtn: {

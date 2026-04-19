@@ -31,7 +31,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!__DEV__) return;
-    devClearPersistedData().then(() => setDevReady(true));
+    // Commenter cette ligne pour tester la persistence :
+    // devClearPersistedData().then(() => setDevReady(true));
+    setDevReady(true); // Remplacer par ceci pour tester la persistence
   }, []);
 
   if (__DEV__ && !devReady) {

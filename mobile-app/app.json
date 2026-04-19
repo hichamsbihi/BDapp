@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "MangaKids",
-    "slug": "mangakids",
+    "name": "StoryMagic",
+    "slug": "storymagic",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
-    "scheme": "mangakids",
+    "scheme": "storymagic",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "jsEngine": "hermes",
@@ -16,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mangakids.app",
+      "bundleIdentifier": "com.storymagic.app",
       "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Permet de sauvegarder les histoires en PDF dans ta galerie.",
@@ -31,7 +31,7 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.mangakids.app",
+      "package": "com.storymagic.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

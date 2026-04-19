@@ -27,7 +27,7 @@ import {
   useStories,
   useCurrentStory,
   useHasCompletedOnboarding,
-  useStars,
+  useCredits,
 } from '@/store/selectors';
 import { DepthCarousel } from '../components/DepthCarousel';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
@@ -49,7 +49,7 @@ export const HomeScreen: React.FC = () => {
   const stories = useStories();
   const currentStory = useCurrentStory();
   const hasCompletedOnboarding = useHasCompletedOnboarding();
-  const stars = useStars();
+  const credits = useCredits();
 
   const heroName = heroProfile?.name || 'toi';
   const avatarImageUrl = heroProfile?.avatarImageUrl;
@@ -74,10 +74,6 @@ export const HomeScreen: React.FC = () => {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const completedStories = sortedStories.filter((s) => s.isComplete);
-
-  useEffect(() => {
-    // Stars are earned via countdown (12h) and watching ads, not daily auto-bonus
-  }, [hasCompletedOnboarding]);
 
   useEffect(() => {
     profileOpacity.value = withDelay(80, withTiming(1, { duration: 500, easing: EASING }));

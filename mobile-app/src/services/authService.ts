@@ -158,6 +158,50 @@ export async function setSessionFromOAuthRedirectUrl(url: string): Promise<AuthR
   };
 }
 
+/**
+ * Sign in anonymously. Creates a real auth.users row with is_anonymous=true.
+ * The handle_new_user trigger auto-creates a profile + wallet.
+ */
+export async function signInAnonymously(): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (__DEV__) {
+    console.log('signInAnonymously:', {
+      userId: data?.user?.id ?? null,
+      hasSession: !!data?.session,
+      error: error?.message ?? null,
+    });
+  }
+  return {
+    user: data?.user ?? null,
+    session: data?.session ?? null,
+    error: error ?? null,
+  };
+}
+
+/**
+ * Upgrade an anonymous user to a permanent account with email + password.
+ * Supabase merges the anonymous identity with the new email identity.
+ */
+export async function upgradeAnonymousUser(
+  email: string,
+  password: string
+): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.updateUser({
+    email,
+    password,
+  });
+  if (error) {
+    return { user: null, session: null, error };
+  }
+  const { updateProfile } = await import('./profileService');
+  const userId = data.user?.id;
+  if (userId) {
+    await updateProfile(userId, { provider: 'email' } as any);
+  }
+  const session = (await supabase.auth.getSession()).data.session;
+  return { user: data.user ?? null, session, error: null };
+}
+
 export async function signOut(): Promise<{ error: AuthError | null }> {
   const { error } = await supabase.auth.signOut();
   return { error: error ?? null };
@@ -196,7 +240,7 @@ export function onAuthStateChange(
 /**
  * Hydrate app store from server after login or app start.
  * - Ensures profile exists (retry once if needed); if profile is empty and we have local data, syncs local -> DB.
- * - Then loads profile into store (stars, unlocked universes, hero profile).
+ * - Then loads profile into store (credits, unlocked stories, hero profile).
  */
 export async function hydrateStoreFromProfile(): Promise<boolean> {
   const user = await getCurrentUser();
@@ -208,7 +252,10 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
   const { ensureProfile, fetchProfile, touchLastLogin, syncLocalToProfile } = await import('./profileService');
   const { fetchAvatarById } = await import('./avatarService');
   const rawProvider = user.app_metadata?.provider as string | undefined;
-  const validProvider = ['email', 'google', 'apple'].includes(rawProvider ?? '') ? (rawProvider as 'email' | 'google' | 'apple') : 'email';
+  const isAnon = user.is_anonymous === true;
+  const validProvider = isAnon
+    ? 'anonymous' as any
+    : ['email', 'google', 'apple'].includes(rawProvider ?? '') ? (rawProvider as 'email' | 'google' | 'apple') : 'email';
 
   let ensure = await ensureProfile(user.id, user.email ?? null, validProvider);
   if (ensure.error) {
@@ -236,25 +283,22 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
       selected_avatar_id: heroProfile.avatarId ?? null,
       age: heroProfile.age ?? null,
       gender: heroProfile.gender ?? null,
-      unlocked_universe_ids: store.unlockedUniverses ?? [],
-      stars_balance: store.stars ?? 0,
     });
     if (__DEV__ && syncErr.error) console.log('syncLocalToProfile error:', syncErr.error.message);
     profile = (await fetchProfile(user.id)) ?? profile;
   }
 
   await touchLastLogin(user.id);
-  store.setStarsFromServer(profile.stars_balance);
+
+  const { getWallet, getUnlockedStoryIds } = await import('./walletService');
+  const wallet = await getWallet();
+  if (wallet) {
+    store.setCreditsFromServer(wallet.credits);
+    if (wallet.unlimited) store.setIsPremium(true);
+  }
   store.setIsPremium(profile.is_premium ?? false);
 
-  const fromServer = profile.unlocked_universe_ids ?? [];
-  const currentLocal = store.unlockedUniverses ?? [];
-  const merged = fromServer.length > 0
-    ? [...new Set([...fromServer, ...currentLocal])]
-    : currentLocal;
-  store.setUnlockedUniverses(merged);
-
-  const storiesFromServer = profile.unlocked_story_ids ?? [];
+  const storiesFromServer = await getUnlockedStoryIds();
   const storiesLocal = store.unlockedStories ?? [];
   const mergedStories = storiesFromServer.length > 0
     ? [...new Set([...storiesFromServer, ...storiesLocal])]

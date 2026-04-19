@@ -15,7 +15,7 @@ interface StarsBadgeWithModalProps {
  */
 export const StarsBadgeWithModal: React.FC<StarsBadgeWithModalProps> = ({ style }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const stars = useAppStore((s) => s.stars);
+  const credits = useAppStore((s) => s.credits);
   const isPremium = useAppStore((s) => s.isPremium);
 
   const pressScale = useSharedValue(1);
@@ -36,7 +36,7 @@ export const StarsBadgeWithModal: React.FC<StarsBadgeWithModalProps> = ({ style 
         style={style}
       >
         <Animated.View style={pressStyle}>
-          <StarsBadge count={stars} />
+          <StarsBadge count={credits} />
         </Animated.View>
       </Pressable>
       <StarsModal visible={modalVisible} onClose={() => setModalVisible(false)} />

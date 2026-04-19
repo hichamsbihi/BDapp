@@ -45,7 +45,7 @@ export const StoryCompletedScreen: React.FC = () => {
 
   const heroProfile = useAppStore((state) => state.heroProfile);
   const stories = useAppStore((state) => state.stories);
-  const stars = useAppStore((state) => state.stars);
+  const credits = useAppStore((state) => state.credits);
 
   const story = stories.find((s) => s.id === storyId);
   const heroName = heroProfile?.name || 'toi';

@@ -33,6 +33,8 @@ export interface AvatarCharacter {
   id: string;
   characterName: string;
   frames: AvatarFrames;
+  imageHappy?: string;
+  imageSmiling?: string;
   gender: 'boy' | 'girl' | 'all';
   displayOrder: number;
 }
@@ -122,8 +124,8 @@ export interface Story {
   synopsis?: string;
 }
 
-// Stars reward types (non-monetary, narrative)
-export type RewardStarType = 'watch_ad' | 'countdown_bonus';
+// Credit reward types (narrative currency)
+export type RewardType = 'watch_ad';
 
 // App state types
 export interface AppState {
@@ -146,32 +148,19 @@ export interface AppState {
   removeStory: (storyId: string) => void;
   updateStory: (storyId: string, updates: Partial<Story>) => void;
 
-  // Stars (narrative currency - non-monetary)
-  stars: number;
-  unlockedUniverses: string[];
+  // Credits (narrative currency)
+  credits: number;
   unlockedStories: string[];
-  /** Last time user claimed the 12h countdown reward (ISO string) */
-  lastCountdownClaimDate: string | null;
-  addStars: (amount: number) => void;
-  /** Set stars from server (e.g. on session restore). Use instead of addStars for sync. */
-  setStarsFromServer: (amount: number) => void;
-  /** Set unlocked universes from server (e.g. on login). */
-  setUnlockedUniverses: (ids: string[]) => void;
-  /** Add one universe to unlocked (e.g. after completing a story) without spending stars. */
-  addUnlockedUniverse: (universeId: string) => void;
-  /** Set unlocked stories from server (e.g. on login). */
+  addCredits: (amount: number) => void;
+  setCreditsFromServer: (amount: number) => void;
   setUnlockedStories: (ids: string[]) => void;
-  /** Add one story to unlocked without spending stars (e.g. after completing). */
   addUnlockedStory: (storyId: string) => void;
-  spendStars: (amount: number) => boolean;
+  spendCredits: (amount: number) => boolean;
   canAfford: (amount: number) => boolean;
-  rewardStar: (type: RewardStarType) => Promise<number>;
-  /** @deprecated Use unlockStory instead */
-  unlockUniverse: (universeId: string) => boolean;
-  /** Spend stars to unlock a story. Returns true if unlocked (already or just now). */
-  unlockStory: (storyId: string) => boolean;
+  rewardCredits: (type: RewardType) => Promise<number>;
+  unlockStory: (storyId: string, cost: number) => boolean;
 
-  // Premium status
+  // Premium status (unlimited access)
   isPremium: boolean;
   setIsPremium: (status: boolean) => void;
 
@@ -187,29 +176,36 @@ export interface AppState {
   storyProgressList: { universeId: string; currentPageNumber: number }[];
   setStoryProgressList: (list: { universeId: string; currentPageNumber: number }[]) => void;
 
-  /** Clear all persisted user data (e.g. on sign out or when server unreachable). Next launch will show onboarding. */
   resetStoreForSignOut: () => void;
 }
 
-/** Supabase profiles table row (extends auth.users). Avatar = selected_avatar_id (FK avatars), not avatar_url. */
+/** Supabase profiles table row (extends auth.users). */
 export interface SupabaseProfile {
   id: string;
   email: string | null;
   username: string | null;
   avatar_url: string | null;
-  stars_balance: number;
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
-  provider: 'email' | 'google' | 'apple';
+  provider: 'anonymous' | 'email' | 'google' | 'apple';
   is_child_account: boolean;
   selected_avatar_id: string | null;
   last_universe_id: string | null;
   age: number | null;
   gender: 'boy' | 'girl' | null;
-  unlocked_universe_ids: string[];
-  unlocked_story_ids: string[];
   is_premium: boolean;
+}
+
+/** Supabase wallets table row. */
+export interface Wallet {
+  id: string;
+  user_id: string;
+  credits: number;
+  unlimited: boolean;
+  unlimited_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Story Generator Service model ─────────────────────
@@ -246,9 +242,8 @@ export interface GeneratedStory {
   synopsis: string;
   theme: string;
   imageUrl: string;
-  isLocked: boolean;
+  creditsRequired: number;
   totalParts: number;
-  partIds: string[];
   status: string;
   createdAt: string;
   completedAt?: string;
