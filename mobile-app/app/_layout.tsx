@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
+import mobileAds from 'react-native-google-mobile-ads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '@/store';
 import { signOut } from '@/services/authService';
@@ -28,6 +29,14 @@ async function devClearPersistedData(): Promise<void> {
  */
 export default function RootLayout() {
   const [devReady, setDevReady] = useState(!__DEV__);
+
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .catch(() => {
+        if (__DEV__) console.log('AdMob init failed');
+      });
+  }, []);
 
   useEffect(() => {
     if (!__DEV__) return;

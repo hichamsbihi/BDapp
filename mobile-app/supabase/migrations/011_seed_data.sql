@@ -1,5 +1,5 @@
 -- ============================================================
--- StoryMagic — Seed Data
+-- SuperStory — Seed Data
 -- Avatars, Universes, Stories, and Story Parts
 -- ============================================================
 

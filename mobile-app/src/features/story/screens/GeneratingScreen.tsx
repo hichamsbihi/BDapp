@@ -15,6 +15,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { ScreenContainer } from '@/shared';
+import { preloadInterstitial, showInterstitialIfEligible } from '@/services/adService';
 import { colors, spacing, radius, typography, shadows } from '@/theme/theme';
 import {
   getCreationPhraseByProgress,
@@ -302,12 +303,12 @@ export const GeneratingScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    // Title entrance animation
+    preloadInterstitial();
+
     titleOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
     titleY.value = withDelay(200, withSpring(0, { damping: 15 }));
     statusOpacity.value = withDelay(600, withTiming(1, { duration: 400 }));
 
-    // Rotate status messages - uses magic words system
     let progress = 0;
     const statusInterval = setInterval(() => {
       progress = Math.min(progress + 15 + Math.random() * 10, 100);
@@ -315,8 +316,8 @@ export const GeneratingScreen: React.FC = () => {
       setStatusText(newPhrase);
     }, 1800);
 
-    // Navigate to page screen after generation
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
+      await showInterstitialIfEligible();
       router.replace({
         pathname: '/story/page',
         params: { paragraphText },

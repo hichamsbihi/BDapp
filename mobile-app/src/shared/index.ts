@@ -11,5 +11,6 @@ export { StarsBadge } from './StarsBadge';
 export { StarsBadgeWithModal } from './StarsBadgeWithModal';
 export { StarsModal } from './StarsModal';
 export { NotEnoughStarsModal } from './NotEnoughStarsModal';
+export { Skeleton } from './Skeleton';
 export { LottieAnimation } from './LottieAnimation';
 export type { AnimationName } from './LottieAnimation';

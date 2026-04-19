@@ -29,7 +29,7 @@ import { useAppStore } from '@/store';
 import { generatePageId } from '@/utils/ids';
 import { Story, StoryPage, StoryChoice } from '@/types';
 import { getCurrentUser } from '@/services/authService';
-import { upsertStoryProgress, insertUserChoice, saveCreatedStory } from '@/services/syncService';
+import { saveCreatedStory } from '@/services/syncService';
 import {
   getPivotPhraseForPage,
   getContinuePhrase,
@@ -313,8 +313,6 @@ export const PageScreen: React.FC = () => {
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const addStory = useAppStore((state) => state.addStory);
   const clearCurrentStory = useAppStore((state) => state.clearCurrentStory);
-  const storyProgressList = useAppStore((state) => state.storyProgressList);
-  const setStoryProgressList = useAppStore((state) => state.setStoryProgressList);
   const addUnlockedStory = useAppStore((state) => state.addUnlockedStory);
 
   const currentPart = useMemo(() => {
@@ -404,12 +402,6 @@ export const PageScreen: React.FC = () => {
       const universeId = currentStory.universeId;
 
       const user = await getCurrentUser();
-      if (user && universeId) {
-        await upsertStoryProgress(user.id, universeId, currentPart.partNumber);
-        if (selectedChoice?.id) {
-          await insertUserChoice(user.id, universeId, currentPart.partNumber, selectedChoice.id);
-        }
-      }
 
       if (isLastPage) {
         const completedStory = {
@@ -424,7 +416,6 @@ export const PageScreen: React.FC = () => {
         if (user) {
           saveCreatedStory(user.id, completedStory).catch((e) => __DEV__ && console.warn('Story save failed', e));
         }
-        setStoryProgressList((storyProgressList ?? []).filter((p) => p.universeId !== universeId));
         clearCurrentStory();
 
         router.replace({
@@ -460,8 +451,6 @@ export const PageScreen: React.FC = () => {
     isLastPage,
     addStory,
     addUnlockedStory,
-    storyProgressList,
-    setStoryProgressList,
     clearCurrentStory,
     updateCurrentStory,
   ]);

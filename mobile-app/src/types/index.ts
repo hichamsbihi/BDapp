@@ -145,7 +145,6 @@ export interface AppState {
   stories: Story[];
   addStory: (story: Story) => void;
   setStories: (stories: Story[]) => void;
-  removeStory: (storyId: string) => void;
   updateStory: (storyId: string, updates: Partial<Story>) => void;
 
   // Credits (narrative currency)
@@ -168,13 +167,13 @@ export interface AppState {
   hasEverPurchased: boolean;
   setHasEverPurchased: (value: boolean) => void;
 
+  // Ads (disabled after first purchase)
+  adActivated: boolean;
+  setAdActivated: (value: boolean) => void;
+
   // Onboarding status
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (status: boolean) => void;
-
-  // Story progress from server (for "Continue in X")
-  storyProgressList: { universeId: string; currentPageNumber: number }[];
-  setStoryProgressList: (list: { universeId: string; currentPageNumber: number }[]) => void;
 
   resetStoreForSignOut: () => void;
 }
@@ -195,6 +194,7 @@ export interface SupabaseProfile {
   age: number | null;
   gender: 'boy' | 'girl' | null;
   is_premium: boolean;
+  ad_activated: boolean;
 }
 
 /** Supabase wallets table row. */

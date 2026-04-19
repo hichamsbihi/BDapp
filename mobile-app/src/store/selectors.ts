@@ -7,7 +7,6 @@ export const useHasCompletedOnboarding = () =>
   useAppStore((s) => s.hasCompletedOnboarding);
 export const useCredits = () => useAppStore((s) => s.credits);
 export const useIsPremium = () => useAppStore((s) => s.isPremium);
-export const useStoryProgressList = () => useAppStore((s) => s.storyProgressList);
 
 export const useRewardCredits = () => useAppStore((s) => s.rewardCredits);
 export const useUpdateHeroProfile = () => useAppStore((s) => s.updateHeroProfile);

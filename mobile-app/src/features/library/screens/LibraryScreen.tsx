@@ -41,12 +41,10 @@ export const LibraryScreen: React.FC = () => {
 
   const stories = useAppStore((state) => state.stories);
   const heroProfile = useAppStore((state) => state.heroProfile);
-  const removeStory = useAppStore((state) => state.removeStory);
   const credits = useAppStore((state) => state.credits);
   const isPremium = useAppStore((state) => state.isPremium);
   const canAfford = useAppStore((state) => state.canAfford);
   const spendCredits = useAppStore((state) => state.spendCredits);
-  const rewardCredits = useAppStore((state) => state.rewardCredits);
 
   // Cache universe data for story cards (color, name)
   const [universesMap, setUniversesMap] = useState<Record<string, Universe>>({});
@@ -112,14 +110,6 @@ export const LibraryScreen: React.FC = () => {
       Alert.alert('Erreur', 'La creation du PDF a echoue. Reessaie plus tard.');
     } finally {
       setIsExporting(false);
-    }
-  };
-
-  const handleDeleteStory = () => {
-    if (selectedStory) {
-      removeStory(selectedStory.id);
-      setModalVisible(false);
-      setSelectedStory(null);
     }
   };
 
@@ -313,12 +303,6 @@ export const LibraryScreen: React.FC = () => {
             )}
           </AnimatedPressable>
 
-          <AnimatedPressable
-            style={[styles.modalActionDelete]}
-            onPress={handleDeleteStory}
-          >
-            <Text style={styles.modalActionDeleteText}>Supprimer</Text>
-          </AnimatedPressable>
         </View>
       </Modal>
 
@@ -326,7 +310,6 @@ export const LibraryScreen: React.FC = () => {
         visible={showNotEnoughStars}
         onClose={() => setShowNotEnoughStars(false)}
         needed={PDF_EXPORT_COST}
-        onWatchMagic={() => rewardCredits('watch_ad')}
       />
     </ScreenContainer>
   );
@@ -570,14 +553,5 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md + spacing.xxs,
     fontWeight: typography.weight.medium,
     color: colors.text.secondary,
-  },
-  modalActionDelete: {
-    paddingVertical: typography.size.md,
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  modalActionDeleteText: {
-    fontSize: typography.size.md,
-    color: colors.text.muted,
   },
 });

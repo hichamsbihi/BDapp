@@ -30,7 +30,7 @@ export const StoryReaderScreen: React.FC = () => {
   const story = stories.find((s) => s.id === storyId);
 
   const handleClose = useCallback(() => {
-    router.replace('/');
+    router.replace('/(tabs)');
   }, []);
 
   const toggleOverlay = useCallback(() => {

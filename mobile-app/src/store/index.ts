@@ -9,10 +9,6 @@ import {
 
 const INITIAL_CREDITS = INITIAL_STARS;
 
-const mockWatchAd = (): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, 1500));
-};
-
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -40,10 +36,6 @@ export const useAppStore = create<AppState>()(
       addStory: (story: Story) =>
         set((state) => ({ stories: [...state.stories, story] })),
       setStories: (stories: Story[]) => set({ stories: Array.isArray(stories) ? stories : [] }),
-      removeStory: (storyId: string) =>
-        set((state) => ({
-          stories: state.stories.filter((s) => s.id !== storyId),
-        })),
       updateStory: (storyId: string, updates: Partial<Story>) =>
         set((state) => ({
           stories: state.stories.map((s) =>
@@ -83,10 +75,13 @@ export const useAppStore = create<AppState>()(
         let amount = 0;
 
         switch (type) {
-          case 'watch_ad':
-            await mockWatchAd();
+          case 'watch_ad': {
+            const { showRewardedAd } = await import('@/services/adService');
+            const earned = await showRewardedAd();
+            if (!earned) return 0;
             amount = REWARD_WATCH_AD;
             break;
+          }
           default:
             return 0;
         }
@@ -119,14 +114,17 @@ export const useAppStore = create<AppState>()(
       setIsPremium: (status: boolean) => set({ isPremium: status }),
 
       hasEverPurchased: false,
-      setHasEverPurchased: (value: boolean) => set({ hasEverPurchased: value }),
+      setHasEverPurchased: (value: boolean) => {
+        set({ hasEverPurchased: value });
+        if (value) set({ adActivated: false });
+      },
+
+      adActivated: true,
+      setAdActivated: (value: boolean) => set({ adActivated: value }),
 
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (status: boolean) =>
         set({ hasCompletedOnboarding: status }),
-
-      storyProgressList: [],
-      setStoryProgressList: (list) => set({ storyProgressList: list }),
 
       resetStoreForSignOut: () =>
         set({
@@ -137,8 +135,8 @@ export const useAppStore = create<AppState>()(
           unlockedStories: [],
           isPremium: false,
           hasEverPurchased: false,
+          adActivated: true,
           currentStory: null,
-          storyProgressList: [],
         }),
     }),
     {
@@ -152,8 +150,9 @@ export const useAppStore = create<AppState>()(
         unlockedStories: state.unlockedStories,
         isPremium: state.isPremium,
         hasEverPurchased: state.hasEverPurchased,
+        adActivated: state.adActivated,
       }),
-      version: 7,
+      version: 8,
       migrate: (persistedState: any) => {
         return {
           ...persistedState,
@@ -161,6 +160,7 @@ export const useAppStore = create<AppState>()(
           unlockedStories: persistedState?.unlockedStories ?? [],
           isPremium: persistedState?.isPremium ?? false,
           hasEverPurchased: persistedState?.hasEverPurchased ?? false,
+          adActivated: persistedState?.adActivated ?? true,
         };
       },
     }

@@ -4,13 +4,6 @@ import { updateProfile } from './profileService';
 import { syncCreditsToServer, unlockStoryOnServer } from './walletService';
 import { supabase } from './supabase';
 
-export interface StoryProgressRow {
-  user_id: string;
-  universe_id: string;
-  current_page_number: number;
-  updated_at?: string;
-}
-
 export async function syncCredits(credits: number): Promise<void> {
   await syncCreditsToServer(credits);
 }
@@ -41,50 +34,6 @@ export async function syncUnlockedStories(storyIds: string[]): Promise<void> {
   for (const storyId of storyIds) {
     await unlockStoryOnServer(storyId);
   }
-}
-
-export async function upsertStoryProgress(
-  userId: string,
-  universeId: string,
-  currentPageNumber: number
-): Promise<void> {
-  const { error } = await supabase.from('user_story_progress').upsert(
-    {
-      user_id: userId,
-      universe_id: universeId,
-      current_page_number: Math.max(1, currentPageNumber),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id,universe_id' }
-  );
-  if (error && __DEV__) console.log('upsertStoryProgress error:', error.message);
-}
-
-export async function insertUserChoice(
-  userId: string,
-  universeId: string,
-  pageNumber: number,
-  choiceId: string
-): Promise<void> {
-  const { error } = await supabase.from('user_choices').insert({
-    user_id: userId,
-    universe_id: universeId,
-    page_number: pageNumber,
-    choice_id: choiceId,
-  });
-  if (error && __DEV__) console.log('insertUserChoice error:', error.message);
-}
-
-export async function fetchUserStoryProgress(
-  userId: string
-): Promise<StoryProgressRow[]> {
-  const { data, error } = await supabase
-    .from('user_story_progress')
-    .select('user_id, universe_id, current_page_number, updated_at')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  if (error) return [];
-  return (data ?? []) as StoryProgressRow[];
 }
 
 export async function setLastUniverse(userId: string, universeId: string): Promise<void> {

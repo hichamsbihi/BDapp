@@ -1,5 +1,5 @@
 -- ============================================================
--- StoryMagic — Full Supabase Schema
+-- SuperStory — Full Supabase Schema
 -- Run in Supabase SQL editor (or via CLI: supabase db push)
 -- ============================================================
 
@@ -17,6 +17,7 @@ create table if not exists profiles (
   last_universe_id    text,
   last_login_at       timestamptz,
   is_premium          boolean not null default false,
+  ad_activated        boolean not null default true,
   is_child_account    boolean not null default false,
   provider            text not null default 'anonymous'
                         check (provider in ('anonymous', 'email', 'google', 'apple')),
@@ -154,31 +155,6 @@ create table if not exists user_favorite_stories (
 );
 
 -- ─────────────────────────────────────────────
--- USER STORY PROGRESS (resume cursor)
--- ─────────────────────────────────────────────
-create table if not exists user_story_progress (
-  user_id             uuid not null references auth.users(id) on delete cascade,
-  universe_id         text not null,
-  current_page_number integer not null default 1,
-  updated_at          timestamptz not null default now(),
-  primary key (user_id, universe_id)
-);
-
--- ─────────────────────────────────────────────
--- USER CHOICES (recorded for replay/resume)
--- ─────────────────────────────────────────────
-create table if not exists user_choices (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  universe_id text not null,
-  page_number integer not null,
-  choice_id   text not null,
-  created_at  timestamptz not null default now()
-);
-
-create index if not exists idx_user_choices_user on user_choices(user_id);
-
--- ─────────────────────────────────────────────
 -- USER CREATED STORIES (completed stories)
 -- ─────────────────────────────────────────────
 create table if not exists user_created_stories (
@@ -268,16 +244,16 @@ alter table stories enable row level security;
 alter table story_parts enable row level security;
 alter table user_unlocked_stories enable row level security;
 alter table user_favorite_stories enable row level security;
-alter table user_story_progress enable row level security;
-alter table user_choices enable row level security;
 alter table user_created_stories enable row level security;
 
 -- Profiles: own row only
 create policy "profiles_select_own" on profiles for select using (auth.uid() = id);
+create policy "profiles_insert_own" on profiles for insert with check (auth.uid() = id);
 create policy "profiles_update_own" on profiles for update using (auth.uid() = id);
 
 -- Wallets: own row only
 create policy "wallets_select_own" on wallets for select using (auth.uid() = user_id);
+create policy "wallets_insert_own" on wallets for insert with check (auth.uid() = user_id);
 create policy "wallets_update_own" on wallets for update using (auth.uid() = user_id);
 
 -- Transactions: read own, insert own
@@ -299,14 +275,7 @@ create policy "favorites_select_own" on user_favorite_stories for select using (
 create policy "favorites_insert_own" on user_favorite_stories for insert with check (auth.uid() = user_id);
 create policy "favorites_delete_own" on user_favorite_stories for delete using (auth.uid() = user_id);
 
--- Progress / choices / created stories: own rows
-create policy "progress_select_own" on user_story_progress for select using (auth.uid() = user_id);
-create policy "progress_insert_own" on user_story_progress for insert with check (auth.uid() = user_id);
-create policy "progress_update_own" on user_story_progress for update using (auth.uid() = user_id);
-
-create policy "choices_select_own" on user_choices for select using (auth.uid() = user_id);
-create policy "choices_insert_own" on user_choices for insert with check (auth.uid() = user_id);
-
+-- Created stories: own rows
 create policy "created_stories_select_own" on user_created_stories for select using (auth.uid() = user_id);
 create policy "created_stories_insert_own" on user_created_stories for insert with check (auth.uid() = user_id);
 create policy "created_stories_update_own" on user_created_stories for update using (auth.uid() = user_id);

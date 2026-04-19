@@ -8,7 +8,6 @@ import {
   Dimensions,
   ActivityIndicator,
   ImageBackground,
-  Modal as RNModal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,13 +19,12 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { ScreenContainer, StarsBadgeWithModal } from '@/shared';
+import { ScreenContainer, StarsBadgeWithModal, NotEnoughStarsModal } from '@/shared';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
 import { useGeneratedStories } from '@/hooks/useStoryData';
 import { GeneratedStory } from '@/types';
 import { fetchUniversesByGender, fetchStoriesForUniverse } from '@/services/storyService';
-import { getCurrentUser } from '@/services/authService';
 import { colors, spacing, radius, typography } from '@/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -127,201 +125,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
   );
 };
 
-// ─── Unlock Modal ───────────────────────────────────────
-
-const UNLOCK_MESSAGES = [
-  "Cette histoire n'attendait que toi !",
-  "Une aventure extraordinaire est sur le point de commencer...",
-  "Les secrets de cette histoire vont se révéler rien que pour toi !",
-  "Tu es sur le point de vivre quelque chose d'inoubliable !",
-  "Cette histoire a été créée spécialement pour des héros comme toi !",
-  "La magie se prépare... es-tu prêt pour l'aventure ?",
-  "Quelque chose de merveilleux t'attend dans cette histoire !",
-] as const;
-
-interface StoryUnlockModalProps {
-  visible: boolean;
-  story: (GeneratedStory & { locked: boolean }) | null;
-  onClose: () => void;
-  onUnlocked: () => void;
-}
-
-const StoryUnlockModal: React.FC<StoryUnlockModalProps> = ({
-  visible,
-  story,
-  onClose,
-  onUnlocked,
-}) => {
-  const credits = useAppStore((s) => s.credits);
-  const canAfford = useAppStore((s) => s.canAfford);
-  const unlockStory = useAppStore((s) => s.unlockStory);
-  const rewardCredits = useAppStore((s) => s.rewardCredits);
-  const [isWatching, setIsWatching] = useState(false);
-
-  const randomMessage = useMemo(() => {
-    if (!visible) return '';
-    return UNLOCK_MESSAGES[Math.floor(Math.random() * UNLOCK_MESSAGES.length)];
-  }, [visible]);
-
-  if (!story) return null;
-
-  const cost = story.creditsRequired;
-  const affordable = canAfford(cost);
-
-  const handleUseCredits = () => {
-    if (unlockStory(story.id, cost)) {
-      onUnlocked();
-      onClose();
-    }
-  };
-
-  const handleWatchMagic = async () => {
-    setIsWatching(true);
-    try {
-      await rewardCredits('watch_ad');
-      if (canAfford(cost) && unlockStory(story.id, cost)) {
-        onUnlocked();
-        onClose();
-      }
-    } finally {
-      setIsWatching(false);
-    }
-  };
-
-  const handleBuyCredits = async () => {
-    onClose();
-    const user = await getCurrentUser();
-    if (user) {
-      router.push('/paywall');
-    } else {
-      router.push('/(auth)/login?from=paywall');
-    }
-  };
-
-  if (affordable) {
-    return (
-      <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
-          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
-            <LinearGradient
-              colors={[colors.primary, colors.background]}
-              style={styles.confirmHeader}
-            >
-              <Text style={styles.confirmEmoji}>📖</Text>
-            </LinearGradient>
-
-            <View style={styles.confirmContent}>
-              <Text style={styles.confirmTitle}>{story.title}</Text>
-              <Text style={styles.confirmMessage}>{randomMessage}</Text>
-
-              <View style={styles.costBadge}>
-                <Text style={styles.costBadgeText}>⭐ {cost} étoiles</Text>
-              </View>
-
-              <AnimatedPressable style={styles.confirmButtonPrimary} onPress={handleUseCredits}>
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.confirmButtonGradient}
-                >
-                  <Text style={styles.confirmButtonPrimaryText}>Débloquer cette histoire</Text>
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable style={styles.confirmButtonSecondary} onPress={onClose}>
-                <Text style={styles.confirmButtonSecondaryText}>Plus tard</Text>
-              </AnimatedPressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </RNModal>
-    );
-  }
-
-  const missing = cost - credits;
-  return (
-    <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.noStarsCard} onPress={(e) => e.stopPropagation()}>
-          <LinearGradient
-            colors={['#FFD54F', '#FFEB9C', colors.background]}
-            style={styles.noStarsHeader}
-          >
-            <Text style={styles.noStarsHeaderEmoji}>⭐</Text>
-            <Text style={styles.noStarsHeaderTitle}>Presque là !</Text>
-          </LinearGradient>
-
-          <View style={styles.noStarsContent}>
-            <View style={styles.starsProgressRow}>
-              {Array.from({ length: cost }).map((_, i) => (
-                <View key={i} style={[styles.starDot, i < credits && styles.starDotFilled]}>
-                  <Text style={styles.starDotText}>{i < credits ? '⭐' : '☆'}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.starsProgressLabel}>{credits}/{cost} étoiles</Text>
-
-            <Text style={styles.noStarsMessage}>
-              {missing === 1
-                ? `Il te manque encore 1 étoile pour débloquer « ${story.title} » !`
-                : `Il te manque encore ${missing} étoiles pour débloquer « ${story.title} » !`}
-            </Text>
-
-            <View style={styles.noStarsButtons}>
-              <AnimatedPressable
-                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
-                onPress={handleWatchMagic}
-                disabled={isWatching}
-              >
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.noStarsButtonGradient}
-                >
-                  {isWatching ? (
-                    <ActivityIndicator color={colors.text.inverse} size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.noStarsButtonIcon}>✨</Text>
-                      <Text style={styles.noStarsButtonTextWhite}>Gagner une étoile magique</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={[styles.noStarsButtonWrapper, isWatching && styles.buttonOpDisabled]}
-                onPress={handleBuyCredits}
-                disabled={isWatching}
-              >
-                <LinearGradient
-                  colors={['#FFD54F', '#F5C430']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.noStarsButtonGradient}
-                >
-                  <Text style={styles.noStarsButtonIcon}>⭐</Text>
-                  <Text style={styles.noStarsButtonTextDark}>Obtenir plus d'étoiles</Text>
-                </LinearGradient>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={styles.noStarsButtonLater}
-                onPress={onClose}
-                disabled={isWatching}
-              >
-                <Text style={styles.noStarsButtonLaterText}>Plus tard</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
-        </Pressable>
-      </Pressable>
-    </RNModal>
-  );
-};
-
 // ─── Main Screen ────────────────────────────────────────
 
 export const StartSelectScreen: React.FC = () => {
@@ -329,15 +132,18 @@ export const StartSelectScreen: React.FC = () => {
   type EnrichedStory = GeneratedStory & { locked: boolean };
   const [selectedStory, setSelectedStory] = useState<EnrichedStory | null>(null);
   const [loadingParts, setLoadingParts] = useState(false);
-  const [unlockModalVisible, setUnlockModalVisible] = useState(false);
-  const [storyToUnlock, setStoryToUnlock] = useState<EnrichedStory | null>(null);
+  const [showNotEnoughStars, setShowNotEnoughStars] = useState(false);
+  const [pendingUnlockCost, setPendingUnlockCost] = useState(0);
+  const [pendingUnlockStory, setPendingUnlockStory] = useState<EnrichedStory | null>(null);
   const [universe, setUniverse] = useState<{ backgroundImageUrl?: string } | null>(null);
   const isNavigatingRef = useRef(false);
 
   const currentStory = useAppStore((state) => state.currentStory);
   const updateCurrentStory = useAppStore((state) => state.updateCurrentStory);
   const isPremium = useAppStore((state) => state.isPremium);
+  const credits = useAppStore((state) => state.credits);
   const unlockedStories = useAppStore((state) => state.unlockedStories);
+  const unlockStory = useAppStore((state) => state.unlockStory);
   const heroProfile = useAppStore((state) => state.heroProfile);
 
   const resolvedUniverseId = universeId || currentStory?.universeId;
@@ -393,17 +199,28 @@ export const StartSelectScreen: React.FC = () => {
 
   const handleSelect = (story: EnrichedStory) => {
     if (story.locked) {
-      setStoryToUnlock(story);
-      setUnlockModalVisible(true);
+      const cost = story.creditsRequired;
+      if (unlockStory(story.id, cost)) {
+        setSelectedStory({ ...story, locked: false });
+      } else {
+        setPendingUnlockCost(cost);
+        setPendingUnlockStory(story);
+        setShowNotEnoughStars(true);
+      }
     } else {
       setSelectedStory(story);
     }
   };
 
-  const handleUnlocked = () => {
-    if (storyToUnlock) {
-      setSelectedStory({ ...storyToUnlock, locked: false });
+  const handleNotEnoughStarsClose = () => {
+    setShowNotEnoughStars(false);
+    if (pendingUnlockStory) {
+      const cost = pendingUnlockStory.creditsRequired;
+      if (unlockStory(pendingUnlockStory.id, cost)) {
+        setSelectedStory({ ...pendingUnlockStory, locked: false });
+      }
     }
+    setPendingUnlockStory(null);
   };
 
   const handleContinue = useCallback(async () => {
@@ -548,11 +365,11 @@ export const StartSelectScreen: React.FC = () => {
         </View>
       </ScreenContainer>
 
-      <StoryUnlockModal
-        visible={unlockModalVisible}
-        story={storyToUnlock}
-        onClose={() => setUnlockModalVisible(false)}
-        onUnlocked={handleUnlocked}
+      <NotEnoughStarsModal
+        visible={showNotEnoughStars}
+        onClose={handleNotEnoughStarsClose}
+        needed={pendingUnlockCost}
+        current={credits}
       />
     </View>
   );
@@ -750,177 +567,4 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
   },
 
-  // ── Unlock Modal — Can Afford ──
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  confirmCard: {
-    width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: radius.xxl,
-    overflow: 'hidden',
-  },
-  confirmHeader: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl + spacing.md,
-  },
-  confirmEmoji: {
-    fontSize: 48,
-  },
-  confirmContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
-    alignItems: 'center',
-  },
-  confirmTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  confirmMessage: {
-    fontSize: typography.size.md,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: typography.size.md * 1.5,
-    marginBottom: spacing.xl,
-  },
-  costBadge: {
-    backgroundColor: 'rgba(255,215,0,0.15)',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    marginBottom: spacing.xl,
-  },
-  costBadgeText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: '#D4A017',
-  },
-  confirmButtonPrimary: {
-    width: '100%',
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-  },
-  confirmButtonGradient: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    borderRadius: radius.lg,
-  },
-  confirmButtonPrimaryText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.text.inverse,
-  },
-  confirmButtonSecondary: {
-    paddingVertical: spacing.md,
-  },
-  confirmButtonSecondaryText: {
-    fontSize: typography.size.md,
-    color: colors.text.muted,
-  },
-
-  // ── Unlock Modal — Not Enough Stars ──
-  noStarsCard: {
-    width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: radius.xxl,
-    overflow: 'hidden',
-  },
-  noStarsHeader: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  noStarsHeaderEmoji: {
-    fontSize: 40,
-    marginBottom: spacing.sm,
-  },
-  noStarsHeaderTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  noStarsContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
-    alignItems: 'center',
-  },
-  starsProgressRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  starDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  starDotFilled: {
-    backgroundColor: 'rgba(255,215,0,0.2)',
-  },
-  starDotText: {
-    fontSize: 16,
-  },
-  starsProgressLabel: {
-    fontSize: typography.size.sm,
-    color: colors.text.muted,
-    marginBottom: spacing.lg,
-  },
-  noStarsMessage: {
-    fontSize: typography.size.md,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: typography.size.md * 1.5,
-    marginBottom: spacing.xl,
-  },
-  noStarsButtons: {
-    width: '100%',
-    gap: spacing.md,
-  },
-  noStarsButtonWrapper: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  noStarsButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    gap: spacing.sm,
-    borderRadius: radius.lg,
-  },
-  noStarsButtonIcon: {
-    fontSize: 18,
-  },
-  noStarsButtonTextWhite: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold,
-    color: colors.text.inverse,
-  },
-  noStarsButtonTextDark: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold,
-    color: '#5D4037',
-  },
-  noStarsButtonLater: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  noStarsButtonLaterText: {
-    fontSize: typography.size.md,
-    color: colors.text.muted,
-  },
-  buttonOpDisabled: {
-    opacity: 0.5,
-  },
 });

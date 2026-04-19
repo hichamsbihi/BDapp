@@ -25,6 +25,7 @@ import * as StoreReview from 'expo-store-review';
 import { ScreenContainer } from '@/shared';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
 import { useAppStore } from '@/store';
+import { showInterstitialIfEligible } from '@/services/adService';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 
 const EASING = Easing.out(Easing.cubic);
@@ -110,6 +111,8 @@ export const StoryCompletedScreen: React.FC = () => {
       1100,
       withTiming(1, { duration: 400, easing: EASING })
     );
+
+    showInterstitialIfEligible();
 
     StoreReview.isAvailableAsync()
       .then((available) => {

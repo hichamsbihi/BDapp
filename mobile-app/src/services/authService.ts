@@ -325,18 +325,8 @@ export async function hydrateStoreFromProfile(): Promise<boolean> {
     avatarCharacterName,
   });
 
-  const { fetchUserStoryProgress, fetchUserCreatedStories } = await import('./syncService');
+  const { fetchUserCreatedStories } = await import('./syncService');
   const serverStories = await fetchUserCreatedStories(user.id);
-  const progressRows = await fetchUserStoryProgress(user.id);
-  const completedUniverseIds = new Set(serverStories.map((s) => s.universeId));
-  store.setStoryProgressList(
-    progressRows
-      .filter((r) => !completedUniverseIds.has(r.universe_id))
-      .map((r) => ({
-        universeId: r.universe_id,
-        currentPageNumber: r.current_page_number,
-      }))
-  );
 
   const serverIds = new Set(serverStories.map((s) => s.id));
   const localStories = store.stories ?? [];

@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -28,8 +29,16 @@ import { useAvatars } from '@/hooks/useAvatars';
 import { ProfileAvatarGrid } from '../components/ProfileAvatarGrid';
 import { getCurrentUser, signOut } from '@/services/authService';
 import { updateProfile } from '@/services/profileService';
+import { Skeleton } from '@/shared/Skeleton';
 import { colors, spacing, typography, radius, shadows } from '@/theme/theme';
 import type { AvatarCharacter } from '@/types';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GRID_COLS = 3;
+const GRID_GAP = spacing.sm;
+const GRID_RING_PAD = 2;
+const GRID_CONTENT_W = SCREEN_WIDTH - spacing.xl * 2;
+const SKEL_SIZE = (GRID_CONTENT_W - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 
 const AVATAR_SIZE = 88;
 
@@ -177,8 +186,22 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>Choisir un avatar</Text>
               {loading ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Chargement...</Text>
+                <View style={styles.skeletonGrid}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <View key={i} style={styles.skeletonCell}>
+                      <Skeleton
+                        width={SKEL_SIZE}
+                        height={SKEL_SIZE}
+                        borderRadius={SKEL_SIZE / 2}
+                      />
+                      <Skeleton
+                        width={SKEL_SIZE * 0.6}
+                        height={spacing.sm}
+                        borderRadius={radius.xs}
+                        style={{ marginTop: spacing.xs }}
+                      />
+                    </View>
+                  ))}
                 </View>
               ) : (
                 <ProfileAvatarGrid
@@ -337,18 +360,14 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     flex: 1,
   },
-  loadingContainer: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GRID_GAP,
   },
-  loadingText: {
-    fontSize: typography.size.sm,
-    color: colors.text.muted,
+  skeletonCell: {
+    width: SKEL_SIZE + GRID_RING_PAD * 2,
+    alignItems: 'center',
   },
   input: {
     backgroundColor: colors.surfaceElevated,

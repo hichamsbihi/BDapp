@@ -1,0 +1,6 @@
+story-generator-service/
+.cursor/
+n8n/
+backend/
+.git/
+.claude/

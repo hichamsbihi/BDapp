@@ -29,7 +29,7 @@ import { UniverseConfig } from '@/types';
 import { useUniverses } from '@/hooks/useStoryData';
 import { generateStoryId } from '@/utils/ids';
 import { getCurrentUser } from '@/services/authService';
-import { upsertStoryProgress, setLastUniverse } from '@/services/syncService';
+import { setLastUniverse } from '@/services/syncService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - spacing.xl * 2;
@@ -172,19 +172,12 @@ export const UniverseSelectScreen: React.FC = () => {
   const heroProfile = useAppStore((state) => state.heroProfile);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
   const setHasCompletedOnboarding = useAppStore((state) => state.setHasCompletedOnboarding);
-  const storyProgressList = useAppStore((state) => state.storyProgressList);
   const stories = useAppStore((state) => state.stories);
 
   const isNewUser = !hasCompletedOnboarding;
 
   const gender = heroProfile?.gender || 'boy';
   const { data: universes, error: universesError, refetch: refetchUniverses } = useUniverses(gender);
-
-  const resumeProgress = storyProgressList.find((p) => p.currentPageNumber >= 1);
-  const hasCompletedInResumeUniverse =
-    resumeProgress && (stories ?? []).some((s) => s.universeId === resumeProgress.universeId && s.isComplete !== false);
-  const resumeUniverse = resumeProgress ? universes.find((u) => u.id === resumeProgress.universeId) : null;
-  const showResume = resumeUniverse && resumeProgress && !hasCompletedInResumeUniverse;
 
   // Animation values
   const introProgress = useSharedValue(0);
@@ -246,7 +239,6 @@ export const UniverseSelectScreen: React.FC = () => {
 
     const user = await getCurrentUser();
     if (user) {
-      await upsertStoryProgress(user.id, selectedUniverseId, 1);
       await setLastUniverse(user.id, selectedUniverseId);
     }
 
@@ -258,20 +250,6 @@ export const UniverseSelectScreen: React.FC = () => {
     if (!hasCompletedOnboarding) {
       setHasCompletedOnboarding(true);
     }
-  };
-
-  const handleResumeProgress = () => {
-    if (!resumeProgress) return;
-    setCurrentStory({
-      id: generateStoryId(),
-      universeId: resumeProgress.universeId,
-      heroId: heroProfile?.id || 'default-hero',
-      pages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isComplete: false,
-    });
-    router.push('/selection/start-select');
   };
 
   const selectedUniverse = universes.find((u) => u.id === selectedUniverseId);
@@ -336,16 +314,6 @@ export const UniverseSelectScreen: React.FC = () => {
           <Text style={styles.title}>Choisis ta porte magique</Text>
           <Text style={styles.subtitle}>Chaque monde cache des secrets...</Text>
         </Animated.View>
-
-        {showResume && resumeUniverse && resumeProgress && (
-          <Pressable style={styles.resumeCard} onPress={handleResumeProgress}>
-            <Text style={styles.resumeLabel}>Reprendre</Text>
-            <Text style={styles.resumeText}>
-              Tu étais à la même place dans « {resumeUniverse.name} » (page {resumeProgress.currentPageNumber})
-            </Text>
-            <Text style={styles.resumeCta}>Reprendre l'histoire</Text>
-          </Pressable>
-        )}
 
         {/* Universe cards */}
         <View style={styles.cardsContainer}>
@@ -487,32 +455,6 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     textAlign: 'center',
   },
-  resumeCard: {
-    backgroundColor: colors.semantic.warningBg,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    borderWidth: 2,
-    borderColor: colors.accent,
-  },
-  resumeLabel: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
-    color: colors.primaryDark,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
-  resumeText: {
-    fontSize: typography.size.lg,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
-  resumeCta: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold,
-    color: colors.primary,
-  },
-
   // Cards
   cardsContainer: {
     gap: spacing.xl,

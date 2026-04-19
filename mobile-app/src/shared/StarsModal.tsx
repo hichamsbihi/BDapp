@@ -23,6 +23,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { useAppStore } from '@/store';
+import { preloadRewarded } from '@/services/adService';
 import { CREDIT_PACKS, PACK_UNLIMITED } from '@/constants/stars';
 import { colors, radius, spacing, typography, shadows } from '@/theme/theme';
 import { AnimatedPressable } from '@/shared/AnimatedPressable';
@@ -114,6 +115,7 @@ export const StarsModal: React.FC<StarsModalProps> = ({ visible, onClose }) => {
 
   useEffect(() => {
     if (!visible) return;
+    preloadRewarded();
     contentScale.value = withSpring(1, { damping: 14, stiffness: 120 });
     contentOpacity.value = withTiming(1, { duration: 300 });
     balanceScale.value = 0.85;
